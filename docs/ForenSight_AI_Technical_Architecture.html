@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ForenSight AI — Technical Architecture</title>
+<style>
+  :root {
+    --accent: #1F3A5F;
+    --accent-light: #D9E2F3;
+    --text: #1c1c1c;
+    --muted: #5b6470;
+    --rule: #d6dbe2;
+    --code-bg: #f5f7fa;
+    --code-text: #111;
+    --row-alt: #f7f9fc;
+    --link: #1a5fb4;
+    --link-hover: #0d3a7a;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Calibri, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    line-height: 1.65;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 56px 48px 96px 48px;
+    background: #fff;
+    font-size: 16px;
+  }
+
+  header.cover {
+    text-align: center;
+    padding: 80px 0 60px 0;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 48px;
+  }
+  header.cover .product {
+    font-size: 64px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -1px;
+    margin: 0 0 12px 0;
+  }
+  header.cover .tagline {
+    font-size: 22px;
+    color: var(--text);
+    margin: 0 0 8px 0;
+  }
+  header.cover .doctype {
+    font-size: 18px;
+    font-style: italic;
+    color: var(--accent);
+    margin: 18px 0 0 0;
+  }
+  header.cover .version {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 24px;
+  }
+
+  h1 {
+    color: var(--accent);
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 48px;
+    margin-bottom: 16px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--accent-light);
+  }
+  h2 {
+    color: var(--accent);
+    font-size: 21px;
+    font-weight: 700;
+    margin-top: 36px;
+    margin-bottom: 12px;
+  }
+  h3 {
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 24px;
+    margin-bottom: 8px;
+  }
+
+  p { margin: 0 0 14px 0; text-align: justify; }
+
+  a { color: var(--link); text-decoration: none; border-bottom: 1px solid transparent; }
+  a:hover { color: var(--link-hover); border-bottom-color: var(--link-hover); }
+
+  ul, ol { margin: 0 0 16px 0; padding-left: 28px; }
+  li { margin-bottom: 6px; }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 14px 18px;
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+    font-family: "SF Mono", Consolas, Monaco, "Courier New", monospace;
+    font-size: 13.5px;
+    line-height: 1.55;
+    overflow-x: auto;
+    margin: 0 0 18px 0;
+    white-space: pre;
+  }
+  code {
+    font-family: "SF Mono", Consolas, Monaco, "Courier New", monospace;
+    font-size: 13.5px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 22px 0;
+    font-size: 14.5px;
+  }
+  th {
+    background: var(--accent);
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    border: 1px solid var(--accent);
+  }
+  td {
+    padding: 9px 12px;
+    border: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  tbody tr:nth-child(even) td { background: var(--row-alt); }
+
+  nav.toc {
+    background: #fafbfd;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 18px 24px;
+    margin-bottom: 36px;
+  }
+  nav.toc h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--accent);
+    font-size: 18px;
+  }
+  nav.toc ol { padding-left: 22px; margin-bottom: 0; }
+  nav.toc li { margin-bottom: 4px; }
+
+  .sources {
+    background: var(--accent-light);
+    border-radius: 6px;
+    padding: 14px 20px;
+    margin: 14px 0 20px 0;
+    font-size: 14px;
+  }
+  .sources strong { color: var(--accent); }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  @media print {
+    body { padding: 24px; font-size: 12pt; }
+    header.cover { padding: 40px 0; }
+    pre { font-size: 10pt; }
+    h1 { page-break-before: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="product">ForenSight AI</div>
+  <div class="tagline">Intelligent Digital Forensics Investigation Copilot</div>
+  <div class="doctype">Technical Architecture Document</div>
+  <div class="version">Version 1.0</div>
+</header>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#s1">Executive Summary</a></li>
+    <li><a href="#s2">Problem Statement</a></li>
+    <li><a href="#s3">Objectives</a></li>
+    <li><a href="#s4">System Overview</a></li>
+    <li><a href="#s5">Architectural Layers</a></li>
+    <li><a href="#s6">Technology Stack</a></li>
+    <li><a href="#s7">Knowledge Graph Design</a></li>
+    <li><a href="#s8">AI Copilot — Prompt and Retrieval Design</a></li>
+    <li><a href="#s9">Integrity, Security, and Chain of Custody</a></li>
+    <li><a href="#s10">Module Breakdown by Data Source</a></li>
+    <li><a href="#s11">Deployment Architecture</a></li>
+    <li><a href="#s12">Project Scope</a></li>
+    <li><a href="#s13">Implementation Plan (12 Weeks)</a></li>
+    <li><a href="#s14">Evaluation Plan</a></li>
+    <li><a href="#s15">Risks and Mitigations</a></li>
+    <li><a href="#s16">Future Scope</a></li>
+    <li><a href="#s17">Data Sources &amp; References</a></li>
+    <li><a href="#s18">Glossary</a></li>
+  </ol>
+</nav>
+
+<h1 id="s1">1. Executive Summary</h1>
+<p>ForenSight AI is a digital forensics investigation copilot designed to reduce the manual burden on investigators by automatically transforming raw forensic evidence into structured, queryable, and explainable investigation knowledge. Existing tools such as <a href="https://www.autopsy.com/" target="_blank">Autopsy</a>, <a href="https://accessdata.com/products-services/forensic-toolkit-ftk" target="_blank">FTK</a> and <a href="https://www.opentext.com/products/encase-forensic" target="_blank">EnCase</a> are excellent at collecting and presenting evidence, but they leave the analyst to manually inspect thousands or millions of events and infer cause-effect relationships. ForenSight AI ingests heterogeneous forensic data — disk images, memory dumps, network captures, and mobile or cloud extractions — normalizes the events into a common fact model, links them into a per-case knowledge graph, and assists the investigator with an LLM-driven reasoning layer that can answer natural-language questions, summarize timelines, and suggest next investigative steps.</p>
+<p>This document describes the technical architecture at a depth appropriate for a two-person team with a three-week timeline, runnable on a developer laptop, using open-source components throughout. The full architecture covers all four data sources; the three-week deliverable is a hard-scoped slice of it (see <a href="#s12">Section 12</a>) that demonstrates every layer end-to-end on a single representative source plus one auxiliary source.</p>
+
+<h1 id="s2">2. Problem Statement</h1>
+<p>A modern forensic investigation produces overwhelming volumes of evidence. A 500 GB disk image typically yields several million filesystem events, tens of thousands of registry entries, browser histories, deleted artefacts, and user-attributable actions. A single hour of network capture can contain millions of packets. Memory dumps and mobile extractions add yet more structured noise. The investigator's job is not to look at all of this — it is to find the small subset of events that constitute the story of what happened.</p>
+<p>Today, that subset is found mostly by hand. Investigators write SQL queries against case databases, click through file trees in Autopsy, and rebuild timelines in spreadsheets. Cross-case knowledge — the fact that a similar registry persistence technique was used in a case three months ago — lives in the analyst's head.</p>
+
+<h3>2.1 Gaps in current tools</h3>
+<ul>
+  <li>Tools surface evidence but do not infer relationships between events across data sources.</li>
+  <li>There is no shared semantic model — disk events, network events, and mobile events live in incompatible schemas.</li>
+  <li>Investigators cannot ask the case natural-language questions; they must translate every question into a query.</li>
+  <li>Knowledge from prior investigations is not retrievable; each new case starts from scratch.</li>
+  <li>Reports are written from notes; the link back to underlying evidence is informal.</li>
+</ul>
+
+<h1 id="s3">3. Objectives</h1>
+<ol>
+  <li>Acquire and ingest forensic evidence from disk images, memory dumps, network captures, and mobile or cloud extractions while preserving cryptographic integrity.</li>
+  <li>Normalize all extracted artefacts into a common fact model so events from different sources can be reasoned about together.</li>
+  <li>Build a per-case knowledge graph that captures entities (files, processes, users, hosts, IPs, accounts) and the relationships between them.</li>
+  <li>Correlate events across sources using time, identity, and causal heuristics to produce candidate event chains.</li>
+  <li>Compare the current case against an embedding index of past cases to surface similar techniques, indicators, and modus operandi.</li>
+  <li>Provide an AI copilot, grounded in the case knowledge graph through retrieval-augmented generation, that answers investigator questions in natural language with citations back to the underlying evidence.</li>
+  <li>Produce defensible, evidence-linked output that an investigator can include in a forensic report.</li>
+</ol>
+
+<h1 id="s4">4. System Overview</h1>
+<p>ForenSight AI is built as a six-layer pipeline. Each layer has a single responsibility and communicates with the next through well-defined data contracts. This separation makes it possible to swap individual parsers, storage backends, or LLM providers without touching the rest of the system.</p>
+
+<h3>4.1 Conceptual data flow</h3>
+<pre>  RAW EVIDENCE          -> Disk image (E01/dd), RAM dump, PCAP, mobile
+         |                 extraction (UFDR/AFU), cloud export (JSON)
+         v
+  ACQUISITION LAYER     -> Hash, mount read-only, verify integrity
+         |
+         v
+  PARSING LAYER         -> Autopsy/dfvfs, Volatility3, Zeek/tshark,
+         |                 ALEAPP/iLEAPP, custom cloud parsers
+         v
+  NORMALIZATION LAYER   -> Common Fact Model (entity, event, relation)
+         |
+         v
+  STORAGE LAYER         -> Case DB (Postgres) + Graph (Neo4j) +
+         |                 Object store (filesystem) + Vector DB
+         v
+  REASONING LAYER       -> Correlation rules, graph queries, ML models,
+         |                 cross-case similarity
+         v
+  AI COPILOT LAYER      -> RAG over graph + docs, natural-language Q&amp;A,
+         |                 summarisation, next-step suggestions
+         v
+  PRESENTATION LAYER    -> Web UI, timeline, graph view, report export</pre>
+<p>The acquisition and parsing layers are dominated by existing open-source tooling — ForenSight AI is not a new disk parser. Our contribution lives in the normalization, storage, reasoning, and copilot layers, where we transform tool output into investigation knowledge.</p>
+
+<h1 id="s5">5. Architectural Layers</h1>
+
+<h2>5.1 Acquisition Layer</h2>
+<p>The acquisition layer is responsible for taking custody of raw evidence and proving, mathematically, that it has not been modified after intake. Every artefact entering the system is hashed (SHA-256 and SHA-1 for cross-tool compatibility), the hash is recorded in the case database alongside the artefact metadata, and the original file is mounted read-only or copied into an immutable evidence store.</p>
+<h3>Responsibilities</h3>
+<ul>
+  <li>Compute and persist cryptographic hashes for every incoming file.</li>
+  <li>Maintain a chain-of-custody log: who uploaded what, when, from where.</li>
+  <li>Detect evidence type by magic bytes and file extension and route to the correct parser.</li>
+  <li>Reject or quarantine evidence whose hash does not match a recorded reference value.</li>
+</ul>
+
+<h2>5.2 Parsing Layer</h2>
+<p>Parsing converts source-specific binary or proprietary formats into structured Python objects. We do not write parsers from scratch; we wrap mature open-source libraries and tools and capture their output through a normalized adapter interface.</p>
+<table>
+  <thead>
+    <tr><th>Source</th><th>Primary tool / library</th><th>Artefacts extracted</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Disk images (E01, dd, raw)</td>
+      <td><a href="https://github.com/log2timeline/dfvfs" target="_blank">dfVFS</a>, <a href="https://github.com/py4n6/pytsk" target="_blank">pytsk3</a>, <a href="https://www.autopsy.com/download/" target="_blank">Autopsy CLI</a></td>
+      <td>Filesystem timeline, MFT, registry hives, browser history, recycle bin, prefetch, shellbags</td>
+    </tr>
+    <tr>
+      <td>Memory dumps</td>
+      <td><a href="https://github.com/volatilityfoundation/volatility3" target="_blank">Volatility 3</a></td>
+      <td>Process tree, network sockets, loaded DLLs, injected code, command history</td>
+    </tr>
+    <tr>
+      <td>Network captures (PCAP)</td>
+      <td><a href="https://zeek.org/" target="_blank">Zeek</a>, <a href="https://www.wireshark.org/docs/man-pages/tshark.html" target="_blank">tshark</a>, <a href="https://scapy.net/" target="_blank">Scapy</a></td>
+      <td>Flows, DNS queries, HTTP/TLS metadata, file carving, IDS alerts</td>
+    </tr>
+    <tr>
+      <td>Mobile (Android / iOS)</td>
+      <td><a href="https://github.com/abrignoni/ALEAPP" target="_blank">ALEAPP</a>, <a href="https://github.com/abrignoni/iLEAPP" target="_blank">iLEAPP</a>, <a href="https://github.com/mvt-project/mvt" target="_blank">MVT</a></td>
+      <td>App data, messages, call logs, location, installed packages, notifications</td>
+    </tr>
+    <tr>
+      <td>Cloud exports</td>
+      <td>Custom JSON adapters (<a href="https://takeout.google.com/" target="_blank">Google Takeout</a>, <a href="https://learn.microsoft.com/en-us/purview/ediscovery" target="_blank">Microsoft eDiscovery</a>)</td>
+      <td>Login events, file access logs, OAuth grants, sharing activity</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>5.3 Normalization Layer — the Common Fact Model</h2>
+<p>This is the architectural heart of ForenSight AI. Every parser, regardless of source, emits records that conform to a single schema we call the Common Fact Model. A normalized record always contains an entity (the thing the fact is about), an event (the action or observation), a timestamp interval, a source reference (which artefact and offset), and an integrity reference (hash of the originating evidence).</p>
+<h3>Schema (simplified)</h3>
+<pre>Entity {
+  id: UUID,
+  type: enum(FILE, PROCESS, USER, HOST, IP, DOMAIN, ACCOUNT, DEVICE,
+             REGISTRY_KEY, MESSAGE, APP),
+  canonical_name: string,
+  attributes: jsonb        # e.g. {path, size, hash, owner_sid}
+}
+
+Event {
+  id: UUID,
+  type: enum(CREATE, MODIFY, ACCESS, DELETE, EXEC, CONNECT, AUTH,
+             SEND, RECEIVE, INSTALL, LOGIN, LOGOUT, PERSIST),
+  timestamp_start: timestamptz,
+  timestamp_end: timestamptz NULL,
+  primary_entity_id: UUID,
+  secondary_entity_id: UUID NULL,
+  source_artefact_id: UUID,
+  evidence_offset: bigint NULL,
+  confidence: float        # 0.0 - 1.0
+}
+
+Relation {
+  src: UUID, dst: UUID,
+  type: enum(PARENT_OF, OWNS, CONTACTED, EXECUTED, ACCESSED,
+             RESOLVES_TO, AUTHENTICATED_AS, LOCATED_AT),
+  weight: float,
+  derived_from: [EventID]  # provenance
+}</pre>
+<p>Provenance is non-negotiable. Every fact in the system traces back to a parser run on a hashed artefact at a known offset. Without this, the AI copilot's answers would not be defensible in a forensic context.</p>
+
+<h2>5.4 Storage Layer</h2>
+<p>Different parts of the system want different views of the same data. We use four cooperating stores rather than forcing one engine to do everything badly.</p>
+<table>
+  <thead>
+    <tr><th>Store</th><th>Engine</th><th>Holds</th><th>Why</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Case relational DB</td>
+      <td><a href="https://www.postgresql.org/" target="_blank">PostgreSQL 16</a></td>
+      <td>Cases, users, artefacts, raw normalized facts, audit log</td>
+      <td>Strong transactions, JSONB, mature</td>
+    </tr>
+    <tr>
+      <td>Knowledge graph</td>
+      <td><a href="https://neo4j.com/download-center/#community" target="_blank">Neo4j Community</a></td>
+      <td>Entities and relations, Cypher queries for traversal</td>
+      <td>Native graph traversals, visual browser</td>
+    </tr>
+    <tr>
+      <td>Object / evidence store</td>
+      <td>Local filesystem, WORM-style write-once layout</td>
+      <td>Original disk images, memory dumps, PCAPs</td>
+      <td>Simple, no cloud cost, easy hashing</td>
+    </tr>
+    <tr>
+      <td>Vector index</td>
+      <td><a href="https://qdrant.tech/" target="_blank">Qdrant</a> (or <a href="https://www.trychroma.com/" target="_blank">Chroma</a>)</td>
+      <td>Embeddings of artefact summaries and prior-case notes</td>
+      <td>Powers similarity search and RAG</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>5.5 Reasoning &amp; Correlation Layer</h2>
+<p>Once events are in the knowledge graph, the reasoning layer derives higher-order facts. It is the layer that turns "a process was executed" and "a network connection was made" into "this process initiated this connection". Three complementary techniques are used:</p>
+<h3>5.5.1 Rule-based correlation</h3>
+<p>A library of hand-written rules expressed in <a href="https://neo4j.com/developer/cypher/" target="_blank">Cypher</a> and Python operates over the graph. Each rule reads a pattern, asserts a derived relation, and records its provenance. Example rules include temporal-proximity binding of a process execution to an outbound socket, matching a downloaded file's hash to the file it was later persisted as, and detecting registry Run-key persistence.</p>
+<h3>5.5.2 Statistical and ML-based correlation</h3>
+<p>Where rules are too brittle, we use lightweight ML. A clustering pass over filesystem events groups bursts of activity into user sessions. A small classifier (gradient-boosted trees via <a href="https://scikit-learn.org/" target="_blank">scikit-learn</a> or <a href="https://lightgbm.readthedocs.io/" target="_blank">LightGBM</a>) flags processes whose behaviour profile matches known malware families. None of this requires GPU training; pre-trained models ship with the system and only get fine-tuned on case-specific data when needed.</p>
+<h3>5.5.3 Cross-case similarity</h3>
+<p>Every case produces a set of artefact summaries — short structured descriptions of techniques and indicators observed. These are embedded with a <a href="https://www.sbert.net/" target="_blank">sentence-transformer</a> model and indexed in Qdrant. When a new case is loaded, the reasoning layer queries the index to surface the top-K most similar prior cases and lists overlapping techniques. This is how "compare with previous investigations" is implemented.</p>
+
+<h2>5.6 AI Copilot Layer</h2>
+<p>The AI copilot is a retrieval-augmented chat interface that sits on top of the knowledge graph. It is not a general-purpose chatbot; it is a constrained reasoning agent with access to a small set of tools and a strict requirement to cite evidence.</p>
+<h3>5.6.1 Architecture</h3>
+<pre>User question
+    |
+    v
+  Intent classifier (small local model)
+    |--- factual lookup  --&gt; graph query tool (Cypher)
+    |--- timeline        --&gt; timeline query tool
+    |--- similarity      --&gt; vector search tool
+    |--- summarisation   --&gt; document retriever
+    v
+  Retrieved context (facts + provenance)
+    |
+    v
+  LLM (Llama 3 8B via Ollama, or Gemini / Claude API)
+    |  - system prompt enforces citation format
+    |  - response must reference Event IDs
+    v
+  Rendered answer with hyperlinks to underlying artefacts</pre>
+<h3>5.6.2 Guardrails</h3>
+<ul>
+  <li>The LLM never sees raw evidence. It only sees normalized facts that are already in the graph, so it cannot hallucinate file paths that do not exist.</li>
+  <li>Every claim in a generated answer must be backed by at least one Event ID. The UI greys out unsupported sentences.</li>
+  <li>All copilot interactions are logged with the prompt, retrieved context, and final response, forming an auditable trail.</li>
+</ul>
+
+<h2>5.7 Presentation Layer</h2>
+<p>The frontend is a single-page web application that presents three core views: a case dashboard with timeline and key indicators, an interactive graph explorer for walking entities and relations, and a chat panel for the copilot. Report export produces a Word or PDF file with embedded evidence references.</p>
+<ul>
+  <li>Framework: <a href="https://react.dev/" target="_blank">React 18</a> with <a href="https://www.typescriptlang.org/" target="_blank">TypeScript</a>.</li>
+  <li>Visualisation: <a href="https://js.cytoscape.org/" target="_blank">Cytoscape.js</a> for graph, <a href="https://github.com/visjs/vis-timeline" target="_blank">vis-timeline</a> for events, <a href="https://recharts.org/" target="_blank">Recharts</a> for distributions.</li>
+  <li>Auth: simple JWT against the case database; not multi-tenant in this scope.</li>
+</ul>
+
+<h1 id="s6">6. Technology Stack</h1>
+<p>The stack is deliberately conservative. Every component is open source, runs locally, has substantial documentation, and is realistic for a two-person team to operate end-to-end inside three weeks.</p>
+<table>
+  <thead>
+    <tr><th>Concern</th><th>Choice</th><th>Rationale</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Language (backend)</td><td><a href="https://www.python.org/" target="_blank">Python 3.11</a></td><td>Native binding for every forensic library we need</td></tr>
+    <tr><td>API framework</td><td><a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a></td><td>Async, typed, auto-OpenAPI for the frontend</td></tr>
+    <tr><td>Task queue</td><td><a href="https://docs.celeryq.dev/" target="_blank">Celery</a> + <a href="https://redis.io/" target="_blank">Redis</a></td><td>Long-running parsers must not block API requests</td></tr>
+    <tr><td>Relational DB</td><td><a href="https://www.postgresql.org/" target="_blank">PostgreSQL 16</a></td><td>JSONB columns model artefact attributes well</td></tr>
+    <tr><td>Graph DB</td><td><a href="https://neo4j.com/" target="_blank">Neo4j Community 5.x</a></td><td>Cypher is easy to read; visual browser helps demos</td></tr>
+    <tr><td>Vector DB</td><td><a href="https://qdrant.tech/" target="_blank">Qdrant</a></td><td>Lightweight, runs in Docker, REST API</td></tr>
+    <tr><td>Disk parsing</td><td><a href="https://github.com/log2timeline/dfvfs" target="_blank">dfVFS</a>, <a href="https://github.com/py4n6/pytsk" target="_blank">pytsk3</a>, <a href="https://www.autopsy.com/" target="_blank">Autopsy CLI</a></td><td>Industry standard, Python-friendly</td></tr>
+    <tr><td>Memory parsing</td><td><a href="https://github.com/volatilityfoundation/volatility3" target="_blank">Volatility 3</a></td><td>Maintained, Python 3, scriptable</td></tr>
+    <tr><td>Network parsing</td><td><a href="https://zeek.org/" target="_blank">Zeek</a> + <a href="https://www.wireshark.org/" target="_blank">tshark</a></td><td>Zeek for structured logs, tshark for ad-hoc</td></tr>
+    <tr><td>Mobile parsing</td><td><a href="https://github.com/abrignoni/ALEAPP" target="_blank">ALEAPP</a>, <a href="https://github.com/abrignoni/iLEAPP" target="_blank">iLEAPP</a>, <a href="https://github.com/mvt-project/mvt" target="_blank">MVT</a></td><td>Active, well-documented Python tools</td></tr>
+    <tr><td>LLM (default)</td><td><a href="https://ollama.com/library/llama3.1" target="_blank">Llama 3.1 8B</a> via <a href="https://ollama.com/" target="_blank">Ollama</a></td><td>Runs on a single 16 GB GPU or CPU; no API cost</td></tr>
+    <tr><td>LLM (fallback)</td><td><a href="https://ai.google.dev/gemini-api" target="_blank">Gemini 1.5 Flash</a> or <a href="https://docs.anthropic.com/" target="_blank">Claude Haiku</a> via API</td><td>Used when local model is too slow for the demo</td></tr>
+    <tr><td>Embeddings</td><td><a href="https://huggingface.co/BAAI/bge-small-en-v1.5" target="_blank">BAAI/bge-small-en-v1.5</a></td><td>Free, small, strong on retrieval benchmarks</td></tr>
+    <tr><td>Frontend</td><td><a href="https://react.dev/" target="_blank">React 18</a> + TypeScript + <a href="https://vitejs.dev/" target="_blank">Vite</a></td><td>Standard, fast dev loop</td></tr>
+    <tr><td>Graph viz</td><td><a href="https://js.cytoscape.org/" target="_blank">Cytoscape.js</a></td><td>Best free interactive graph renderer</td></tr>
+    <tr><td>Containerisation</td><td><a href="https://docs.docker.com/compose/" target="_blank">Docker Compose</a></td><td>Single <code>up</code> command brings the whole stack online</td></tr>
+    <tr><td>Source control</td><td><a href="https://git-scm.com/" target="_blank">Git</a> + <a href="https://github.com/" target="_blank">GitHub</a></td><td>CI via <a href="https://github.com/features/actions" target="_blank">GitHub Actions</a></td></tr>
+  </tbody>
+</table>
+
+<h1 id="s7">7. Knowledge Graph Design</h1>
+<p>The knowledge graph is the durable record of what we know about a case. Its schema is intentionally small — six node types and ten relation types — so that anyone can read a Cypher query and understand it immediately.</p>
+<h3>Node labels</h3>
+<ul>
+  <li><strong>File</strong> — any filesystem object, including deleted and carved files.</li>
+  <li><strong>Process</strong> — any executing or previously-executed program instance.</li>
+  <li><strong>User</strong> — local or domain account observed in any source.</li>
+  <li><strong>Host</strong> — physical or virtual machine; one per case is typical at this scale.</li>
+  <li><strong>NetworkEndpoint</strong> — IP, domain, or URL contacted.</li>
+  <li><strong>Artefact</strong> — the originating evidence container (disk image, memory dump, PCAP, mobile extraction).</li>
+</ul>
+<h3>Relation types</h3>
+<ul>
+  <li><code>EXECUTED</code> — Process executed File.</li>
+  <li><code>PARENT_OF</code> — Process parent of Process.</li>
+  <li><code>ACCESSED</code>, <code>MODIFIED</code>, <code>DELETED</code> — User or Process to File.</li>
+  <li><code>CONNECTED_TO</code> — Process to NetworkEndpoint.</li>
+  <li><code>RESOLVES_TO</code> — NetworkEndpoint (domain) to NetworkEndpoint (IP).</li>
+  <li><code>AUTHENTICATED_AS</code> — Host to User.</li>
+  <li><code>EXTRACTED_FROM</code> — every node has at least one such edge to an Artefact, preserving provenance.</li>
+  <li><code>DERIVED_BY</code> — links a relation to the correlation rule or model that produced it.</li>
+</ul>
+<h3>Example Cypher — "what did process X touch?"</h3>
+<pre>MATCH (p:Process {pid:1234})-[r:ACCESSED|MODIFIED|DELETED|CONNECTED_TO]-&gt;(t)
+WHERE p.case_id = $caseId
+RETURN p, r, t
+ORDER BY r.timestamp_start</pre>
+
+<h1 id="s8">8. AI Copilot — Prompt and Retrieval Design</h1>
+<p>The copilot's behaviour is governed almost entirely by its system prompt and the contract it has with the retrieval tools. The LLM itself is interchangeable.</p>
+<h3>System prompt (abbreviated)</h3>
+<pre>You are ForenSight, a digital forensics assistant.
+You answer questions about the active investigation case only.
+Every claim you make must cite at least one Event ID from the
+supplied context, written as [E:&lt;uuid&gt;] inline. If the context
+does not contain enough information to answer, say so explicitly.
+Do not speculate about evidence that is not in the context.
+Format timestamps in UTC, ISO-8601.
+When suggesting next steps, suggest concrete graph queries or
+additional parsers to run, not vague recommendations.</pre>
+<h3>Retrieval flow</h3>
+<ol>
+  <li>Classify the user's intent into one of: factual, timeline, similarity, summarisation, recommendation.</li>
+  <li>Issue the corresponding tool call — Cypher query, timeline range query, vector search, or document retrieval.</li>
+  <li>Rank the returned facts by confidence, recency, and graph-degree.</li>
+  <li>Truncate the context to fit the model's window (8K for local Llama, 32K+ for API models), preserving Event IDs.</li>
+  <li>Generate the answer; post-process to verify every sentence has at least one citation; flag the ones that do not.</li>
+</ol>
+
+<h1 id="s9">9. Integrity, Security, and Chain of Custody</h1>
+<p>A forensic system is only credible if it can prove that nothing inside it has been tampered with. The architecture enforces this with three mechanisms:</p>
+<ul>
+  <li><strong>Hash-on-ingest:</strong> every uploaded artefact is hashed before it is written to the evidence store; the hash is the artefact's primary key.</li>
+  <li><strong>Append-only audit log:</strong> every API call that mutates state writes a row to an append-only table that includes the actor, timestamp, action, and a hash of the previous row (Merkle-style chain).</li>
+  <li><strong>Read-only mounts and copy-on-read:</strong> parsers never write back to the original evidence; they operate on snapshots and the snapshots themselves are hashed.</li>
+</ul>
+
+<h1 id="s10">10. Module Breakdown by Data Source</h1>
+
+<h2>10.1 Disk Images and Filesystems</h2>
+<ul>
+  <li>Mount the image read-only via <a href="https://github.com/log2timeline/dfvfs" target="_blank">dfVFS</a>.</li>
+  <li>Walk the filesystem; for each file emit a FILE entity with hash, path, MAC times, owner.</li>
+  <li>Parse NTFS MFT directly to recover deleted entries and timestamps that the filesystem walk misses.</li>
+  <li>Parse registry hives (SYSTEM, SOFTWARE, NTUSER.DAT) for autostart, USB plug history, ShellBags using <a href="https://github.com/williballenthin/python-registry" target="_blank">python-registry</a>.</li>
+  <li>Parse browser histories (Chrome, Firefox, Edge) into MESSAGE / ACCESSED events.</li>
+</ul>
+
+<h2>10.2 Memory Dumps</h2>
+<ul>
+  <li>Run <a href="https://volatility3.readthedocs.io/" target="_blank">Volatility 3</a> plugins: <code>pslist</code>, <code>pstree</code>, <code>netscan</code>, <code>malfind</code>, <code>cmdline</code>, <code>dlllist</code>.</li>
+  <li>Each row emitted by a plugin becomes a normalized Process or NetworkEndpoint entity with a CONNECTED_TO or EXECUTED edge.</li>
+  <li>Confidence is set lower for memory-only facts because RAM forensics is inherently more probabilistic than disk.</li>
+</ul>
+
+<h2>10.3 Network Captures</h2>
+<ul>
+  <li>Convert the PCAP with <a href="https://docs.zeek.org/en/master/" target="_blank">Zeek</a> to obtain <code>conn.log</code>, <code>dns.log</code>, <code>http.log</code>, <code>ssl.log</code>, <code>files.log</code>.</li>
+  <li>Each <code>conn.log</code> row becomes a CONNECTED_TO relation between local Process (joined via memory data) and a NetworkEndpoint.</li>
+  <li>DNS resolutions become RESOLVES_TO edges. This is what enables "this process talked to this domain" queries.</li>
+</ul>
+
+<h2>10.4 Mobile and Cloud</h2>
+<ul>
+  <li><a href="https://github.com/abrignoni/ALEAPP" target="_blank">ALEAPP</a> / <a href="https://github.com/abrignoni/iLEAPP" target="_blank">iLEAPP</a> produce HTML and JSON reports; we parse the JSON only.</li>
+  <li>Messages, call logs, and location pings become MESSAGE-typed Event records, each tied to an APP entity and a USER entity.</li>
+  <li>Cloud exports (<a href="https://takeout.google.com/" target="_blank">Google Takeout</a>, <a href="https://learn.microsoft.com/en-us/purview/ediscovery" target="_blank">Microsoft eDiscovery</a>) are parsed by per-provider adapters; their schemas are stable and well-documented.</li>
+</ul>
+
+<h1 id="s11">11. Deployment Architecture</h1>
+<p>All components run as Docker containers orchestrated by a single <code>docker-compose.yml</code>. The system is brought up with one command and torn down the same way. No Kubernetes, no cloud provider, no managed service — appropriate for an offline, evidence-handling workload.</p>
+<pre>services:
+  postgres:  image: postgres:16
+  neo4j:     image: neo4j:5-community
+  qdrant:    image: qdrant/qdrant
+  redis:     image: redis:7
+  api:       build: ./backend  (FastAPI + Celery worker)
+  worker:    build: ./backend  (Celery worker, parser-heavy)
+  ollama:    image: ollama/ollama  (optional, for local LLM)
+  web:       build: ./frontend (React, served by nginx)</pre>
+<p>Total memory footprint at idle is approximately 4 GB; with a 1 GB disk image being parsed it peaks around 8 GB. The whole stack runs on a developer laptop.</p>
+
+<h1 id="s12">12. Project Scope (Two People, Three Weeks)</h1>
+<p>The architecture above is the full vision. With a two-person team and a three-week window the deliverable is a hard-scoped vertical slice: every layer is present, but only enough of each to demonstrate the pipeline end-to-end on a real dataset. Anything not on the "in scope" list is explicitly deferred.</p>
+<h3>In scope</h3>
+<ul>
+  <li><strong>Two data sources</strong> only — one disk image and one matching memory dump from a single public CTF dataset (e.g. <a href="https://cfreds.nist.gov/all/NIST/HackingCase" target="_blank">NIST Hacking Case</a> or a <a href="https://digitalcorpora.org/corpora/scenarios/" target="_blank">Digital Corpora scenario</a>). PCAP and mobile parsing are demonstrated as stub adapters only.</li>
+  <li>Common Fact Model with <strong>four entity types</strong> (File, Process, User, NetworkEndpoint) and <strong>six relation types</strong> (EXECUTED, ACCESSED, MODIFIED, CONNECTED_TO, PARENT_OF, EXTRACTED_FROM).</li>
+  <li><strong>Three rule-based correlations</strong>: process-to-network binding by time, registry Run-key persistence, parent-child process chain.</li>
+  <li>AI copilot with <strong>two question intents</strong> only — factual lookup and timeline summarisation — using a <strong>hosted API LLM</strong> (Gemini Flash or Claude Haiku) for speed. No local LLM in this slice.</li>
+  <li>Minimal web UI: case dashboard, graph view (Cytoscape.js), and chat panel. No standalone timeline component in v1.</li>
+  <li>Hash-on-ingest, append-only audit log.</li>
+  <li>Report export skipped in v1; copy/paste from chat is acceptable for the demo.</li>
+</ul>
+<h3>Explicitly deferred</h3>
+<ul>
+  <li>Full PCAP, mobile, and cloud parsers (stubs only).</li>
+  <li>ML-based correlation and cross-case similarity.</li>
+  <li>Local LLM via Ollama.</li>
+  <li>Multi-tenant access control.</li>
+  <li>Carving, mobile decryption, cloud connector auth, multi-node deployment.</li>
+  <li>Word/PDF report export.</li>
+</ul>
+
+<h1 id="s13">13. Implementation Plan (Two People, Three Weeks)</h1>
+<p>Work is split between two roles for the entire three weeks. <strong>Engineer A</strong> owns backend, parsers, and storage. <strong>Engineer B</strong> owns the knowledge graph, AI copilot, and UI. They sync daily and demo end-to-end at the end of each week.</p>
+<table>
+  <thead>
+    <tr><th>Week</th><th>Days</th><th>Engineer A (backend / parsing)</th><th>Engineer B (graph / copilot / UI)</th><th>Joint deliverable at week-end</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1</strong><br/>Foundations</td>
+      <td>Mon – Sun</td>
+      <td>Docker Compose for Postgres + Neo4j; ingestion API with hash-on-ingest; disk parser (dfVFS) emitting File entities; Common Fact Model schema in Postgres</td>
+      <td>Neo4j schema (4 nodes, 6 relations); loader that maps Postgres facts into Neo4j; React shell with case dashboard placeholder; chat panel stubbed</td>
+      <td>Sample disk image ingests cleanly; File and User entities visible in Neo4j browser; UI shows a case list</td>
+    </tr>
+    <tr>
+      <td><strong>2</strong><br/>Correlation</td>
+      <td>Mon – Sun</td>
+      <td>Memory parser (Volatility 3) emitting Process and NetworkEndpoint entities; stub adapters for PCAP and mobile; audit log table; CI smoke test</td>
+      <td>Three correlation rules in Cypher (process-to-network, Run-key persistence, parent-child); Cytoscape.js graph view wired to live Neo4j query</td>
+      <td>Walk the graph in the UI; click a process and see what it executed and connected to</td>
+    </tr>
+    <tr>
+      <td><strong>3</strong><br/>Copilot &amp; demo</td>
+      <td>Mon – Thu</td>
+      <td>Harden ingestion errors; finalise dataset; performance pass on slow Cypher queries; fixture data for tests</td>
+      <td>Copilot wiring: intent classifier (rule-based, not ML), Cypher tool, hosted-API LLM with citation-enforcing system prompt; chat panel renders Event-ID citations as links</td>
+      <td>Chat answers "what did process X do?" and "summarise the timeline for user Y" with clickable citations</td>
+    </tr>
+    <tr>
+      <td><strong>3</strong><br/>Polish</td>
+      <td>Fri – Sun</td>
+      <td colspan="2" style="text-align:center;">Joint: end-to-end demo rehearsal &middot; bug fixes &middot; architecture doc &middot; slide deck &middot; evaluation pass on the demo case</td>
+      <td>Demo-ready build, frozen on git tag <code>v0.1-demo</code></td>
+    </tr>
+  </tbody>
+</table>
+<h3>Daily cadence</h3>
+<ul>
+  <li>15-minute morning standup: yesterday, today, blockers.</li>
+  <li>End-of-day commit + push; CI must stay green.</li>
+  <li>End-of-week demo on the live system, not slides.</li>
+</ul>
+<h3>What gets dropped if a week slips</h3>
+<ol>
+  <li>Audit-log Merkle chain (replace with plain append-only table).</li>
+  <li>One of the three correlation rules.</li>
+  <li>Cypher performance pass.</li>
+  <li>Memory parser (fall back to disk-only).</li>
+</ol>
+
+<h1 id="s14">14. Evaluation Plan</h1>
+<p>Because forensic correctness is the whole point, evaluation is taken as seriously as implementation.</p>
+<ul>
+  <li><strong>Ground-truth comparison</strong> on a public CTF case where the correct answer to investigative questions is known. Metrics: precision and recall of recovered events; precision and recall of generated answers' citations.</li>
+  <li><strong>Time-to-first-insight:</strong> how long, from ingest to first useful correlation, the system takes versus an unaided analyst using Autopsy. Target: 5× faster.</li>
+  <li><strong>Copilot answer quality:</strong> blind rating by three peers on a 5-point scale across faithfulness, completeness, and usefulness.</li>
+  <li><strong>Integrity audit:</strong> random sampling of stored artefacts to re-verify their hashes match the ingest record. Target: 100% match.</li>
+</ul>
+
+<h1 id="s15">15. Risks and Mitigations</h1>
+<table>
+  <thead>
+    <tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Local LLM too slow for live demo</td><td>Medium</td><td>High</td><td>Maintain API fallback (Gemini / Claude) behind same interface</td></tr>
+    <tr><td>Volatility 3 profile mismatch with chosen memory dump</td><td>Medium</td><td>Medium</td><td>Pick demo data with publicly known Volatility profile</td></tr>
+    <tr><td>Neo4j Community licence limits in production</td><td>Low</td><td>Low</td><td>Documented; switch to <a href="https://memgraph.com/" target="_blank">Memgraph</a> if needed later</td></tr>
+    <tr><td>Forensic correctness drift as schema evolves</td><td>High</td><td>High</td><td>Provenance edges on every fact; CI test fixtures locked to schema version</td></tr>
+    <tr><td>Two engineers, three weeks — extremely tight bandwidth</td><td>High</td><td>High</td><td>Hard-scoped vertical slice (Section 12); fixed daily cadence; documented drop-list (Section 13) executed without negotiation when a week slips</td></tr>
+    <tr><td>Single point of failure if one engineer is unavailable</td><td>Medium</td><td>High</td><td>Pair-program the boundary modules (ingestion API, graph loader); daily push to shared branch; written runbook</td></tr>
+    <tr><td>Hosted-API LLM rate limits or outage during demo</td><td>Low</td><td>High</td><td>Cache the demo case's typical questions and responses; have a fallback static answer set ready</td></tr>
+  </tbody>
+</table>
+
+<h1 id="s16">16. Future Scope</h1>
+<ul>
+  <li>Live triage mode: stream events from an EDR agent in addition to post-incident artefacts.</li>
+  <li>Multi-investigator collaboration with role-based access and case sharing.</li>
+  <li>Automated report drafting that produces a full investigative report from the case graph.</li>
+  <li>Federated cross-case search across multiple forensic teams while keeping case data local.</li>
+  <li>Fine-tuned forensic LLM trained on anonymised case summaries and report-writing conventions.</li>
+</ul>
+
+<h1 id="s17">17. Data Sources &amp; References</h1>
+
+<h2>17.1 Public forensic datasets (for development and demo)</h2>
+<ul>
+  <li><a href="https://cfreds.nist.gov/" target="_blank">NIST Computer Forensic Reference Data Sets (CFReDS)</a> — disk images, mobile data, hacking-case scenarios.</li>
+  <li><a href="https://digitalcorpora.org/" target="_blank">Digital Corpora</a> — disk images, memory dumps, network captures, mobile and scenario-based datasets.</li>
+  <li><a href="https://dfrws.org/dfrws-challenges/" target="_blank">DFRWS Forensic Challenges</a> — annual challenge datasets with documented ground truth.</li>
+  <li><a href="https://www.malware-traffic-analysis.net/" target="_blank">malware-traffic-analysis.net</a> — PCAPs and matching write-ups for network forensics.</li>
+  <li><a href="https://www.cfreds.nist.gov/Hacking_Case.html" target="_blank">NIST Hacking Case</a> — classic instructional disk image.</li>
+  <li><a href="https://github.com/ashemery/exploitation-course/tree/master/Memory_Forensics" target="_blank">Memory Forensics samples (Volatility-compatible)</a>.</li>
+  <li><a href="https://github.com/abrignoni/DFIR-Artifacts-Datasets" target="_blank">DFIR Artifacts Datasets (ALEAPP / iLEAPP-friendly)</a>.</li>
+  <li><a href="https://github.com/RealityNet/kape_targets" target="_blank">KAPE-style triage datasets</a> for Windows artefacts.</li>
+  <li><a href="https://attack.mitre.org/" target="_blank">MITRE ATT&amp;CK</a> — technique taxonomy used to tag observed behaviours.</li>
+</ul>
+
+<h2>17.2 Open-source tools (parsers and engines)</h2>
+<ul>
+  <li><a href="https://www.autopsy.com/" target="_blank">Autopsy</a> &middot; <a href="https://github.com/log2timeline/dfvfs" target="_blank">dfVFS</a> &middot; <a href="https://github.com/py4n6/pytsk" target="_blank">pytsk3</a> &middot; <a href="https://github.com/log2timeline/plaso" target="_blank">Plaso (log2timeline)</a></li>
+  <li><a href="https://github.com/volatilityfoundation/volatility3" target="_blank">Volatility 3</a></li>
+  <li><a href="https://zeek.org/" target="_blank">Zeek</a> &middot; <a href="https://www.wireshark.org/" target="_blank">Wireshark / tshark</a> &middot; <a href="https://scapy.net/" target="_blank">Scapy</a></li>
+  <li><a href="https://github.com/abrignoni/ALEAPP" target="_blank">ALEAPP</a> &middot; <a href="https://github.com/abrignoni/iLEAPP" target="_blank">iLEAPP</a> &middot; <a href="https://github.com/mvt-project/mvt" target="_blank">MVT</a></li>
+  <li><a href="https://www.postgresql.org/" target="_blank">PostgreSQL</a> &middot; <a href="https://neo4j.com/" target="_blank">Neo4j</a> &middot; <a href="https://qdrant.tech/" target="_blank">Qdrant</a> &middot; <a href="https://redis.io/" target="_blank">Redis</a></li>
+  <li><a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a> &middot; <a href="https://docs.celeryq.dev/" target="_blank">Celery</a> &middot; <a href="https://react.dev/" target="_blank">React</a> &middot; <a href="https://js.cytoscape.org/" target="_blank">Cytoscape.js</a></li>
+  <li><a href="https://ollama.com/" target="_blank">Ollama</a> &middot; <a href="https://huggingface.co/BAAI/bge-small-en-v1.5" target="_blank">BGE embeddings</a> &middot; <a href="https://www.sbert.net/" target="_blank">Sentence-Transformers</a></li>
+</ul>
+
+<h2>17.3 Standards and references</h2>
+<ul>
+  <li><a href="https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-86.pdf" target="_blank">NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response</a></li>
+  <li><a href="https://www.iso.org/standard/44381.html" target="_blank">ISO/IEC 27037 — Guidelines for identification, collection, acquisition and preservation of digital evidence</a></li>
+  <li><a href="https://www.swgde.org/documents/published/" target="_blank">SWGDE — Scientific Working Group on Digital Evidence (published documents)</a></li>
+  <li><a href="https://attack.mitre.org/" target="_blank">MITRE ATT&amp;CK Framework</a></li>
+</ul>
+
+<h1 id="s18">18. Glossary</h1>
+<ul>
+  <li><strong>Artefact</strong> — a piece of original evidence (e.g. a disk image file), as opposed to a fact derived from it.</li>
+  <li><strong>Common Fact Model</strong> — the normalized schema (Entity, Event, Relation) used across all data sources.</li>
+  <li><strong>Provenance</strong> — the chain of references that lets any fact in the graph be traced back to a hashed artefact at a known offset.</li>
+  <li><strong>RAG (Retrieval-Augmented Generation)</strong> — pattern of supplying an LLM with retrieved factual context before generation, so its answers are grounded.</li>
+  <li><strong>Cypher</strong> — Neo4j's query language; the pattern-matching equivalent of SQL for graphs.</li>
+</ul>
+
+<footer>
+  ForenSight AI — Technical Architecture Document &middot; Version 1.0
+</footer>
+
+</body>
+</html>
