@@ -1,0 +1,57 @@
+services:
+  # MongoDB - Primary Document Database
+  mongodb:
+    image: mongo:6.0
+    container_name: forensight-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
+
+  # Neo4j - Graph Database
+  neo4j:
+    image: neo4j:5.12-community
+    container_name: forensight-neo4j
+    ports:
+      - "7474:7474" # HTTP UI
+      - "7687:7687" # Bolt connection
+    volumes:
+      - neo4j_data:/data
+      - neo4j_plugins:/plugins
+    environment:
+      - NEO4J_AUTH=neo4j/forensight_pass # User: neo4j, Pass: forensight_pass
+      - NEO4J_PLUGINS=["apoc", "graph-data-science"]     # Install APOC and Graph Data Science plugins
+    restart: always
+
+  # Redis - Cache & Task Queue Broker
+  redis:
+    image: redis:7.0
+    container_name: forensight-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  # MinIO - Object Storage (Local S3)
+  minio:
+    image: minio/minio
+    container_name: forensight-minio
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Web UI Console Port
+    volumes:
+      - minio_data:/data
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    restart: always
+
+volumes:
+  mongodb_data:
+  neo4j_data:
+  neo4j_plugins:
+  redis_data:
+  minio_data:

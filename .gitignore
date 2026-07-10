@@ -20,6 +20,9 @@ backend/.env
 /datasets/
 /minio_data/
 
+# Private local documentation
+/documentation/
+
 # Node
 node_modules/
 
