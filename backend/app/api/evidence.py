@@ -17,22 +17,6 @@ from bson import ObjectId
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["evidence"])
 
-def get_evidence_type_from_extension(filename: str) -> EvidenceType:
-    """Infer evidence type based on file extension."""
-    ext = filename.split(".")[-1].lower()
-    if ext == "evtx":
-        return EvidenceType.EVTX
-    elif ext in ("pcap", "pcapng"):
-        return EvidenceType.PCAP
-    elif ext in ("db", "sqlite", "sqlite3"):
-        return EvidenceType.BROWSER_SQLITE
-    elif ext == "csv":
-        return EvidenceType.CSV
-    elif ext == "json":
-        return EvidenceType.JSON
-    else:
-        # Default fallback
-        return EvidenceType.JSON
 
 @router.post("/cases/{case_id}/evidence", response_model=EvidenceResponse, status_code=status.HTTP_202_ACCEPTED)
 async def upload_evidence(
@@ -103,7 +87,8 @@ async def upload_evidence(
         )
         
     # 5. Insert metadata into MongoDB
-    inferred_type = get_evidence_type_from_extension(file.filename)
+    from backend.app.services.ingestion.file_detector import FileDetector
+    inferred_type = FileDetector.detect_type(file_bytes.getvalue(), file.filename)
     now = datetime.utcnow()
     evidence_dict = {
         "case_id": ObjectId(case_id),
@@ -122,6 +107,15 @@ async def upload_evidence(
     
     created_evidence = await EvidenceRepository.create(evidence_dict)
     
+    # 6. Trigger background processing task
+    from backend.app.services.ingestion.processing_pipeline import ProcessingPipeline
+    await ProcessingPipeline.trigger_processing(str(created_evidence["_id"]), current_user.organization_id)
+    
+    # Fetch updated state with queued status
+    updated_evidence = await EvidenceRepository.get_by_id(str(created_evidence["_id"]), current_user.organization_id)
+    if updated_evidence:
+        created_evidence = updated_evidence
+        
     # Format MongoDB return values
     created_evidence["id"] = str(created_evidence["_id"])
     created_evidence["case_id"] = str(created_evidence["case_id"])

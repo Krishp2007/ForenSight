@@ -1,6 +1,9 @@
+import logging
 from typing import Optional, Dict, Any, List
 from bson import ObjectId
 from backend.app.db.mongodb import db_client
+
+logger = logging.getLogger(__name__)
 
 class EvidenceRepository:
     @staticmethod
@@ -13,7 +16,8 @@ class EvidenceRepository:
                 "_id": ObjectId(evidence_id),
                 "organization_id": ObjectId(org_id)
             })
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in EvidenceRepository.get_by_id: {e}")
             return None
 
     @staticmethod
@@ -26,7 +30,8 @@ class EvidenceRepository:
                 "case_id": ObjectId(case_id),
                 "sha256": sha256
             })
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in EvidenceRepository.get_by_sha256: {e}")
             return None
 
     @staticmethod
