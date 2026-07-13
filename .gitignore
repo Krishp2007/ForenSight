@@ -23,6 +23,11 @@ backend/.env
 # Private local documentation
 /documentation/
 
+# Local verification and test scripts
+backend/check_connections.py
+backend/test_db_crud.py
+backend/test_auth.py
+
 # Node
 node_modules/
 
