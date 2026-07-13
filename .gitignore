@@ -27,6 +27,11 @@ backend/.env
 backend/check_connections.py
 backend/test_db_crud.py
 backend/test_auth.py
+backend/test_api_endpoints.py
+backend/verify_storage.py
+backend/test_parsers.py
+backend/test_pipeline.py
+backend/test_graph_and_events.py
 
 # Node
 node_modules/
