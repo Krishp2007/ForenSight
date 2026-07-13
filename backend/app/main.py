@@ -60,11 +60,15 @@ from backend.app.api.auth import router as auth_router
 from backend.app.api.organizations import router as org_router
 from backend.app.api.cases import router as cases_router
 from backend.app.api.evidence import router as evidence_router
+from backend.app.api.events import router as events_router
+from backend.app.api.graph import router as graph_router
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(org_router, prefix="/api/v1")
 app.include_router(cases_router, prefix="/api/v1")
 app.include_router(evidence_router, prefix="/api/v1")
+app.include_router(events_router, prefix="/api/v1")
+app.include_router(graph_router, prefix="/api/v1")
 
 @app.get("/")
 def get_root():

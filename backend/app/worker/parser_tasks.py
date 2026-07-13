@@ -26,16 +26,8 @@ def run_async(coro):
 
 async def _process_evidence_async(evidence_id: str, org_id: str):
     """Async database and MinIO helper to process evidence."""
-    # 1. Force reconnect MongoDB client to bind to the active thread's loop context
-    if db_client.client:
-        try:
-            db_client.client.close()
-        except Exception:
-            pass
-            
-    from motor.motor_asyncio import AsyncIOMotorClient
-    db_client.client = AsyncIOMotorClient(settings.MONGODB_URL)
-    db_client.db = db_client.client[settings.MONGODB_DB_NAME]
+    # 1. MongoDB client is automatically initialized on first query via loop-safe lazy loader
+    pass
 
     # 2. Fetch Evidence Metadata
     evidence = await EvidenceRepository.get_by_id(evidence_id, org_id)
@@ -78,8 +70,11 @@ async def _process_evidence_async(evidence_id: str, org_id: str):
         inserted_count = 0
         if enriched_events:
             inserted_count = await EventRepository.bulk_create(enriched_events)
+            logger.info(f"Successfully bulk inserted {inserted_count} events into MongoDB.")
             
-        logger.info(f"Successfully bulk inserted {inserted_count} events into MongoDB.")
+            # 7. Sync parsed events to Neo4j graph database
+            from backend.app.repositories.graph_repository import GraphRepository
+            await GraphRepository.bulk_import_events(enriched_events)
         
         # Update evidence status to parsed
         await EvidenceRepository.update_status(evidence_id, org_id, EvidenceStatus.PARSED.value)
