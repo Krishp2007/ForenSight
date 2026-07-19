@@ -101,7 +101,8 @@ class GraphRepository:
         MATCH (s:Entity {case_id: $case_id, organization_id: $org_id})-[r:FORENSIC_ACTION {case_id: $case_id, organization_id: $org_id}]->(o:Entity {case_id: $case_id, organization_id: $org_id})
         RETURN s.name AS source_name, s.type AS source_type,
                o.name AS target_name, o.type AS target_type,
-               r.action AS action, r.severity AS severity, r.timestamp AS timestamp, r.event_id AS event_id
+               r.action AS action, r.severity AS severity, r.timestamp AS timestamp, r.event_id AS event_id,
+               r.is_anomaly AS is_anomaly, r.anomaly_score AS anomaly_score
         LIMIT 1000
         """
         
@@ -132,7 +133,9 @@ class GraphRepository:
                         "action": record["action"],
                         "severity": record["severity"],
                         "timestamp": record["timestamp"],
-                        "event_id": record["event_id"]
+                        "event_id": record["event_id"],
+                        "is_anomaly": record.get("is_anomaly", False),
+                        "anomaly_score": record.get("anomaly_score", 0.0)
                     })
                     
             return {

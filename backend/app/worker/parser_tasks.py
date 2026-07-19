@@ -79,6 +79,10 @@ async def _process_evidence_async(evidence_id: str, org_id: str):
         # Update evidence status to parsed
         await EvidenceRepository.update_status(evidence_id, org_id, EvidenceStatus.PARSED.value)
         
+        # 8. Trigger ML anomaly detection task for the case context
+        from backend.app.worker.ml_tasks import run_anomaly_detection_task
+        run_anomaly_detection_task.delay(str(evidence["case_id"]), org_id)
+        
     except Exception as e:
         logger.error(f"Error parsing evidence {evidence_id}: {e}")
         # Update status to failed
