@@ -62,6 +62,10 @@ class EventResponse(EventBase):
     case_id: str = Field(..., description="Parent case ID")
     evidence_id: str = Field(..., description="Originating evidence ID")
     organization_id: str = Field(..., description="Owner organization ID")
+    
+    # Optional semantic search rank properties
+    distance: Optional[float] = Field(default=None, description="FAISS L2 search match distance")
+    search_sentence: Optional[str] = Field(default=None, description="Formatted sentence used for vector embedding matching")
 
     class Config:
         from_attributes = True

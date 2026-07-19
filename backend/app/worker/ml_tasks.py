@@ -25,4 +25,9 @@ def run_anomaly_detection_task(case_id: str, org_id: str):
         
     result = run_async(run())
     logger.info(f"ML anomaly task completed. Result: {result}")
+    
+    # Trigger vector embedding generation task for case context
+    from backend.app.worker.embedding_tasks import generate_event_embeddings_task
+    generate_event_embeddings_task.delay(case_id, org_id)
+    
     return result

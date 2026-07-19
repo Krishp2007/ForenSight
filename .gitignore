@@ -33,6 +33,7 @@ backend/test_parsers.py
 backend/test_pipeline.py
 backend/test_graph_and_events.py
 backend/test_ml_anomalies.py
+backend/test_ai_copilot.py
 
 # Node
 node_modules/
