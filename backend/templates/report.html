@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>ForenSight Forensic Investigation Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #64748b;
+            }
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.5;
+            font-size: 10pt;
+            margin: 0;
+            padding: 0;
+        }
+        h1, h2, h3, h4 {
+            color: #0f172a;
+            margin-top: 0;
+        }
+        h1 {
+            font-size: 20pt;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            font-size: 14pt;
+            color: #1e3a8a;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 4px;
+            margin-top: 30px;
+            margin-bottom: 12px;
+            page-break-after: avoid;
+        }
+        h3 {
+            font-size: 11pt;
+            color: #3b82f6;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+        p {
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        .header-table td {
+            padding: 0;
+            vertical-align: top;
+        }
+        .logo-title {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+        }
+        .logo-subtitle {
+            font-size: 9pt;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+        .meta-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px 15px;
+            font-size: 9pt;
+            margin-bottom: 25px;
+        }
+        .meta-grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .meta-grid td {
+            padding: 3px 0;
+            vertical-align: top;
+        }
+        .meta-label {
+            font-weight: bold;
+            color: #64748b;
+            width: 120px;
+        }
+        .meta-val {
+            color: #0f172a;
+        }
+        /* Stats Cards */
+        .stats-container {
+            display: table;
+            width: 100%;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            display: table-cell;
+            width: 33.33%;
+            background-color: #f1f5f9;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        .stat-card:not(:last-child) {
+            border-right: 10px solid white; /* hack to emulate gap in pdf tables */
+        }
+        .stat-number {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin-bottom: 4px;
+        }
+        .stat-label {
+            font-size: 8pt;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        /* Tables */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 8.5pt;
+        }
+        table.data-table th, table.data-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        table.data-table th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: bold;
+        }
+        table.data-table tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 7.5pt;
+            font-weight: bold;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .badge-critical { background-color: #fee2e2; color: #991b1b; }
+        .badge-high { background-color: #ffedd5; color: #c2410c; }
+        .badge-medium { background-color: #fef9c3; color: #854d0e; }
+        .badge-low { background-color: #ecfdf5; color: #065f46; }
+        .badge-info { background-color: #e0f2fe; color: #075985; }
+        .badge-anomaly { background-color: #fae8ff; color: #86198f; }
+        
+        ul {
+            margin-top: 0;
+            margin-bottom: 12px;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        code {
+            font-family: Consolas, Monaco, monospace;
+            background-color: #f1f5f9;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 8.5pt;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <table class="header-table">
+        <tr>
+            <td>
+                <div class="logo-title">FORENSIGHT AI</div>
+                <div class="logo-subtitle">Incident Investigation Audit Report</div>
+            </td>
+            <td style="text-align: right; font-size: 8pt; color: #64748b; line-height: 1.3;">
+                ForenSight Security Systems Inc.<br>
+                Verification Authority: Local ML & AI Engine<br>
+                Date Generated: {{ date_generated }}
+            </td>
+        </tr>
+    </table>
+
+    <!-- Case Meta Box -->
+    <div class="meta-box">
+        <table class="meta-grid">
+            <tr>
+                <td class="meta-label">Case Title:</td>
+                <td class="meta-val" style="font-weight: bold;">{{ case.title }}</td>
+                <td class="meta-label">Case ID:</td>
+                <td class="meta-val"><code>{{ case_id }}</code></td>
+            </tr>
+            <tr>
+                <td class="meta-label">Description:</td>
+                <td class="meta-val" colspan="3">{{ case.description or 'No description provided.' }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Stats summary grid -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_events }}</div>
+            <div class="stat-label">Total Events Analyzed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: #991b1b;">{{ anomalies_count }}</div>
+            <div class="stat-label">Outlying Anomalies</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: #c2410c;">{{ critical_high_count }}</div>
+            <div class="stat-label">Critical / High Severity</div>
+        </div>
+    </div>
+
+    <!-- AI Copilot Audit Analysis -->
+    <h2>1. AI Security Copilot Analysis</h2>
+    <div class="copilot-report">
+        {{ copilot_analysis_html | safe }}
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- Critical Anomalies Timeline -->
+    <h2>2. Flagged ML Anomalies</h2>
+    <p>The following events were classified as outliers by the local Isolation Forest machine learning engine (contamination setting: 5%). These processes or network calls show abnormal behaviors, timings, or parameters:</p>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 120px;">Timestamp</th>
+                <th>Subject</th>
+                <th>Action</th>
+                <th>Object</th>
+                <th style="width: 70px; text-align: center;">Score</th>
+                <th style="width: 70px; text-align: center;">Severity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in anomalies %}
+            <tr>
+                <td>{{ a.timestamp }}</td>
+                <td><code>{{ a.subject }}</code></td>
+                <td>{{ a.action }}</td>
+                <td><code>{{ a.object }}</code></td>
+                <td style="text-align: center; font-weight: bold; color: #86198f;">{{ "%.4f"|format(a.anomaly_score) }}</td>
+                <td style="text-align: center;">
+                    <span class="badge badge-{{ a.severity }}">{{ a.severity }}</span>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; color: #64748b;">No anomalies were flagged for this case.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Forensic Connections Graph -->
+    <h2>3. Incident Entity Relationships</h2>
+    <p>The Subject-Action-Object links below map the forensic relationships stored inside the Neo4j Graph Database. These represent the logical timeline paths that occurred in the case context:</p>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Source Node (Subject)</th>
+                <th style="width: 120px;">Action (Relationship)</th>
+                <th>Target Node (Object)</th>
+                <th style="width: 70px; text-align: center;">Severity</th>
+                <th style="width: 80px; text-align: center;">Outlier Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for edge in graph.edges %}
+            <tr>
+                <td><code>{{ edge.source }}</code></td>
+                <td style="font-weight: bold; color: #1e3a8a;">{{ edge.action }}</td>
+                <td><code>{{ edge.target }}</code></td>
+                <td style="text-align: center;">
+                    <span class="badge badge-{{ edge.severity }}">{{ edge.severity }}</span>
+                </td>
+                <td style="text-align: center;">
+                    {% if edge.is_anomaly %}
+                    <span class="badge badge-anomaly">Anomaly</span>
+                    {% else %}
+                    <span style="color: #64748b; font-size: 8pt;">Normal</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: #64748b;">No entity relationships are indexed for this case.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>

@@ -74,19 +74,7 @@ class CopilotService:
         if question:
             semantic_context = await VectorStore.search_similar_events(case_id, org_id, query=question, limit=5)
             
-        # Check LLM provider choice from config setting
-        llm_provider = os.getenv("LLM_PROVIDER", settings.LLM_PROVIDER).lower()
-        if llm_provider == "local":
-            logger.info("LLM provider explicitly set to 'local'. Using local heuristic analysis.")
-            return cls.get_fallback_summary(case, anomalies, semantic_context, question)
-            
-        # Default to 'gemini'
-        api_key = os.getenv("GEMINI_API_KEY", settings.GEMINI_API_KEY)
-        if not api_key or api_key == "change_me_in_production":
-            logger.info("Gemini API key not configured. Falling back to local analysis.")
-            return cls.get_fallback_summary(case, anomalies, semantic_context, question)
-            
-        # 4. Formulate Prompt
+        # 4. Formulate Prompt (shared by both Gemini and Ollama)
         prompt_lines = []
         prompt_lines.append(f"You are Antigravity, a forensic investigator assistant analyzing case logs for the 'ForenSight AI' platform.")
         prompt_lines.append(f"Analyze the following security investigation details:\n")
@@ -103,14 +91,44 @@ class CopilotService:
         for idx, a in enumerate(anomalies[:10]):
             prompt_lines.append(f"- At {a.get('timestamp')}, Subject '{a.get('subject')}' did '{a.get('action')}' to '{a.get('object')}'. Severity: {a.get('severity')}. Anomaly Score: {a.get('anomaly_score', 0.0):.4f}.")
             
-        prompt_lines.append("\nTask: Based on these anomalies and matching logs, write a detailed forensic analysis report in Markdown. Highlight potential attack patterns (like execution, persistence, or data staging), specify which nodes are suspicious, and recommend immediate containment steps. Keep your tone professional, concise, and objective.")
+        prompt_lines.append("\nTask: Based on these anomalies and matching logs, write a detailed forensic analysis report in Markdown. Highlight potential attack patterns (like execution, persistence, or data staging), specify which nodes are suspicious, and recommend immediate containment steps. Keep your tone professional, concise, and objective. If the question is a general conversation or math query (like 'how are you' or '2+2'), reply to it naturally while linking it to the investigation context if relevant.")
         
         prompt = "\n".join(prompt_lines)
+
+        # Check LLM provider choice from config setting
+        llm_provider = os.getenv("LLM_PROVIDER", settings.LLM_PROVIDER).lower()
         
-        # 5. Call Gemini API in executor pool to maintain async responsiveness
+        if llm_provider == "local":
+            logger.info("LLM provider explicitly set to 'local'. Using local heuristic analysis.")
+            return cls.get_fallback_summary(case, anomalies, semantic_context, question)
+            
+        elif llm_provider == "ollama":
+            import httpx
+            logger.info(f"Using local Ollama LLM provider ({settings.OLLAMA_MODEL}) at {settings.OLLAMA_HOST}")
+            try:
+                async with httpx.AsyncClient(timeout=45.0) as client:
+                    payload = {
+                        "model": settings.OLLAMA_MODEL,
+                        "prompt": prompt,
+                        "stream": False
+                    }
+                    response = await client.post(f"{settings.OLLAMA_HOST}/api/generate", json=payload)
+                    if response.status_code == 200:
+                        return response.json().get("response", "No response returned from Ollama.")
+                    else:
+                        raise ValueError(f"Ollama server returned status code {response.status_code}: {response.text}")
+            except Exception as e:
+                logger.error(f"Local Ollama invocation failed: {e}. Falling back to local heuristic analysis.")
+                return cls.get_fallback_summary(case, anomalies, semantic_context, question)
+                
+        # Default/Gemini Path
+        api_key = os.getenv("GEMINI_API_KEY", settings.GEMINI_API_KEY)
+        if not api_key or api_key == "change_me_in_production":
+            logger.info("Gemini API key not configured. Falling back to local analysis.")
+            return cls.get_fallback_summary(case, anomalies, semantic_context, question)
+            
         try:
             genai.configure(api_key=api_key)
-            # Use lightweight flash model for fast latency responses
             model = genai.GenerativeModel("gemini-1.5-flash")
             
             loop = asyncio.get_running_loop()

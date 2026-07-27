@@ -64,6 +64,7 @@ from backend.app.api.events import router as events_router
 from backend.app.api.graph import router as graph_router
 from backend.app.api.chat import router as chat_router
 from backend.app.api.similarity import router as similarity_router
+from backend.app.api.reports import router as reports_router
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(org_router, prefix="/api/v1")
@@ -73,6 +74,7 @@ app.include_router(events_router, prefix="/api/v1")
 app.include_router(graph_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(similarity_router, prefix="/api/v1")
+app.include_router(reports_router, prefix="/api/v1")
 
 @app.get("/")
 def get_root():

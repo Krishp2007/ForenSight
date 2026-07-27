@@ -4,6 +4,10 @@ import logging
 import numpy as np
 import faiss
 from typing import List, Dict, Any
+
+# Suppress harmless HuggingFace hub rate limit/symlinks warning logs
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
 from sentence_transformers import SentenceTransformer
 from bson import ObjectId
 

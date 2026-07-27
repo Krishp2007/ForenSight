@@ -34,6 +34,11 @@ backend/test_pipeline.py
 backend/test_graph_and_events.py
 backend/test_ml_anomalies.py
 backend/test_ai_copilot.py
+backend/test_reports.py
+backend/save_demo_report.py
+backend/chat_cli.py
+backend/report_demo.html
+backend/report_demo.pdf
 
 # Node
 node_modules/
