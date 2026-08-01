@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-from backend.app.schemas.user import UserCreate, UserResponse, Token
+from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate, Token
 from backend.app.repositories.user_repository import UserRepository
 from backend.app.repositories.organization_repository import OrganizationRepository
 from backend.app.auth.password import hash_password, verify_password
@@ -97,3 +97,42 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
 async def get_me(current_user: UserResponse = Depends(get_current_user)):
     """Retrieve logged-in user profile details."""
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    payload: UserUpdate,
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Update the logged-in user's profile (username, email, password)."""
+    update_fields: dict = {"updated_at": datetime.utcnow()}
+
+    if payload.username is not None:
+        update_fields["username"] = payload.username
+
+    if payload.email is not None:
+        # Ensure new email is not taken by another account
+        existing = await UserRepository.get_by_email(payload.email)
+        if existing and str(existing["_id"]) != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email address is already in use by another account.",
+            )
+        update_fields["email"] = payload.email
+
+    if payload.password is not None:
+        update_fields["hashed_password"] = hash_password(payload.password)
+
+    if len(update_fields) == 1:  # only updated_at — nothing to do
+        return current_user
+
+    updated = await UserRepository.update(current_user.id, update_fields)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update profile.",
+        )
+
+    updated["id"] = str(updated["_id"])
+    updated["organization_id"] = str(updated["organization_id"])
+    return UserResponse(**updated)

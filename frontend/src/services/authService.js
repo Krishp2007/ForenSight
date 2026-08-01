@@ -22,3 +22,9 @@ export const getMe = async () => {
   const res = await api.get('/auth/me')
   return res.data
 }
+
+// PATCH /auth/me — update username, email, and/or password
+export const updateMe = async (payload) => {
+  const res = await api.patch('/auth/me', payload)
+  return res.data
+}

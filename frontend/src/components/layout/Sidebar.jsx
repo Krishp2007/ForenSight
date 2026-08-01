@@ -1,7 +1,6 @@
 import { NavLink, useParams } from 'react-router-dom'
 import {
   LayoutDashboard,
-  FolderOpen,
   Upload,
   GitBranch,
   Clock,
@@ -10,87 +9,171 @@ import {
   Shield,
   Link,
   ShieldCheck,
+  UserCircle,
 } from 'lucide-react'
-
-const navBase =
-  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors'
-const active = 'bg-blue-600 text-white'
-const inactive = 'text-gray-400 hover:bg-gray-700 hover:text-white'
 
 const Sidebar = () => {
   const { caseId } = useParams()
 
+  const navItemStyle = (isActive) => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '8px 12px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '500',
+    textDecoration: 'none',
+    transition: 'background 0.15s, color 0.15s',
+    background: isActive ? '#4a7fe8' : 'transparent',
+    color: isActive ? '#ffffff' : '#9aa8c0',
+    cursor: 'pointer',
+  })
+
   return (
-    <aside className="w-56 shrink-0 bg-gray-900 min-h-screen flex flex-col p-4 gap-1">
+    <aside style={{
+      width: '220px',
+      flexShrink: 0,
+      background: '#1e2a3d',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      padding: '16px',
+      gap: '4px',
+      borderRight: '1px solid #2d3748',
+    }}>
       {/* Brand */}
-      <div className="flex items-center gap-2 mb-6 px-1">
-        <Shield size={22} className="text-blue-500" />
-        <span className="text-white font-bold text-base tracking-tight">ForenSight</span>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        marginBottom: '24px',
+        padding: '4px 4px',
+      }}>
+        <div style={{
+          width: '34px', height: '34px',
+          background: 'rgba(96,165,250,0.15)',
+          border: '1px solid rgba(96,165,250,0.35)',
+          borderRadius: '8px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Shield size={17} color="#60a5fa" />
+        </div>
+        <div>
+          <div style={{ color: '#ffffff', fontWeight: '700', fontSize: '15px', letterSpacing: '-0.2px' }}>
+            ForenSight
+          </div>
+          <div style={{ color: '#6b7fa3', fontSize: '9px', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+            AI Forensics
+          </div>
+        </div>
       </div>
 
       {/* Global nav */}
-      <NavLink to="/dashboard" className={({ isActive }) => `${navBase} ${isActive ? active : inactive}`}>
-        <LayoutDashboard size={16} />
+      <NavLink
+        to="/dashboard"
+        style={({ isActive }) => navItemStyle(isActive)}
+        onMouseEnter={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = '#2a3347' }}
+        onMouseLeave={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = 'transparent' }}
+      >
+        <LayoutDashboard size={15} />
         Dashboard
       </NavLink>
 
       {/* Case-scoped nav — only visible when inside a case */}
       {caseId && (
         <>
-          <div className="mt-4 mb-1 px-3 text-xs text-gray-500 uppercase tracking-widest">
+          <div style={{
+            marginTop: '16px',
+            marginBottom: '4px',
+            padding: '0 12px',
+            fontSize: '10px',
+            color: '#4a5568',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            fontWeight: '600',
+          }}>
             Current Case
           </div>
           <NavLink
             to={`/cases/${caseId}/evidence`}
-            className={({ isActive }) => `${navBase} ${isActive ? active : inactive}`}
+            style={({ isActive }) => navItemStyle(isActive)}
+            onMouseEnter={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = '#2a3347' }}
+            onMouseLeave={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = 'transparent' }}
           >
-            <Upload size={16} />
+            <Upload size={15} />
             Evidence
           </NavLink>
           <NavLink
             to={`/cases/${caseId}/timeline`}
-            className={({ isActive }) => `${navBase} ${isActive ? active : inactive}`}
+            style={({ isActive }) => navItemStyle(isActive)}
+            onMouseEnter={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = '#2a3347' }}
+            onMouseLeave={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = 'transparent' }}
           >
-            <Clock size={16} />
+            <Clock size={15} />
             Timeline
           </NavLink>
           <NavLink
             to={`/cases/${caseId}/graph`}
-            className={({ isActive }) => `${navBase} ${isActive ? active : inactive}`}
+            style={({ isActive }) => navItemStyle(isActive)}
+            onMouseEnter={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = '#2a3347' }}
+            onMouseLeave={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = 'transparent' }}
           >
-            <GitBranch size={16} />
+            <GitBranch size={15} />
             Graph
           </NavLink>
           <NavLink
             to={`/cases/${caseId}/correlations`}
-            className={({ isActive }) => `${navBase} ${isActive ? active : inactive}`}
+            style={({ isActive }) => navItemStyle(isActive)}
+            onMouseEnter={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = '#2a3347' }}
+            onMouseLeave={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = 'transparent' }}
           >
-            <Link size={16} />
+            <Link size={15} />
             Correlations
           </NavLink>
           <NavLink
             to={`/cases/${caseId}/chat`}
-            className={({ isActive }) => `${navBase} ${isActive ? active : inactive}`}
+            style={({ isActive }) => navItemStyle(isActive)}
+            onMouseEnter={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = '#2a3347' }}
+            onMouseLeave={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = 'transparent' }}
           >
-            <MessageSquare size={16} />
+            <MessageSquare size={15} />
             Copilot
           </NavLink>
           <NavLink
             to={`/cases/${caseId}/report`}
-            className={({ isActive }) => `${navBase} ${isActive ? active : inactive}`}
+            style={({ isActive }) => navItemStyle(isActive)}
+            onMouseEnter={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = '#2a3347' }}
+            onMouseLeave={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = 'transparent' }}
           >
-            <FileText size={16} />
+            <FileText size={15} />
             Report
           </NavLink>
           <NavLink
             to={`/cases/${caseId}/audit`}
-            className={({ isActive }) => `${navBase} ${isActive ? active : inactive}`}
+            style={({ isActive }) => navItemStyle(isActive)}
+            onMouseEnter={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = '#2a3347' }}
+            onMouseLeave={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = 'transparent' }}
           >
-            <ShieldCheck size={16} />
+            <ShieldCheck size={15} />
             Audit Trail
           </NavLink>
         </>
       )}
+      {/* Profile link — pinned at bottom */}
+      <div style={{ flex: 1 }} />
+      <div style={{ borderTop: '1px solid #2d3748', paddingTop: '12px' }}>
+        <NavLink
+          to="/profile"
+          style={({ isActive }) => navItemStyle(isActive)}
+          onMouseEnter={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = '#2a3347' }}
+          onMouseLeave={e => { if (e.currentTarget.style.background !== 'rgb(74, 127, 232)') e.currentTarget.style.background = 'transparent' }}
+        >
+          <UserCircle size={15} />
+          Profile &amp; Settings
+        </NavLink>
+      </div>
     </aside>
   )
 }

@@ -7,6 +7,7 @@ import RegisterPage from './pages/RegisterPage'
 import OrganizationSetupPage from './pages/OrganizationSetupPage'
 import DashboardPage from './pages/DashboardPage'
 import CaseDetailPage from './pages/CaseDetailPage'
+import ProfilePage from './pages/ProfilePage'
 import AppShell from './components/layout/AppShell'
 
 // Only redirect to login if there is NO token at all
@@ -33,7 +34,8 @@ const AppRoutes = () => {
       <Route path="/setup"    element={<OrganizationSetupPage />} />
 
       <Route element={<Protected><AppShell /></Protected>}>
-        <Route path="/dashboard"        element={<DashboardPage />} />
+        <Route path="/dashboard"          element={<DashboardPage />} />
+        <Route path="/profile"            element={<ProfilePage />} />
         <Route path="/cases/:caseId/:tab" element={<CaseDetailPage />} />
         <Route path="/"                 element={<Navigate to="/dashboard" replace />} />
       </Route>

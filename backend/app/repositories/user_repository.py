@@ -27,3 +27,19 @@ class UserRepository:
         result = await db_client.db["users"].insert_one(user_data)
         user_data["_id"] = result.inserted_id
         return user_data
+
+    @staticmethod
+    async def update(user_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update user fields by ID, return updated document."""
+        if not ObjectId.is_valid(user_id):
+            return None
+        try:
+            from pymongo import ReturnDocument
+            result = await db_client.db["users"].find_one_and_update(
+                {"_id": ObjectId(user_id)},
+                {"$set": update_data},
+                return_document=ReturnDocument.AFTER,
+            )
+            return result
+        except Exception:
+            return None
