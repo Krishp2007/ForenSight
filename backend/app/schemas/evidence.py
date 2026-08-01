@@ -39,6 +39,8 @@ class EvidenceResponse(EvidenceBase):
     minio_object_name: str = Field(..., description="Internal storage object identifier")
     status: EvidenceStatus
     error_message: Optional[str] = None
+    parsing_started_at: Optional[datetime] = None
+    parsed_at: Optional[datetime] = None
     created_by: str = Field(..., description="The User ID who uploaded the file")
     created_at: datetime
     updated_at: datetime

@@ -95,6 +95,7 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
               <th style={thStyle}>Type</th>
               <th style={thStyle}>Size</th>
               <th style={thStyle}>Status</th>
+              <th style={thStyle}>Scan Time</th>
               <th style={thStyle}>Uploaded</th>
               <th style={thStyle}>SHA-256</th>
               <th style={thStyle}>Actions</th>
@@ -120,6 +121,25 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
                     )}
                   </div>
                   {e.error_message && <p style={{ color: '#fca5a5', fontSize: '11px', margin: '3px 0 0 0' }}>{e.error_message}</p>}
+                </td>
+                <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                  {(() => {
+                    if (e.status === 'parsed' && e.parsing_started_at && e.parsed_at) {
+                      const secs = Math.round(
+                        (new Date(e.parsed_at) - new Date(e.parsing_started_at)) / 1000
+                      )
+                      const color = secs < 10 ? '#34d399' : secs < 60 ? '#fbbf24' : '#f87171'
+                      return (
+                        <span style={{ fontSize: '12px', fontWeight: '600', color }}>
+                          {secs}s
+                        </span>
+                      )
+                    }
+                    if (['queued','parsing'].includes(e.status)) {
+                      return <span style={{ fontSize: '11px', color: '#fbbf24' }}>scanning…</span>
+                    }
+                    return <span style={{ color: '#4a5568', fontSize: '11px' }}>—</span>
+                  })()}
                 </td>
                 <td style={{ padding: '10px 14px', color: '#9aa8c0', fontSize: '11px', whiteSpace: 'nowrap' }}>{formatDateTime(e.created_at)}</td>
                 <td style={{ padding: '10px 14px', color: '#4a5568', fontSize: '11px', fontFamily: 'monospace', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

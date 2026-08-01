@@ -77,11 +77,17 @@ class EvidenceRepository:
         try:
             if not ObjectId.is_valid(evidence_id) or not ObjectId.is_valid(org_id):
                 return None
-            update_fields: Dict[str, Any] = {"status": status}
+            from datetime import datetime
+            update_fields: Dict[str, Any] = {"status": status, "updated_at": datetime.utcnow()}
             if status in ("parsed", "parsing", "queued"):
                 update_fields["error_message"] = None
             elif error_message is not None:
                 update_fields["error_message"] = error_message
+            # Track timing
+            if status == "parsing":
+                update_fields["parsing_started_at"] = datetime.utcnow()
+            if status == "parsed":
+                update_fields["parsed_at"] = datetime.utcnow()
             from pymongo import ReturnDocument
             result = await db_client.db["evidence"].find_one_and_update(
                 {"_id": ObjectId(evidence_id), "organization_id": ObjectId(org_id)},
