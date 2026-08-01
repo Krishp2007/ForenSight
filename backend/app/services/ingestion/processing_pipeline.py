@@ -86,8 +86,11 @@ async def _run_full_pipeline(evidence_id: str, org_id: str):
             logger.info(f"[PIPELINE] Inserted {count} events to MongoDB")
 
             # 6. Sync to Neo4j
-            await GraphRepository.bulk_import_events(enriched)
-            logger.info(f"[PIPELINE] Synced to Neo4j")
+            synced = await GraphRepository.bulk_import_events(enriched)
+            if synced == 0:
+                logger.warning(f"[PIPELINE] ⚠️ Neo4j sync returned 0 — driver may be unavailable or all events lacked subject/object fields. Graph view will be empty.")
+            else:
+                logger.info(f"[PIPELINE] Synced {synced} events to Neo4j")
 
         # 7. Mark parsed
         await EvidenceRepository.update_status(evidence_id, org_id, EvidenceStatus.PARSED.value)

@@ -192,7 +192,7 @@ const CaseDetailPage = () => {
         {activeTab === 'evidence' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <EvidenceUpload caseId={caseId} onUploaded={handleEvidenceUploaded} />
-            <EvidenceList items={evidence} onItemUpdated={handleEvidenceUpdated} />
+            <EvidenceList items={evidence} caseId={caseId} onItemUpdated={handleEvidenceUpdated} />
           </div>
         )}
         {activeTab === 'timeline'     && <EventTimeline caseId={caseId} />}

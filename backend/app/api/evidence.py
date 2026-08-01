@@ -140,7 +140,44 @@ async def upload_evidence(
     )
     return created_evidence
 
-@router.get("/cases/{case_id}/evidence", response_model=List[EvidenceResponse])
+@router.post("/cases/{case_id}/evidence/{evidence_id}/reprocess", status_code=status.HTTP_202_ACCEPTED)
+async def reprocess_evidence(
+    case_id: str,
+    evidence_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Re-trigger full processing pipeline for already-uploaded evidence (re-syncs Neo4j, anomalies, embeddings)."""
+    require_investigator(current_user.role)
+
+    if not ObjectId.is_valid(case_id) or not ObjectId.is_valid(evidence_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ID format")
+
+    case = await CaseRepository.get_by_id(case_id, current_user.organization_id)
+    if not case:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found or access denied")
+
+    evidence = await EvidenceRepository.get_by_id(evidence_id, current_user.organization_id)
+    if not evidence:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found")
+
+    # Reset status so the pipeline runs again
+    from backend.app.schemas.evidence import EvidenceStatus
+    await EvidenceRepository.update_status(evidence_id, current_user.organization_id, EvidenceStatus.UPLOADED.value)
+
+    from backend.app.services.ingestion.processing_pipeline import ProcessingPipeline
+    await ProcessingPipeline.trigger_processing(evidence_id, current_user.organization_id)
+
+    await AuditRepository.log(
+        actor_id=current_user.id,
+        org_id=current_user.organization_id,
+        action="evidence.reprocess",
+        entity_type="evidence",
+        entity_id=evidence_id,
+        metadata={"filename": evidence.get("filename"), "case_id": case_id},
+    )
+    return {"detail": "Re-processing started", "evidence_id": evidence_id}
+
+
 async def list_case_evidence(
     case_id: str,
     current_user: UserResponse = Depends(get_current_user)

@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { getEvidence } from '../../services/evidenceService'
-import { formatBytes, formatDateTime, evidenceStatusColor, humanize } from '../../utils/formatters'
-import { FileText, RefreshCw } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { getEvidence, reprocessEvidence } from '../../services/evidenceService'
+import { formatBytes, formatDateTime, humanize } from '../../utils/formatters'
+import { FileText, RefreshCw, RotateCcw } from 'lucide-react'
 import EmptyState from '../ui/EmptyState'
 
 const POLLING_INTERVAL = 4000
@@ -34,8 +34,21 @@ const StatusPill = ({ status }) => {
   )
 }
 
-const EvidenceList = ({ items, onItemUpdated }) => {
+const EvidenceList = ({ items, caseId, onItemUpdated }) => {
   const timerRef = useRef(null)
+  const [reprocessing, setReprocessing] = useState({})
+
+  const handleReprocess = async (ev) => {
+    setReprocessing(p => ({ ...p, [ev.id]: true }))
+    try {
+      await reprocessEvidence(caseId, ev.id)
+      onItemUpdated({ ...ev, status: 'queued' })
+    } catch (e) {
+      console.error('Reprocess failed', e)
+    } finally {
+      setReprocessing(p => ({ ...p, [ev.id]: false }))
+    }
+  }
 
   useEffect(() => {
     const pending = items.filter((e) => !TERMINAL.includes(e.status))
@@ -78,6 +91,7 @@ const EvidenceList = ({ items, onItemUpdated }) => {
             <th style={thStyle}>Status</th>
             <th style={thStyle}>Uploaded</th>
             <th style={thStyle}>SHA-256</th>
+            <th style={thStyle}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -117,6 +131,29 @@ const EvidenceList = ({ items, onItemUpdated }) => {
               </td>
               <td style={{ padding: '10px 16px', color: '#4a5568', fontSize: '11px', fontFamily: 'monospace', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {e.sha256?.slice(0, 12)}…
+              </td>
+              <td style={{ padding: '10px 16px' }}>
+                <button
+                  onClick={() => handleReprocess(e)}
+                  disabled={reprocessing[e.id] || !['parsed', 'failed', 'uploaded'].includes(e.status)}
+                  title="Re-run full pipeline: re-sync to Neo4j, re-run anomaly detection and embeddings"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '5px',
+                    padding: '4px 10px', borderRadius: '6px', border: 'none',
+                    background: reprocessing[e.id] ? 'rgba(96,165,250,0.1)' : 'rgba(96,165,250,0.15)',
+                    color: '#60a5fa', fontSize: '11px', fontWeight: '600',
+                    cursor: (reprocessing[e.id] || !['parsed', 'failed', 'uploaded'].includes(e.status))
+                      ? 'not-allowed' : 'pointer',
+                    opacity: !['parsed', 'failed', 'uploaded'].includes(e.status) ? 0.4 : 1,
+                    fontFamily: 'inherit', whiteSpace: 'nowrap',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={el => { if (!reprocessing[e.id]) el.currentTarget.style.background = 'rgba(96,165,250,0.25)' }}
+                  onMouseLeave={el => el.currentTarget.style.background = 'rgba(96,165,250,0.15)'}
+                >
+                  <RotateCcw size={11} style={{ animation: reprocessing[e.id] ? 'spin 1s linear infinite' : 'none' }} />
+                  {reprocessing[e.id] ? 'Starting…' : 'Re-process'}
+                </button>
               </td>
             </tr>
           ))}

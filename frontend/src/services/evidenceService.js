@@ -22,3 +22,9 @@ export const getEvidence = async (evidenceId) => {
   const res = await api.get(`/evidence/${evidenceId}`)
   return res.data
 }
+
+// POST /cases/:caseId/evidence/:evidenceId/reprocess
+export const reprocessEvidence = async (caseId, evidenceId) => {
+  const res = await api.post(`/cases/${caseId}/evidence/${evidenceId}/reprocess`)
+  return res.data
+}
