@@ -50,6 +50,7 @@ class GraphRepository:
             timestamp: event.timestamp,
             severity: event.severity,
             event_id: event.event_id,
+            evidence_id: event.evidence_id,
             case_id: event.case_id,
             organization_id: event.organization_id
         }]->(o)
@@ -74,6 +75,7 @@ class GraphRepository:
                 "timestamp": e["timestamp"].isoformat() if hasattr(e["timestamp"], "isoformat") else str(e["timestamp"]),
                 "severity": str(e["severity"]),
                 "event_id": str(e["_id"]) if "_id" in e else str(e.get("id", "")),
+                "evidence_id": str(e.get("evidence_id", "")),
                 "case_id": str(e["case_id"]),
                 "organization_id": str(e["organization_id"])
             })

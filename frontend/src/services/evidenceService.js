@@ -1,6 +1,5 @@
 import api from './api'
 
-// POST /cases/:id/evidence  — multipart file upload
 export const uploadEvidence = async (caseId, file, onUploadProgress) => {
   const form = new FormData()
   form.append('file', file)
@@ -11,20 +10,34 @@ export const uploadEvidence = async (caseId, file, onUploadProgress) => {
   return res.data
 }
 
-// GET /cases/:id/evidence
 export const listEvidence = async (caseId) => {
   const res = await api.get(`/cases/${caseId}/evidence`)
   return res.data
 }
 
-// GET /evidence/:id
 export const getEvidence = async (evidenceId) => {
   const res = await api.get(`/evidence/${evidenceId}`)
   return res.data
 }
 
-// POST /cases/:caseId/evidence/:evidenceId/reprocess
 export const reprocessEvidence = async (caseId, evidenceId) => {
   const res = await api.post(`/cases/${caseId}/evidence/${evidenceId}/reprocess`)
+  return res.data
+}
+
+export const deleteEvidence = async (caseId, evidenceId) => {
+  await api.delete(`/cases/${caseId}/evidence/${evidenceId}`)
+}
+
+export const getEvidenceGraph = async (caseId, evidenceId) => {
+  const res = await api.get(`/cases/${caseId}/evidence/${evidenceId}/graph`)
+  return res.data
+}
+
+export const getEvidenceReport = async (caseId, evidenceId) => {
+  const res = await api.get(`/cases/${caseId}/evidence/${evidenceId}/report/html`, {
+    headers: { Accept: 'text/html' },
+    responseType: 'text',
+  })
   return res.data
 }

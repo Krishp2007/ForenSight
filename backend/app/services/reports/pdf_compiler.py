@@ -172,8 +172,11 @@ class ReportCompiler:
     async def compile_html_report(cls, case_id: str, org_id: str) -> str:
         """Render the Jinja2 report template with case metadata, returning a full HTML string."""
         context = await cls.get_report_context(case_id, org_id)
-        
-        # Load Jinja2 template via Environment for full filter support
+        return cls._render_template(context)
+
+    @staticmethod
+    def _render_template(context: Dict[str, Any]) -> str:
+        """Render the report.html Jinja2 template from an already-assembled context dict."""
         templates_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
             "templates"

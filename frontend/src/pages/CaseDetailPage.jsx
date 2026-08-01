@@ -64,6 +64,8 @@ const CaseDetailPage = () => {
   const handleEvidenceUploaded = (ev) => setEvidence((prev) => [ev, ...prev])
   const handleEvidenceUpdated = (updated) =>
     setEvidence((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))
+  const handleEvidenceDeleted = (deletedId) =>
+    setEvidence((prev) => prev.filter((e) => e.id !== deletedId))
 
   const goTab = (t) => navigate(`/cases/${caseId}/${t}`)
 
@@ -192,7 +194,7 @@ const CaseDetailPage = () => {
         {activeTab === 'evidence' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <EvidenceUpload caseId={caseId} onUploaded={handleEvidenceUploaded} />
-            <EvidenceList items={evidence} caseId={caseId} onItemUpdated={handleEvidenceUpdated} />
+            <EvidenceList items={evidence} caseId={caseId} onItemUpdated={handleEvidenceUpdated} onItemDeleted={handleEvidenceDeleted} />
           </div>
         )}
         {activeTab === 'timeline'     && <EventTimeline caseId={caseId} />}
