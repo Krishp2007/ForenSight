@@ -3,7 +3,7 @@ import io
 import logging
 from datetime import datetime
 from typing import List
-from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status, Depends, UploadFile, File
 from fastapi.responses import StreamingResponse
 from backend.app.schemas.evidence import EvidenceResponse, EvidenceStatus, EvidenceType
 from backend.app.repositories.evidence_repository import EvidenceRepository
@@ -26,6 +26,7 @@ router = APIRouter(tags=["evidence"])
              status_code=status.HTTP_202_ACCEPTED)
 async def upload_evidence(
     case_id: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: UserResponse = Depends(get_current_user),
 ):
@@ -95,10 +96,10 @@ async def upload_evidence(
     }
     created = await EvidenceRepository.create(evidence_dict)
 
-    # Trigger processing pipeline
+    # Trigger processing pipeline via FastAPI BackgroundTasks (runs in-process, guaranteed)
     from backend.app.services.ingestion.processing_pipeline import ProcessingPipeline
-    await ProcessingPipeline.trigger_processing(str(created["_id"]),
-                                                current_user.organization_id)
+    ProcessingPipeline.run_in_background(background_tasks, str(created["_id"]),
+                                         current_user.organization_id)
 
     updated = await EvidenceRepository.get_by_id(str(created["_id"]),
                                                   current_user.organization_id)
@@ -130,10 +131,10 @@ async def upload_evidence(
 async def reprocess_evidence(
     case_id: str,
     evidence_id: str,
+    background_tasks: BackgroundTasks,
     current_user: UserResponse = Depends(get_current_user),
 ):
-    """Re-trigger the full pipeline for already-uploaded evidence.
-    Re-syncs Neo4j, re-runs anomaly detection, rebuilds embeddings and correlations."""
+    """Re-trigger the full pipeline for already-uploaded evidence."""
     require_investigator(current_user.role)
 
     if not ObjectId.is_valid(case_id) or not ObjectId.is_valid(evidence_id):
@@ -151,7 +152,8 @@ async def reprocess_evidence(
                                            EvidenceStatus.UPLOADED.value)
 
     from backend.app.services.ingestion.processing_pipeline import ProcessingPipeline
-    await ProcessingPipeline.trigger_processing(evidence_id, current_user.organization_id)
+    ProcessingPipeline.run_in_background(background_tasks, evidence_id,
+                                         current_user.organization_id)
 
     await AuditRepository.log(
         actor_id=current_user.id,

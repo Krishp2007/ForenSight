@@ -105,10 +105,22 @@ class AuditRepository:
 
     @staticmethod
     async def list_for_case(case_id: str, org_id: str, limit: int = 200) -> list:
-        """Return chronological audit trail for a specific case."""
+        """
+        Return the chronological audit trail for a case.
+
+        Includes ALL audit entries that belong to the case:
+          - entries where entity_id == case_id  (case.create, case.update, correlations.run…)
+          - entries where metadata.case_id == case_id  (evidence.upload, evidence.reprocess…)
+        """
         col = db_client.db[COLLECTION]
         cursor = col.find(
-            {"organization_id": org_id, "entity_id": case_id},
+            {
+                "organization_id": org_id,
+                "$or": [
+                    {"entity_id": case_id},
+                    {"metadata.case_id": case_id},
+                ],
+            },
             sort=[("created_at", 1)],
         ).limit(limit)
         rows = await cursor.to_list(length=limit)
