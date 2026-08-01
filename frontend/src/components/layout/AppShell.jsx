@@ -3,11 +3,17 @@ import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 
 const AppShell = ({ title }) => (
-  <div className="flex min-h-screen bg-gray-950 text-white">
+  <div style={{
+    display: 'flex',
+    minHeight: '100vh',
+    background: '#1a2234',
+    color: '#ffffff',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  }}>
     <Sidebar />
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <Topbar title={title} />
-      <main className="flex-1 overflow-auto p-6">
+      <main style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
         <Outlet />
       </main>
     </div>

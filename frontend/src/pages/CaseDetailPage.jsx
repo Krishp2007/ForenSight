@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useLocation, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { getCase, updateCase } from '../services/caseService'
 import { listEvidence } from '../services/evidenceService'
 import useCase from '../hooks/useCase'
@@ -67,35 +67,58 @@ const CaseDetailPage = () => {
 
   const goTab = (t) => navigate(`/cases/${caseId}/${t}`)
 
-  if (loading) return <div className="flex justify-center py-24"><Spinner size="lg" /></div>
-  if (!caseData) return <p className="text-gray-400 text-center py-24">Case not found.</p>
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '96px 0' }}>
+      <Spinner size="lg" />
+    </div>
+  )
+  if (!caseData) return (
+    <p style={{ color: '#9aa8c0', textAlign: 'center', padding: '96px 0' }}>Case not found.</p>
+  )
 
   return (
-    <div className="flex flex-col gap-5 max-w-6xl mx-auto">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Back + Case header */}
-      <div className="flex items-start gap-4">
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
         <button
           onClick={() => navigate('/dashboard')}
-          className="mt-1 text-gray-400 hover:text-white transition-colors"
+          style={{
+            marginTop: '4px',
+            background: 'none', border: 'none',
+            color: '#9aa8c0', cursor: 'pointer', padding: 0,
+            transition: 'color 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
+          onMouseLeave={e => e.currentTarget.style.color = '#9aa8c0'}
         >
           <ArrowLeft size={18} />
         </button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-white text-xl font-bold truncate">{caseData.title}</h2>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h2 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {caseData.title}
+            </h2>
             <CaseStatusBadge status={caseData.status} />
             <button
               onClick={() => setEditMode(true)}
-              className="text-gray-500 hover:text-white ml-auto"
+              style={{
+                marginLeft: 'auto', background: 'none', border: 'none',
+                color: '#6b7fa3', cursor: 'pointer', padding: 0,
+                transition: 'color 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
+              onMouseLeave={e => e.currentTarget.style.color = '#6b7fa3'}
               title="Edit case"
             >
               <Pencil size={15} />
             </button>
           </div>
           {caseData.description && (
-            <p className="text-gray-400 text-sm mt-1">{caseData.description}</p>
+            <p style={{ color: '#9aa8c0', fontSize: '13px', margin: '6px 0 0 0' }}>{caseData.description}</p>
           )}
-          <p className="text-gray-600 text-xs mt-1">Created {formatDateShort(caseData.created_at)}</p>
+          <p style={{ color: '#6b7fa3', fontSize: '11px', margin: '4px 0 0 0' }}>
+            Created {formatDateShort(caseData.created_at)}
+          </p>
         </div>
       </div>
 
@@ -104,11 +127,26 @@ const CaseDetailPage = () => {
 
       {/* Edit modal */}
       {editMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold">Edit Case</h3>
-              <button onClick={() => setEditMode(false)} className="text-gray-400 hover:text-white">
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.6)',
+          padding: '16px',
+        }}>
+          <div style={{
+            background: '#323d52',
+            borderRadius: '16px',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '440px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h3 style={{ color: '#ffffff', fontWeight: '600', fontSize: '16px', margin: 0 }}>Edit Case</h3>
+              <button
+                onClick={() => setEditMode(false)}
+                style={{ background: 'none', border: 'none', color: '#9aa8c0', cursor: 'pointer', padding: 0 }}
+              >
                 <X size={18} />
               </button>
             </div>
@@ -118,15 +156,31 @@ const CaseDetailPage = () => {
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-700 gap-1">
+      <div style={{
+        display: 'flex',
+        borderBottom: '1px solid #3d4f6a',
+        gap: '2px',
+      }}>
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => goTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize rounded-t-lg transition-colors
-              ${activeTab === t
-                ? 'text-white border-b-2 border-blue-500 bg-gray-800'
-                : 'text-gray-400 hover:text-white'}`}
+            style={{
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: '500',
+              textTransform: 'capitalize',
+              background: activeTab === t ? '#323d52' : 'transparent',
+              border: 'none',
+              borderBottom: activeTab === t ? '2px solid #4a7fe8' : '2px solid transparent',
+              color: activeTab === t ? '#ffffff' : '#9aa8c0',
+              cursor: 'pointer',
+              transition: 'color 0.15s, background 0.15s',
+              borderRadius: '6px 6px 0 0',
+              fontFamily: 'inherit',
+            }}
+            onMouseEnter={e => { if (activeTab !== t) e.currentTarget.style.color = '#ffffff' }}
+            onMouseLeave={e => { if (activeTab !== t) e.currentTarget.style.color = '#9aa8c0' }}
           >
             {t}
           </button>
@@ -134,9 +188,9 @@ const CaseDetailPage = () => {
       </div>
 
       {/* Tab panels */}
-      <div className="min-h-[400px]">
+      <div style={{ minHeight: '400px' }}>
         {activeTab === 'evidence' && (
-          <div className="flex flex-col gap-5">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <EvidenceUpload caseId={caseId} onUploaded={handleEvidenceUploaded} />
             <EvidenceList items={evidence} onItemUpdated={handleEvidenceUpdated} />
           </div>

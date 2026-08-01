@@ -3,37 +3,36 @@ import ReactMarkdown from 'react-markdown'
 const ChatMessage = ({ role, content }) => {
   const isUser = role === 'user'
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[85%] rounded-xl px-4 py-3 text-sm leading-relaxed
-          ${isUser
-            ? 'bg-blue-600 text-white rounded-br-none'
-            : 'bg-gray-700 text-gray-100 rounded-bl-none'
-          }`}
-      >
+    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
+      <div style={{
+        maxWidth: '85%',
+        borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+        padding: '10px 14px',
+        fontSize: '13px',
+        lineHeight: '1.6',
+        background: isUser ? '#4a7fe8' : '#2d3748',
+        color: '#ffffff',
+      }}>
         {isUser ? (
-          <p>{content}</p>
+          <p style={{ margin: 0 }}>{content}</p>
         ) : (
           <ReactMarkdown
             components={{
-              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-              ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
-              ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
-              code: ({ inline, children }) =>
-                inline
-                  ? <code className="bg-gray-600 px-1 py-0.5 rounded text-xs font-mono">{children}</code>
-                  : <pre className="bg-gray-800 rounded p-2 text-xs overflow-x-auto my-2"><code>{children}</code></pre>,
-              h3: ({ children }) => <h3 className="font-bold text-blue-300 mb-1 mt-2">{children}</h3>,
-              h4: ({ children }) => <h4 className="font-semibold text-gray-300 mb-1">{children}</h4>,
-              strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+              p: ({ children }) => <p style={{ margin: '0 0 8px 0' }}>{children}</p>,
+              ul: ({ children }) => <ul style={{ margin: '0 0 8px 0', paddingLeft: '20px' }}>{children}</ul>,
+              ol: ({ children }) => <ol style={{ margin: '0 0 8px 0', paddingLeft: '20px' }}>{children}</ol>,
+              code: ({ inline, children }) => inline
+                ? <code style={{ background: 'rgba(0,0,0,0.3)', padding: '1px 5px', borderRadius: '4px', fontSize: '12px', fontFamily: 'monospace' }}>{children}</code>
+                : <pre style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '6px', padding: '10px', fontSize: '11px', overflow: 'auto', margin: '8px 0' }}><code style={{ fontFamily: 'monospace' }}>{children}</code></pre>,
+              h3: ({ children }) => <h3 style={{ color: '#93c5fd', fontWeight: '700', margin: '12px 0 4px 0', fontSize: '13px' }}>{children}</h3>,
+              h4: ({ children }) => <h4 style={{ color: '#cbd5e1', fontWeight: '600', margin: '8px 0 4px 0', fontSize: '13px' }}>{children}</h4>,
+              strong: ({ children }) => <strong style={{ color: '#ffffff', fontWeight: '600' }}>{children}</strong>,
+              li: ({ children }) => <li style={{ marginBottom: '4px' }}>{children}</li>,
             }}
-          >
-            {content}
-          </ReactMarkdown>
+          >{content}</ReactMarkdown>
         )}
       </div>
     </div>
   )
 }
-
 export default ChatMessage

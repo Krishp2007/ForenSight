@@ -1,4 +1,14 @@
 import io
+import os
+import tempfile
+
+# Fix scapy cache permission issues on Windows before import
+os.environ.setdefault(
+    'SCAPY_CACHE_DIR',
+    os.path.join(tempfile.gettempdir(), 'scapy_cache_forensight')
+)
+os.makedirs(os.environ['SCAPY_CACHE_DIR'], exist_ok=True)
+
 from datetime import datetime
 import logging
 from typing import List, Dict, Any, Optional

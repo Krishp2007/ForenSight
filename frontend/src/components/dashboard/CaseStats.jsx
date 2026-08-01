@@ -4,14 +4,32 @@ import { listEvidence } from '../../services/evidenceService'
 import Spinner from '../ui/Spinner'
 import { AlertTriangle, Activity, FileText, Layers } from 'lucide-react'
 
-const Stat = ({ icon: Icon, label, value, color }) => (
-  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center gap-4">
-    <div className={`p-2 rounded-lg ${color}`}>
-      <Icon size={18} className="text-white" />
+const Stat = ({ icon: Icon, label, value, iconBg }) => (
+  <div style={{
+    background: '#2d3748',
+    border: '1px solid #3d4f6a',
+    borderRadius: '12px',
+    padding: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  }}>
+    <div style={{
+      width: '40px', height: '40px',
+      borderRadius: '10px',
+      background: iconBg,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      <Icon size={18} color="#ffffff" />
     </div>
     <div>
-      <p className="text-gray-400 text-xs">{label}</p>
-      <p className="text-white text-xl font-bold">{value}</p>
+      <p style={{ color: '#9aa8c0', fontSize: '11px', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        {label}
+      </p>
+      <p style={{ color: '#ffffff', fontSize: '22px', fontWeight: '700', margin: 0, lineHeight: 1 }}>
+        {value}
+      </p>
     </div>
   </div>
 )
@@ -37,15 +55,23 @@ const CaseStats = ({ caseId }) => {
     load()
   }, [caseId])
 
-  if (loading) return <div className="flex justify-center py-6"><Spinner /></div>
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+      <Spinner />
+    </div>
+  )
   if (!stats) return null
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <Stat icon={Activity} label="Total Events" value={stats.total} color="bg-blue-600" />
-      <Stat icon={AlertTriangle} label="Anomalies" value={stats.anomalies} color="bg-orange-500" />
-      <Stat icon={Layers} label="Critical Events" value={stats.critical} color="bg-red-600" />
-      <Stat icon={FileText} label="Evidence Files" value={stats.files} color="bg-emerald-600" />
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+      gap: '16px',
+    }}>
+      <Stat icon={Activity}      label="Total Events"   value={stats.total}     iconBg="#2563eb" />
+      <Stat icon={AlertTriangle} label="Anomalies"      value={stats.anomalies} iconBg="#f97316" />
+      <Stat icon={Layers}        label="Critical Events" value={stats.critical}  iconBg="#ef4444" />
+      <Stat icon={FileText}      label="Evidence Files" value={stats.files}     iconBg="#10b981" />
     </div>
   )
 }

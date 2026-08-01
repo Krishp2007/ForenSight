@@ -13,38 +13,66 @@ const CaseForm = ({ initial = {}, onSubmit, onCancel, loading }) => {
     onSubmit({ title, description, status })
   }
 
-  const inputCls = 'w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm focus:outline-none focus:border-blue-500'
-  const labelCls = 'block text-xs text-gray-400 mb-1 font-medium'
+  const inputStyle = {
+    width: '100%',
+    boxSizing: 'border-box',
+    padding: '10px 14px',
+    background: '#2a3347',
+    border: '1.5px solid #3d4f6a',
+    borderRadius: '8px',
+    color: '#ffffff',
+    fontSize: '13px',
+    outline: 'none',
+    fontFamily: 'inherit',
+    transition: 'border-color 0.2s',
+    resize: 'none',
+  }
+
+  const labelStyle = {
+    display: 'block',
+    color: '#8a9ab8',
+    fontSize: '11px',
+    fontWeight: '600',
+    letterSpacing: '0.8px',
+    textTransform: 'uppercase',
+    marginBottom: '6px',
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <label className={labelCls}>Title *</label>
+        <label style={labelStyle}>Title *</label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required minLength={3} maxLength={150}
-          className={inputCls}
           placeholder="e.g. APT29 Phishing Investigation"
+          style={inputStyle}
+          onFocus={e => e.target.style.borderColor = '#60a5fa'}
+          onBlur={e => e.target.style.borderColor = '#3d4f6a'}
         />
       </div>
       <div>
-        <label className={labelCls}>Description</label>
+        <label style={labelStyle}>Description</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className={`${inputCls} resize-none`}
           placeholder="Optional case scope or incident details…"
+          style={inputStyle}
+          onFocus={e => e.target.style.borderColor = '#60a5fa'}
+          onBlur={e => e.target.style.borderColor = '#3d4f6a'}
         />
       </div>
       {initial.id && (
         <div>
-          <label className={labelCls}>Status</label>
+          <label style={labelStyle}>Status</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className={inputCls}
+            style={{ ...inputStyle, cursor: 'pointer', appearance: 'none' }}
+            onFocus={e => e.target.style.borderColor = '#60a5fa'}
+            onBlur={e => e.target.style.borderColor = '#3d4f6a'}
           >
             {CASE_STATUSES.map((s) => (
               <option key={s} value={s}>{humanize(s)}</option>
@@ -52,16 +80,46 @@ const CaseForm = ({ initial = {}, onSubmit, onCancel, loading }) => {
           </select>
         </div>
       )}
-      <div className="flex gap-3 justify-end pt-2">
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '8px' }}>
         <button
-          type="button" onClick={onCancel}
-          className="px-4 py-2 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+          type="button"
+          onClick={onCancel}
+          style={{
+            padding: '8px 16px',
+            fontSize: '13px',
+            borderRadius: '8px',
+            border: '1px solid #3d4f6a',
+            background: 'transparent',
+            color: '#9aa8c0',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'background 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#2a3347'; e.currentTarget.style.color = '#ffffff' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9aa8c0' }}
         >
           Cancel
         </button>
         <button
-          type="submit" disabled={loading}
-          className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          type="submit"
+          disabled={loading}
+          style={{
+            padding: '8px 16px',
+            fontSize: '13px',
+            borderRadius: '8px',
+            border: 'none',
+            background: loading ? '#3b6bc4' : '#4a7fe8',
+            color: '#ffffff',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontFamily: 'inherit',
+            opacity: loading ? 0.7 : 1,
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#3b6bc4' }}
+          onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#4a7fe8' }}
         >
           {loading && <Spinner size="sm" />}
           {initial.id ? 'Update Case' : 'Create Case'}

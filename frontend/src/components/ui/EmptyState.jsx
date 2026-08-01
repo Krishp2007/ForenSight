@@ -1,9 +1,15 @@
 const EmptyState = ({ icon: Icon, title, description }) => (
-  <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
-    {Icon && <Icon size={40} strokeWidth={1.2} />}
-    <p className="text-base font-medium text-gray-500">{title}</p>
-    {description && <p className="text-sm text-center max-w-xs">{description}</p>}
+  <div style={{
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    justifyContent: 'center', padding: '64px 16px', gap: '12px',
+  }}>
+    {Icon && <Icon size={40} strokeWidth={1.2} color="#3d4f6a" />}
+    <p style={{ color: '#6b7fa3', fontSize: '15px', fontWeight: '500', margin: 0 }}>{title}</p>
+    {description && (
+      <p style={{ color: '#4a5568', fontSize: '13px', textAlign: 'center', maxWidth: '280px', margin: 0, lineHeight: '1.6' }}>
+        {description}
+      </p>
+    )}
   </div>
 )
-
 export default EmptyState

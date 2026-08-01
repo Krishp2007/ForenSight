@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Upload, FileUp } from 'lucide-react'
+import { FileUp } from 'lucide-react'
 import { uploadEvidence } from '../../services/evidenceService'
 import Spinner from '../ui/Spinner'
 
@@ -36,31 +36,55 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]) }}
       onClick={() => !uploading && inputRef.current?.click()}
-      className={`cursor-pointer border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 transition-colors
-        ${dragging ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 hover:border-blue-500 hover:bg-gray-700/30'}`}
+      style={{
+        cursor: uploading ? 'default' : 'pointer',
+        border: `2px dashed ${dragging ? '#4a7fe8' : '#3d4f6a'}`,
+        borderRadius: '12px',
+        padding: '32px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '12px',
+        background: dragging ? 'rgba(74,127,232,0.08)' : '#2a3347',
+        transition: 'border-color 0.2s, background 0.2s',
+      }}
+      onMouseEnter={e => { if (!uploading && !dragging) { e.currentTarget.style.borderColor = '#4a7fe8'; e.currentTarget.style.background = 'rgba(74,127,232,0.05)' } }}
+      onMouseLeave={e => { if (!dragging) { e.currentTarget.style.borderColor = '#3d4f6a'; e.currentTarget.style.background = '#2a3347' } }}
     >
       <input
-        ref={inputRef} type="file" accept={ACCEPTED} className="hidden"
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED}
+        style={{ display: 'none' }}
         onChange={(e) => handleFile(e.target.files[0])}
       />
       {uploading ? (
         <>
           <Spinner size="lg" />
-          <p className="text-sm text-gray-400">Uploading… {progress}%</p>
-          <div className="w-48 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 transition-all" style={{ width: `${progress}%` }} />
+          <p style={{ color: '#9aa8c0', fontSize: '13px', margin: 0 }}>Uploading… {progress}%</p>
+          <div style={{ width: '192px', height: '6px', background: '#3d4f6a', borderRadius: '99px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${progress}%`, background: '#4a7fe8', borderRadius: '99px', transition: 'width 0.3s' }} />
           </div>
         </>
       ) : (
         <>
-          <div className="p-3 bg-blue-600/20 rounded-full">
-            <FileUp size={24} className="text-blue-400" />
+          <div style={{
+            width: '52px', height: '52px',
+            background: 'rgba(74,127,232,0.15)',
+            borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <FileUp size={22} color="#60a5fa" />
           </div>
-          <p className="text-sm text-gray-300 font-medium">Drop a file or click to browse</p>
-          <p className="text-xs text-gray-500">EVTX · PCAP · SQLite · CSV · JSON</p>
+          <p style={{ color: '#ffffff', fontSize: '13px', fontWeight: '500', margin: 0 }}>
+            Drop a file or click to browse
+          </p>
+          <p style={{ color: '#6b7fa3', fontSize: '11px', margin: 0 }}>
+            EVTX · PCAP · SQLite · CSV · JSON
+          </p>
         </>
       )}
-      {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+      {error && <p style={{ color: '#fca5a5', fontSize: '12px', margin: '4px 0 0 0' }}>{error}</p>}
     </div>
   )
 }

@@ -1,3 +1,11 @@
+import os
+import tempfile
+
+# Fix scapy Windows cache permission issue BEFORE any import loads scapy
+_scapy_cache = os.path.join(tempfile.gettempdir(), 'scapy_cache_forensight')
+os.makedirs(_scapy_cache, exist_ok=True)
+os.environ.setdefault('SCAPY_CACHE_DIR', _scapy_cache)
+
 from celery import Celery
 from backend.app.config import settings
 

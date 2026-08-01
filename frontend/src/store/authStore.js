@@ -22,9 +22,15 @@ const useAuthStore = create((set, get) => ({
     try {
       const user = await getMe()
       set({ user, isLoading: false })
-    } catch {
-      // on any error just stop loading — don't clear token, don't redirect
-      set({ isLoading: false })
+    } catch (err) {
+      // Clear token on 401 — expired or invalid
+      if (err?.response?.status === 401 || err?.response?.status === 422) {
+        localStorage.removeItem('token')
+        set({ user: null, token: null, isLoading: false })
+      } else {
+        // Network error — keep token, just stop loading
+        set({ isLoading: false })
+      }
     }
   },
 }))

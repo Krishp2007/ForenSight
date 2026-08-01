@@ -66,11 +66,15 @@ class EvidenceRepository:
         try:
             if not ObjectId.is_valid(evidence_id) or not ObjectId.is_valid(org_id):
                 return None
-                
+
             update_fields = {"status": status}
-            if error_message is not None:
+
+            # Always clear error_message on successful/in-progress states
+            if status in ("parsed", "parsing", "queued"):
+                update_fields["error_message"] = None
+            elif error_message is not None:
                 update_fields["error_message"] = error_message
-                
+
             result = await db_client.db["evidence"].find_one_and_update(
                 {"_id": ObjectId(evidence_id), "organization_id": ObjectId(org_id)},
                 {"$set": update_fields},

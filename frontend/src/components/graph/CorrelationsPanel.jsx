@@ -2,121 +2,112 @@ import { useState, useEffect } from 'react'
 import { getCorrelations, runCorrelations } from '../../services/correlationService'
 import Spinner from '../ui/Spinner'
 import EmptyState from '../ui/EmptyState'
-import Badge from '../ui/Badge'
 import { Link2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { humanize } from '../../utils/formatters'
 
-const RULE_COLORS = {
-  PROCESS_INITIATED_CONNECTION: 'bg-blue-600 text-white',
-  REGISTRY_RUN_KEY_PERSISTENCE:  'bg-red-600 text-white',
-  PARENT_OF:                     'bg-purple-600 text-white',
+const RULE_STYLES = {
+  PROCESS_INITIATED_CONNECTION: { bg: 'rgba(74,127,232,0.2)', color: '#93c5fd' },
+  REGISTRY_RUN_KEY_PERSISTENCE:  { bg: 'rgba(239,68,68,0.2)',  color: '#fca5a5' },
+  PARENT_OF:                     { bg: 'rgba(167,139,250,0.2)', color: '#c4b5fd' },
 }
 
 const CorrelationsPanel = ({ caseId }) => {
-  const [data, setData]         = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [running, setRunning]   = useState(false)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
   const [openRule, setOpenRule] = useState(null)
-  const [error, setError]       = useState(null)
+  const [error, setError] = useState(null)
 
   const load = async () => {
     setLoading(true)
-    try {
-      const d = await getCorrelations(caseId)
-      setData(d)
-    } catch (e) {
-      setError(e.response?.data?.detail || 'Failed to load correlations')
-    } finally {
-      setLoading(false)
-    }
+    try { setData(await getCorrelations(caseId)) }
+    catch (e) { setError(e.response?.data?.detail || 'Failed to load correlations') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => { load() }, [caseId])
 
   const handleRun = async () => {
-    setRunning(true)
-    setError(null)
-    try {
-      await runCorrelations(caseId)
-      await load()
-    } catch (e) {
-      setError(e.response?.data?.detail || 'Failed to run correlations')
-    } finally {
-      setRunning(false)
-    }
+    setRunning(true); setError(null)
+    try { await runCorrelations(caseId); await load() }
+    catch (e) { setError(e.response?.data?.detail || 'Failed to run correlations') }
+    finally { setRunning(false) }
   }
 
   const correlations = data?.correlations || []
-
-  // Group by rule
   const groups = correlations.reduce((acc, c) => {
-    const r = c.rule || 'UNKNOWN'
-    acc[r] = acc[r] || []
-    acc[r].push(c)
-    return acc
+    const r = c.rule || 'UNKNOWN'; acc[r] = acc[r] || []; acc[r].push(c); return acc
   }, {})
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-gray-400 text-sm">
-          {correlations.length} derived relationships from 3 Cypher rules
-        </p>
-        <button
-          onClick={handleRun} disabled={running}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
-        >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <p style={{ color: '#9aa8c0', fontSize: '13px', margin: 0 }}>{correlations.length} derived relationships from 3 Cypher rules</p>
+        <button onClick={handleRun} disabled={running} style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '6px 12px', background: '#4a7fe8', border: 'none',
+          borderRadius: '7px', color: '#fff', fontSize: '12px', fontWeight: '500',
+          cursor: running ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+          opacity: running ? 0.6 : 1,
+        }}>
           {running ? <Spinner size="sm" /> : <RefreshCw size={13} />}
           Re-run Rules
         </button>
       </div>
 
-      {error && (
-        <p className="text-red-400 text-xs bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">{error}</p>
-      )}
+      {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '12px' }}>{error}</div>}
 
       {loading ? (
-        <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}><Spinner size="lg" /></div>
       ) : correlations.length === 0 ? (
-        <EmptyState icon={Link2} title="No correlations yet"
-          description="Click 'Re-run Rules' after parsing evidence to derive process, network and persistence relationships." />
+        <EmptyState icon={Link2} title="No correlations yet" description="Click 'Re-run Rules' after parsing evidence to derive relationships." />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {Object.entries(groups).map(([rule, items]) => {
             const isOpen = openRule === rule
-            const colorCls = RULE_COLORS[rule] || 'bg-gray-600 text-white'
+            const rs = RULE_STYLES[rule] || { bg: 'rgba(107,127,163,0.2)', color: '#9aa8c0' }
             return (
-              <div key={rule} className="border border-gray-700 rounded-xl overflow-hidden">
-                <button
-                  onClick={() => setOpenRule(isOpen ? null : rule)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-800 hover:bg-gray-700 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Badge label={humanize(rule)} colorClass={colorCls} />
-                    <span className="text-gray-400 text-xs">{items.length} relationships</span>
+              <div key={rule} style={{ border: '1px solid #3d4f6a', borderRadius: '10px', overflow: 'hidden' }}>
+                <button onClick={() => setOpenRule(isOpen ? null : rule)} style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 16px', background: '#253347', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#2a3347'}
+                onMouseLeave={e => e.currentTarget.style.background = '#253347'}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', background: rs.bg, color: rs.color }}>
+                      {humanize(rule.replace(/_/g, ' '))}
+                    </span>
+                    <span style={{ color: '#6b7fa3', fontSize: '12px' }}>{items.length} relationships</span>
                     {items[0]?.mitre && (
-                      <span className="text-xs font-mono bg-purple-800/50 text-purple-300 px-2 py-0.5 rounded">
+                      <span style={{ fontSize: '11px', fontFamily: 'monospace', background: 'rgba(167,139,250,0.15)', color: '#c4b5fd', padding: '2px 7px', borderRadius: '4px' }}>
                         {items[0].mitre}
                       </span>
                     )}
                   </div>
-                  {isOpen ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+                  {isOpen ? <ChevronUp size={14} color="#6b7fa3" /> : <ChevronDown size={14} color="#6b7fa3" />}
                 </button>
 
                 {isOpen && (
-                  <div className="divide-y divide-gray-700/50">
+                  <div>
                     {items.slice(0, 50).map((c, i) => (
-                      <div key={i} className="px-4 py-2.5 flex items-center gap-2 text-sm bg-gray-800/40 hover:bg-gray-700/30">
-                        <span className="text-blue-400 font-medium truncate max-w-[200px]">{c.source}</span>
-                        <span className="text-gray-500 shrink-0">→</span>
-                        <span className="text-green-400 font-medium truncate max-w-[200px]">{c.target}</span>
-                        {c.technique && (
-                          <span className="ml-auto text-xs text-gray-500 truncate">{c.technique}</span>
-                        )}
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '8px 16px', fontSize: '12px',
+                        borderTop: '1px solid #2d3748',
+                        background: i % 2 === 0 ? '#1e2a3d' : '#253347',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#2a3347'}
+                      onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#1e2a3d' : '#253347'}>
+                        <span style={{ color: '#60a5fa', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{c.source}</span>
+                        <span style={{ color: '#3d4f6a', flexShrink: 0 }}>→</span>
+                        <span style={{ color: '#6ee7b7', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{c.target}</span>
+                        {c.technique && <span style={{ marginLeft: 'auto', color: '#6b7fa3', fontSize: '11px', flexShrink: 0 }}>{c.technique}</span>}
                       </div>
                     ))}
                     {items.length > 50 && (
-                      <p className="px-4 py-2 text-xs text-gray-500 bg-gray-800/40">
+                      <p style={{ padding: '8px 16px', color: '#6b7fa3', fontSize: '11px', margin: 0, borderTop: '1px solid #2d3748', background: '#1e2a3d' }}>
                         …and {items.length - 50} more
                       </p>
                     )}
@@ -130,5 +121,4 @@ const CorrelationsPanel = ({ caseId }) => {
     </div>
   )
 }
-
 export default CorrelationsPanel

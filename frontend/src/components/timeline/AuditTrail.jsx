@@ -3,15 +3,15 @@ import { getCaseAuditLog } from '../../services/auditService'
 import { formatDateTime, humanize } from '../../utils/formatters'
 import Spinner from '../ui/Spinner'
 import EmptyState from '../ui/EmptyState'
-import { ShieldCheck, Hash } from 'lucide-react'
+import { ShieldCheck, Hash, ChevronDown, ChevronUp } from 'lucide-react'
 
 const ACTION_COLORS = {
-  'case.create':       'text-emerald-400',
-  'case.update':       'text-blue-400',
-  'evidence.upload':   'text-yellow-400',
-  'graph.clear':       'text-red-400',
-  'correlations.run':  'text-purple-400',
-  'report.generate':   'text-cyan-400',
+  'case.create':      '#34d399',
+  'case.update':      '#60a5fa',
+  'evidence.upload':  '#fbbf24',
+  'graph.clear':      '#fca5a5',
+  'correlations.run': '#c4b5fd',
+  'report.generate':  '#67e8f9',
 }
 
 const AuditTrail = ({ caseId }) => {
@@ -21,52 +21,49 @@ const AuditTrail = ({ caseId }) => {
 
   useEffect(() => {
     getCaseAuditLog(caseId, 200)
-      .then(setRows)
-      .catch(() => {})
-      .finally(() => setLoading(false))
+      .then(setRows).catch(() => {}).finally(() => setLoading(false))
   }, [caseId])
 
-  if (loading) return <div className="flex justify-center py-12"><Spinner size="lg" /></div>
-  if (!rows.length) return (
-    <EmptyState icon={ShieldCheck} title="No audit entries yet"
-      description="Every case mutation is recorded here with a Merkle hash chain." />
-  )
+  if (loading) return <div style={{ display:'flex', justifyContent:'center', padding:'48px' }}><Spinner size="lg" /></div>
+  if (!rows.length) return <EmptyState icon={ShieldCheck} title="No audit entries yet" description="Every case mutation is recorded here with a Merkle hash chain." />
 
   return (
-    <div className="flex flex-col gap-0 border border-gray-700 rounded-xl overflow-hidden">
+    <div style={{ border:'1px solid #3d4f6a', borderRadius:'12px', overflow:'hidden', fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       {[...rows].reverse().map((row, i) => {
-        const color = ACTION_COLORS[row.action] || 'text-gray-400'
+        const color = ACTION_COLORS[row.action] || '#9aa8c0'
         const isOpen = expanded === i
         return (
-          <div
-            key={row.id || i}
-            className="border-b border-gray-700 last:border-0 px-4 py-3 hover:bg-gray-700/30 transition-colors"
-          >
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setExpanded(isOpen ? null : i)}>
-              <ShieldCheck size={14} className={color} />
-              <span className={`text-xs font-mono font-semibold ${color}`}>{row.action}</span>
-              <span className="text-gray-400 text-xs flex-1 truncate">
+          <div key={row.id || i} style={{ borderBottom: i < rows.length-1 ? '1px solid #2d3748' : 'none', background: i%2===0 ? '#1e2a3d' : '#253347' }}>
+            <div
+              onClick={() => setExpanded(isOpen ? null : i)}
+              style={{ display:'flex', alignItems:'center', gap:'12px', padding:'10px 16px', cursor:'pointer', transition:'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#2a3347'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <ShieldCheck size={14} color={color} style={{ flexShrink:0 }} />
+              <span style={{ fontSize:'12px', fontFamily:'monospace', fontWeight:'600', color, whiteSpace:'nowrap' }}>{row.action}</span>
+              <span style={{ color:'#9aa8c0', fontSize:'12px', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {humanize(row.entity_type)} · {row.entity_id?.slice(-8)}
               </span>
-              <span className="text-gray-500 text-xs shrink-0">{formatDateTime(row.created_at)}</span>
+              <span style={{ color:'#6b7fa3', fontSize:'11px', flexShrink:0 }}>{formatDateTime(row.created_at)}</span>
+              {isOpen ? <ChevronUp size={13} color="#6b7fa3" /> : <ChevronDown size={13} color="#6b7fa3" />}
             </div>
-
             {isOpen && (
-              <div className="mt-2 ml-5 flex flex-col gap-1 text-xs text-gray-400">
-                <div className="flex gap-2">
-                  <Hash size={11} className="shrink-0 mt-0.5 text-gray-600" />
-                  <span className="font-mono text-gray-500 break-all">
-                    <span className="text-gray-600">prev:</span> {row.prev_hash?.slice(0, 32)}…
+              <div style={{ padding:'8px 16px 12px 40px', display:'flex', flexDirection:'column', gap:'6px' }}>
+                <div style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
+                  <Hash size={11} color="#3d4f6a" style={{ marginTop:'2px', flexShrink:0 }} />
+                  <span style={{ fontSize:'11px', fontFamily:'monospace', color:'#4a5568', wordBreak:'break-all' }}>
+                    <span style={{ color:'#3d4f6a' }}>prev: </span>{row.prev_hash?.slice(0,40)}…
                   </span>
                 </div>
-                <div className="flex gap-2">
-                  <Hash size={11} className="shrink-0 mt-0.5 text-gray-600" />
-                  <span className="font-mono text-gray-500 break-all">
-                    <span className="text-gray-600">self:</span> {row.self_hash?.slice(0, 32)}…
+                <div style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
+                  <Hash size={11} color="#3d4f6a" style={{ marginTop:'2px', flexShrink:0 }} />
+                  <span style={{ fontSize:'11px', fontFamily:'monospace', color:'#4a5568', wordBreak:'break-all' }}>
+                    <span style={{ color:'#3d4f6a' }}>self: </span>{row.self_hash?.slice(0,40)}…
                   </span>
                 </div>
                 {row.metadata && Object.keys(row.metadata).length > 0 && (
-                  <pre className="bg-gray-800 rounded p-2 text-xs overflow-x-auto mt-1 text-gray-300">
+                  <pre style={{ background:'#1a2234', borderRadius:'6px', padding:'8px 12px', fontSize:'11px', color:'#9aa8c0', overflowX:'auto', margin:'4px 0 0 0', fontFamily:'monospace' }}>
                     {JSON.stringify(row.metadata, null, 2)}
                   </pre>
                 )}
@@ -78,5 +75,4 @@ const AuditTrail = ({ caseId }) => {
     </div>
   )
 }
-
 export default AuditTrail
