@@ -32,45 +32,54 @@ export default function EvidenceDrawer({ evidence, caseId, onClose }) {
 
   // Graph state
   const containerRef = useRef(null)
-  const cyRef = useRef(null)
+  const cyRef        = useRef(null)
   const [graphLoading, setGraphLoading] = useState(false)
-  const [graphData, setGraphData] = useState(null)
+  const [graphData, setGraphData]       = useState(null)
 
   // Report state
-  const [reportHtml, setReportHtml] = useState(null)
+  const [reportHtml,    setReportHtml]    = useState(null)
   const [reportLoading, setReportLoading] = useState(false)
-  const [reportError, setReportError] = useState(null)
+  const [reportError,   setReportError]   = useState(null)
   const iframeRef = useRef(null)
 
-  // Load graph when tab = graph
+  // ── Step 1: fetch graph data when tab=graph ────────────────────────────────
   useEffect(() => {
     if (tab !== 'graph' || !evidence) return
     setGraphLoading(true)
+    setGraphData(null)
+    if (cyRef.current) { cyRef.current.destroy(); cyRef.current = null }
     getEvidenceGraph(caseId, evidence.id)
-      .then(data => {
-        setGraphData(data)
-        if (!data.nodes?.length) return
-        const elements = [
-          ...data.nodes.map(n => ({ data: { id: n.id, label: n.label || n.id, color: NODE_COLORS[n.type] || NODE_COLORS.default } })),
-          ...data.edges.map(e => ({ data: { id: `${e.source}--${e.target}`, source: e.source, target: e.target, label: e.action || '' } })),
-        ]
-        if (cyRef.current) cyRef.current.destroy()
-        if (!containerRef.current) return
-        cyRef.current = cytoscape({
-          container: containerRef.current, elements,
-          style: [
-            { selector: 'node', style: { label: 'data(label)', 'background-color': 'data(color)', color: '#fff', 'font-size': '9px', 'text-valign': 'bottom', 'text-margin-y': 4, width: 24, height: 24, 'border-width': 2, 'border-color': '#1e2a3d' } },
-            { selector: 'edge', style: { label: 'data(label)', 'font-size': '7px', color: '#6b7fa3', 'line-color': '#3d4f6a', 'target-arrow-color': '#3d4f6a', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', width: 1.5 } },
-            { selector: 'node:selected', style: { 'border-color': '#60a5fa', 'border-width': 3 } },
-          ],
-          layout: { name: 'cose', animate: true, padding: 30 },
-          wheelSensitivity: 0.3,
-        })
-      })
+      .then(data => setGraphData(data))
       .catch(console.error)
       .finally(() => setGraphLoading(false))
-    return () => cyRef.current?.destroy()
   }, [tab, evidence?.id])
+
+  // ── Step 2: init Cytoscape once container is in DOM and data is ready ──────
+  useEffect(() => {
+    if (!graphData?.nodes?.length || !containerRef.current) return
+    // Destroy previous instance if any
+    if (cyRef.current) { cyRef.current.destroy(); cyRef.current = null }
+    const elements = [
+      ...graphData.nodes.map(n => ({
+        data: { id: n.id, label: n.label || n.id, color: NODE_COLORS[n.type] || NODE_COLORS.default }
+      })),
+      ...graphData.edges.map(e => ({
+        data: { id: `${e.source}--${e.target}--${Math.random()}`, source: e.source, target: e.target, label: e.action || '' }
+      })),
+    ]
+    cyRef.current = cytoscape({
+      container: containerRef.current,
+      elements,
+      style: [
+        { selector: 'node', style: { label: 'data(label)', 'background-color': 'data(color)', color: '#fff', 'font-size': '9px', 'text-valign': 'bottom', 'text-margin-y': 4, width: 26, height: 26, 'border-width': 2, 'border-color': '#1e2a3d' } },
+        { selector: 'edge', style: { label: 'data(label)', 'font-size': '7px', color: '#6b7fa3', 'line-color': '#3d4f6a', 'target-arrow-color': '#3d4f6a', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', width: 1.5 } },
+        { selector: 'node:selected', style: { 'border-color': '#60a5fa', 'border-width': 3 } },
+      ],
+      layout: { name: 'cose', animate: true, padding: 30, randomize: false },
+      wheelSensitivity: 0.3,
+    })
+    return () => { if (cyRef.current) { cyRef.current.destroy(); cyRef.current = null } }
+  }, [graphData])
 
   // Load report when tab = report
   const loadReport = () => {
@@ -149,14 +158,14 @@ export default function EvidenceDrawer({ evidence, caseId, onClose }) {
 
           {/* GRAPH TAB */}
           {tab === 'graph' && (
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
               {graphLoading && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(26,34,52,0.9)', zIndex: 10 }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a2234' }}>
                   <Spinner size="lg" />
                 </div>
               )}
               {!graphLoading && graphData && !graphData.nodes?.length && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', color: '#6b7fa3' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: '#6b7fa3' }}>
                   <GitBranch size={40} strokeWidth={1.2} />
                   <p style={{ margin: 0, fontSize: '14px' }}>No graph data for this evidence file</p>
                   <p style={{ margin: 0, fontSize: '12px', color: '#4a5568', textAlign: 'center', maxWidth: '300px' }}>
@@ -164,8 +173,9 @@ export default function EvidenceDrawer({ evidence, caseId, onClose }) {
                   </p>
                 </div>
               )}
-              {graphData?.nodes?.length > 0 && (
+              {!graphLoading && graphData?.nodes?.length > 0 && (
                 <>
+                  {/* Legend bar */}
                   <div style={{ padding: '8px 16px', background: '#1e2a3d', borderBottom: '1px solid #2d3748', fontSize: '12px', color: '#6b7fa3', flexShrink: 0 }}>
                     {graphData.nodes.length} nodes · {graphData.edges.length} edges
                     <span style={{ marginLeft: '16px' }}>
@@ -177,7 +187,11 @@ export default function EvidenceDrawer({ evidence, caseId, onClose }) {
                       ))}
                     </span>
                   </div>
-                  <div ref={containerRef} style={{ width: '100%', flex: 1, background: '#1a2234' }} />
+                  {/* Cytoscape container — must have explicit height, NOT flex:1 */}
+                  <div
+                    ref={containerRef}
+                    style={{ width: '100%', height: 'calc(100vh - 180px)', background: '#1a2234' }}
+                  />
                 </>
               )}
             </div>
