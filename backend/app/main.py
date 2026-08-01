@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -16,6 +17,44 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+async def _recover_stuck_evidence():
+    """
+    On startup, find any evidence stuck in 'queued' or 'parsing' state
+    from a previous crash and automatically re-run the pipeline for them.
+    Runs as a background task so it doesn't block startup.
+    """
+    try:
+        # Small delay to let the event loop settle after startup
+        await asyncio.sleep(3)
+        from backend.app.db.mongodb import db_client
+        from backend.app.services.ingestion.processing_pipeline import _run_full_pipeline
+
+        stuck = await db_client.db["evidence"].find(
+            {"status": {"$in": ["queued", "parsing"]}}
+        ).to_list(50)
+
+        if not stuck:
+            logger.info("[RECOVERY] No stuck evidence found.")
+            return
+
+        logger.warning(f"[RECOVERY] Found {len(stuck)} stuck evidence file(s) — re-processing...")
+        for ev in stuck:
+            evidence_id = str(ev["_id"])
+            org_id      = str(ev["organization_id"])
+            filename    = ev.get("filename", evidence_id)
+            logger.info(f"[RECOVERY] Re-processing: {filename} ({evidence_id})")
+            # Reset to uploaded so the pipeline starts fresh
+            await db_client.db["evidence"].update_one(
+                {"_id": ev["_id"]},
+                {"$set": {"status": "uploaded", "error_message": None}}
+            )
+            asyncio.create_task(_run_full_pipeline(evidence_id, org_id))
+
+        logger.info(f"[RECOVERY] Scheduled {len(stuck)} recovery pipeline(s).")
+    except Exception as e:
+        logger.error(f"[RECOVERY] Startup recovery failed: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup actions
@@ -29,9 +68,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Startup infrastructure initialization failed: {e}")
         raise e
-        
+
+    # ── Recovery: re-queue any evidence stuck in queued/parsing from a previous crash
+    asyncio.create_task(_recover_stuck_evidence())
+
     yield
-    
+
     # Shutdown actions
     logger.info("Closing infrastructure database connections...")
     await close_mongo_connection()

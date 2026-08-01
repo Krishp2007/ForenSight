@@ -1,37 +1,46 @@
 # ForenSight — Start Everything
-# Run once: right-click → Run with PowerShell
-# Or pin to taskbar / add to Startup folder
+# Double-click or run: powershell -ExecutionPolicy Bypass -File start-all.ps1
 
-$root    = "d:\ForenSight\ForenSight"
-$backend = "$root\backend"
+$root     = "d:\ForenSight\ForenSight"
+$backend  = "$root\backend"
 $frontend = "$root\frontend"
 
 Write-Host "=== ForenSight Startup ===" -ForegroundColor Cyan
 
-# 1. Start Docker infrastructure (MongoDB, Neo4j, Redis, MinIO, Qdrant)
+# Kill any stale python holding port 8000
+$pids = (netstat -ano | Select-String ":8000.*LISTENING") -replace '.*\s(\d+)$','$1'
+foreach ($p in $pids) {
+    if ($p -match '^\d+$') {
+        Stop-Process -Id ([int]$p) -Force -ErrorAction SilentlyContinue
+        Write-Host "  Killed stale process $p" -ForegroundColor Gray
+    }
+}
+Start-Sleep -Seconds 2
+
+# 1. Docker infrastructure
 Write-Host "[1/3] Starting Docker services..." -ForegroundColor Yellow
 docker compose -f "$root\docker-compose.yml" up -d
-Write-Host "      Docker services started." -ForegroundColor Green
+Write-Host "      Done." -ForegroundColor Green
 
-# 2. Start API in a new window (stays open, auto-restarts on file change)
-Write-Host "[2/3] Starting API server..." -ForegroundColor Yellow
+# 2. API — always fresh, kills old first
+Write-Host "[2/3] Starting API server (http://localhost:8000)..." -ForegroundColor Yellow
 Start-Process powershell -ArgumentList @(
-    "-NoExit",
-    "-Command",
-    "`$env:PYTHONPATH='$root'; Set-Location '$backend'; Write-Host 'ForenSight API' -ForegroundColor Cyan; .venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"
+    "-NoExit", "-Command",
+    "`$env:PYTHONPATH='$root'; Set-Location '$backend'; " +
+    "Write-Host 'ForenSight API — http://localhost:8000' -ForegroundColor Cyan; " +
+    ".venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"
 ) -WindowStyle Normal
-Start-Sleep -Seconds 2
 Write-Host "      API window opened." -ForegroundColor Green
 
-# 3. Start frontend dev server in a new window
-Write-Host "[3/3] Starting frontend..." -ForegroundColor Yellow
+# 3. Frontend dev server
+Write-Host "[3/3] Starting frontend (http://localhost:5173)..." -ForegroundColor Yellow
 Start-Process powershell -ArgumentList @(
-    "-NoExit",
-    "-Command",
+    "-NoExit", "-Command",
     "Set-Location '$frontend'; Write-Host 'ForenSight Frontend' -ForegroundColor Cyan; npm run dev"
 ) -WindowStyle Normal
 Write-Host "      Frontend window opened." -ForegroundColor Green
 
 Write-Host ""
-Write-Host "All services starting. Open http://localhost:5173" -ForegroundColor Green
-Write-Host "API docs: http://localhost:8000/docs" -ForegroundColor Gray
+Write-Host "All services started." -ForegroundColor Green
+Write-Host "  App:  http://localhost:5173" -ForegroundColor White
+Write-Host "  API:  http://localhost:8000/docs" -ForegroundColor White
