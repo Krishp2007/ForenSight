@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 import Evtx.Evtx as evtx
 from backend.app.parsers.base import BaseParser
 from backend.app.schemas.event import EventSource, EventType, EventSeverity
+from backend.app.knowledge.mitre_mapper import MitreMapper
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +136,7 @@ class EvtxParser(BaseParser):
                 act = "failed_logon_attempt"
                 obj = f"from IP {ip}"
                 severity = EventSeverity.MEDIUM.value
-                techniques = ["T1110"] # Brute Force
+                techniques = MitreMapper.tag_from_event_id(4625)
                 
             elif event_id == 4688: # Process Creation
                 event_type = EventType.PROCESS_CREATION.value
@@ -151,10 +152,12 @@ class EvtxParser(BaseParser):
                 cmd_lower = cmd.lower()
                 if "powershell" in cmd_lower and "-enc" in cmd_lower:
                     severity = EventSeverity.HIGH.value
-                    techniques = ["T1059.001"] # PowerShell
+                    techniques = MitreMapper.tag_from_text(cmd_lower)
                 elif "whoami" in cmd_lower or "net user" in cmd_lower:
                     severity = EventSeverity.MEDIUM.value
-                    techniques = ["T1033", "T1087"] # Discovery
+                    techniques = MitreMapper.tag_from_text(cmd_lower)
+                else:
+                    techniques = MitreMapper.tag_from_event_id(4688)
                     
             elif event_id in (4663, 4660): # File Access / Deletion
                 event_type = EventType.FILE_MODIFICATION.value

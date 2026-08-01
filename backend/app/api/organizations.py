@@ -1,10 +1,8 @@
 from datetime import datetime
 from typing import List
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status
 from backend.app.schemas.organization import OrganizationCreate, OrganizationResponse
 from backend.app.repositories.organization_repository import OrganizationRepository
-from backend.app.auth.dependencies import get_current_user
-from backend.app.schemas.user import UserResponse
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -31,8 +29,8 @@ async def create_organization(payload: OrganizationCreate):
     return created_org
 
 @router.get("/", response_model=List[OrganizationResponse])
-async def list_organizations(current_user: UserResponse = Depends(get_current_user)):
-    """List all organizations (restricted to authenticated users)."""
+async def list_organizations():
+    """List all organizations — public endpoint used during user registration."""
     orgs = await OrganizationRepository.list_all()
     response_orgs = []
     for org in orgs:

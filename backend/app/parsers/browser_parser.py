@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 
 from backend.app.parsers.base import BaseParser
 from backend.app.schemas.event import EventSource, EventType, EventSeverity
+from backend.app.knowledge.mitre_mapper import MitreMapper
 
 logger = logging.getLogger(__name__)
 
@@ -95,11 +96,11 @@ class BrowserParser(BaseParser):
                 url_lower = url.lower()
                 if "onion" in url_lower or "torproject" in url_lower:
                     severity = EventSeverity.HIGH.value
-                    techniques = ["T1090.003"] # Tor network redirection
+                    techniques = MitreMapper.tag_from_text(url_lower)
                 elif any(kw in url_lower for kw in [".exe", ".zip", ".msi", ".ps1"]):
                     severity = EventSeverity.MEDIUM.value
-                    techniques = ["T1105"] # Ingress tool transfer
-                
+                    techniques = MitreMapper.tag_from_text(url_lower)
+
                 events.append({
                     "timestamp": timestamp,
                     "event_type": EventType.BROWSER_HISTORY.value,
@@ -149,11 +150,11 @@ class BrowserParser(BaseParser):
                 url_lower = url.lower()
                 if "onion" in url_lower or "torproject" in url_lower:
                     severity = EventSeverity.HIGH.value
-                    techniques = ["T1090.003"]
+                    techniques = MitreMapper.tag_from_text(url_lower)
                 elif any(kw in url_lower for kw in [".exe", ".zip", ".msi", ".ps1"]):
                     severity = EventSeverity.MEDIUM.value
-                    techniques = ["T1105"]
-                
+                    techniques = MitreMapper.tag_from_text(url_lower)
+
                 events.append({
                     "timestamp": timestamp,
                     "event_type": EventType.BROWSER_HISTORY.value,

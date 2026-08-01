@@ -12,6 +12,7 @@ from backend.app.config import settings
 from backend.app.auth.dependencies import get_current_user
 from backend.app.auth.rbac import require_investigator
 from backend.app.schemas.user import UserResponse
+from backend.app.repositories.audit_repository import AuditRepository
 from bson import ObjectId
 
 logger = logging.getLogger(__name__)
@@ -110,17 +111,33 @@ async def upload_evidence(
     # 6. Trigger background processing task
     from backend.app.services.ingestion.processing_pipeline import ProcessingPipeline
     await ProcessingPipeline.trigger_processing(str(created_evidence["_id"]), current_user.organization_id)
-    
+
     # Fetch updated state with queued status
     updated_evidence = await EvidenceRepository.get_by_id(str(created_evidence["_id"]), current_user.organization_id)
     if updated_evidence:
         created_evidence = updated_evidence
-        
+
     # Format MongoDB return values
     created_evidence["id"] = str(created_evidence["_id"])
     created_evidence["case_id"] = str(created_evidence["case_id"])
     created_evidence["organization_id"] = str(created_evidence["organization_id"])
     created_evidence["created_by"] = str(created_evidence["created_by"])
+
+    # Append-only audit log entry — hash-on-ingest record
+    await AuditRepository.log(
+        actor_id=current_user.id,
+        org_id=current_user.organization_id,
+        action="evidence.upload",
+        entity_type="evidence",
+        entity_id=created_evidence["id"],
+        metadata={
+            "filename": file.filename,
+            "sha256": sha256,
+            "size_bytes": size_bytes,
+            "file_type": inferred_type.value,
+            "case_id": case_id,
+        },
+    )
     return created_evidence
 
 @router.get("/cases/{case_id}/evidence", response_model=List[EvidenceResponse])

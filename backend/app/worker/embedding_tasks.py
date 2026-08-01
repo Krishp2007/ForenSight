@@ -24,4 +24,10 @@ def generate_event_embeddings_task(case_id: str, org_id: str):
         
     result = run_async(run())
     logger.info(f"Vector embedding indexing completed. Status: {result}")
+
+    # Trigger graph correlation rules — runs after embeddings so the full
+    # event set is in Neo4j and anomaly scores are populated
+    from backend.app.worker.correlation_tasks import run_correlation_rules_task
+    run_correlation_rules_task.delay(case_id, org_id)
+
     return {"case_id": case_id, "indexed": result}

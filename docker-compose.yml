@@ -1,5 +1,12 @@
+# ── ForenSight AI — Full Stack Docker Compose ────────────────────────────────
+# Architecture: mongodb, neo4j, qdrant, redis, api, worker, ollama, web
+# Start everything:  docker compose up -d
+# Tear down:         docker compose down -v
+
 services:
-  # MongoDB - Primary Document Database
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
   mongodb:
     image: mongo:6.0
     container_name: forensight-mongodb
@@ -7,24 +14,49 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Neo4j - Graph Database
   neo4j:
     image: neo4j:5.12-community
     container_name: forensight-neo4j
     ports:
-      - "7474:7474" # HTTP UI
-      - "7687:7687" # Bolt connection
+      - "7474:7474"   # Browser UI
+      - "7687:7687"   # Bolt
     volumes:
       - neo4j_data:/data
       - neo4j_plugins:/plugins
     environment:
-      - NEO4J_AUTH=neo4j/forensight_pass # User: neo4j, Pass: forensight_pass
-      - NEO4J_PLUGINS=["apoc", "graph-data-science"]     # Install APOC and Graph Data Science plugins
-    restart: always
+      - NEO4J_AUTH=neo4j/forensight_pass
+      - NEO4J_PLUGINS=["apoc", "graph-data-science"]
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "forensight_pass", "RETURN 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
 
-  # Redis - Cache & Task Queue Broker
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: forensight-qdrant
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7.0
     container_name: forensight-redis
@@ -32,26 +64,120 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    restart: always
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # MinIO - Object Storage (Local S3)
   minio:
-    image: minio/minio
+    image: minio/minio:latest
     container_name: forensight-minio
     ports:
-      - "9000:9000" # API Port
-      - "9001:9001" # Web UI Console Port
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
     volumes:
       - minio_data:/data
     environment:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
     command: server /data --console-address ":9001"
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Application ─────────────────────────────────────────────────────────────
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: forensight-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - NEO4J_URL=bolt://neo4j:7687
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+    volumes:
+      - evidence_store:/app/app/storage
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 2
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: forensight-worker
+    env_file:
+      - ./backend/.env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - NEO4J_URL=bolt://neo4j:7687
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+    volumes:
+      - evidence_store:/app/app/storage
+    depends_on:
+      - api
+      - redis
+    restart: unless-stopped
+    # Run Celery worker — includes all 4 task modules
+    command: >
+      celery -A app.worker.celery_app worker
+      --loglevel=info
+      --concurrency=2
+      --queues=celery
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: forensight-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+    # Pull llama3.1 on first start
+    # Run manually after startup: docker exec forensight-ollama ollama pull llama3.1
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: forensight-web
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
 
 volumes:
   mongodb_data:
   neo4j_data:
   neo4j_plugins:
+  qdrant_data:
   redis_data:
   minio_data:
+  evidence_store:
+  ollama_models:

@@ -5,6 +5,7 @@ from typing import Dict, Any
 
 from backend.app.repositories.graph_repository import GraphRepository
 from backend.app.repositories.case_repository import CaseRepository
+from backend.app.repositories.audit_repository import AuditRepository
 from backend.app.auth.dependencies import get_current_user
 from backend.app.schemas.user import UserResponse
 
@@ -59,4 +60,13 @@ async def clear_case_graph(
         
     # 3. Clear graph
     await GraphRepository.clear_case_graph(case_id, current_user.organization_id)
+
+    # Audit log
+    await AuditRepository.log(
+        actor_id=current_user.id,
+        org_id=current_user.organization_id,
+        action="graph.clear",
+        entity_type="case",
+        entity_id=case_id,
+    )
     return None

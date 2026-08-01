@@ -6,6 +6,7 @@ from backend.app.repositories.case_repository import CaseRepository
 from backend.app.auth.dependencies import get_current_user
 from backend.app.auth.rbac import require_investigator
 from backend.app.schemas.user import UserResponse
+from backend.app.repositories.audit_repository import AuditRepository
 from bson import ObjectId
 
 router = APIRouter(prefix="/cases", tags=["cases"])
@@ -36,6 +37,16 @@ async def create_case(
     created_case["id"] = str(created_case["_id"])
     created_case["organization_id"] = str(created_case["organization_id"])
     created_case["created_by"] = str(created_case["created_by"])
+
+    # Append-only audit log entry
+    await AuditRepository.log(
+        actor_id=current_user.id,
+        org_id=current_user.organization_id,
+        action="case.create",
+        entity_type="case",
+        entity_id=created_case["id"],
+        metadata={"title": payload.title, "status": payload.status.value},
+    )
     return created_case
 
 @router.get("/", response_model=List[CaseResponse])
@@ -129,4 +140,14 @@ async def update_case(
     updated_case["id"] = str(updated_case["_id"])
     updated_case["organization_id"] = str(updated_case["organization_id"])
     updated_case["created_by"] = str(updated_case["created_by"])
+
+    # Append-only audit log entry
+    await AuditRepository.log(
+        actor_id=current_user.id,
+        org_id=current_user.organization_id,
+        action="case.update",
+        entity_type="case",
+        entity_id=case_id,
+        metadata=update_data,
+    )
     return updated_case

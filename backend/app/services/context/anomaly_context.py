@@ -1,0 +1,52 @@
+"""
+Anomaly Context Builder — ForenSight AI
+=========================================
+Fetches top anomalous events for a case and formats them into a
+structured context dict ready for the copilot prompt.
+"""
+
+import logging
+from typing import Any, Dict, List
+from bson import ObjectId
+from backend.app.db.mongodb import db_client
+
+logger = logging.getLogger(__name__)
+
+
+async def build_anomaly_context(
+    case: Dict[str, Any], limit: int = 30
+) -> List[Dict[str, Any]]:
+    """
+    Fetch the top anomalous events sorted by anomaly_score descending.
+
+    Parameters
+    ----------
+    case   : case document from MongoDB (must contain _id and organization_id)
+    limit  : max number of anomalies to return
+
+    Returns
+    -------
+    List of event dicts with string-serialized IDs.
+    """
+    col = db_client.db["events"]
+    cursor = col.find(
+        {
+            "case_id": case["_id"],
+            "organization_id": case["organization_id"],
+            "is_anomaly": True,
+        }
+    ).sort("anomaly_score", -1).limit(limit)
+
+    events = await cursor.to_list(length=limit)
+    for e in events:
+        e["id"] = str(e["_id"])
+        e["case_id"] = str(e["case_id"])
+        e["organization_id"] = str(e["organization_id"])
+        e["evidence_id"] = str(e.get("evidence_id", ""))
+        # Normalize timestamp for display
+        ts = e.get("timestamp")
+        if ts and hasattr(ts, "isoformat"):
+            e["timestamp"] = ts.isoformat()
+
+    logger.debug(f"Fetched {len(events)} anomalies for case {case['_id']}")
+    return events

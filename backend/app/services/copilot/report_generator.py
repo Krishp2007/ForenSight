@@ -1,0 +1,117 @@
+"""
+Report Generator — ForenSight AI
+====================================
+Builds the final structured Markdown report that the copilot returns.
+Separated from copilot.py so it can be unit-tested independently and
+reused by the PDF report pipeline.
+
+Consumes pre-assembled context dicts (from services/context/) so it
+has no direct database dependencies.
+"""
+
+from typing import Any, Dict, List, Optional
+
+
+def build_forensic_report(
+    case: Dict[str, Any],
+    anomalies: List[Dict[str, Any]],
+    correlations: List[Dict[str, Any]],
+    enriched_techniques: List[Dict[str, Any]],
+    semantic_context: List[Dict[str, Any]],
+    question: Optional[str] = None,
+) -> str:
+    """
+    Assemble a structured Markdown forensic report from pre-fetched context.
+    Used as the local fallback when no LLM API is available.
+    """
+    lines: List[str] = []
+
+    # ── Header ────────────────────────────────────────────────────────────────
+    lines.append(f"# 🛡️ Forensic Audit: {case.get('title', 'Investigation Case')}")
+    lines.append(f"**Status:** {case.get('status', 'open').replace('_', ' ').title()}  ")
+    desc = case.get("description", "No description provided.")
+    lines.append(f"**Description:** {desc}\n")
+
+    # ── Investigator question + semantic matches ───────────────────────────────
+    if question:
+        lines.append(f"---\n### 💬 Question: _{question}_")
+        if semantic_context:
+            lines.append("**Closest matching events (FAISS similarity search):**")
+            for i, sc in enumerate(semantic_context[:5], 1):
+                ts = sc.get("timestamp", "")
+                lines.append(
+                    f"{i}. `{ts}` — **{sc.get('subject')}** → _{sc.get('action')}_ "
+                    f"→ **{sc.get('object')}** "
+                    f"*(severity: {sc.get('severity')}, distance: {sc.get('distance', 0):.4f})*"
+                )
+        else:
+            lines.append("*No semantically similar events found for this query.*")
+        lines.append("")
+
+    # ── ML Anomaly Detections ─────────────────────────────────────────────────
+    lines.append("---\n### 🤖 Machine Learning Anomaly Detections")
+    if anomalies:
+        lines.append(
+            f"**{len(anomalies)} anomalous events** flagged by Isolation Forest "
+            f"(top results shown):\n"
+        )
+        for i, a in enumerate(anomalies[:8], 1):
+            sev = (a.get("severity") or "info").upper()
+            score = a.get("anomaly_score", 0.0)
+            ts = a.get("timestamp", "")
+            mitre = ", ".join(a.get("mitre_techniques", [])) or "—"
+            lines.append(
+                f"{i}. **[{sev}]** `{ts}`  \n"
+                f"   **{a.get('subject')}** → _{a.get('action')}_ → **{a.get('object')}**  \n"
+                f"   Score: `{score:.4f}` | MITRE: `{mitre}`"
+            )
+    else:
+        lines.append("*No anomalies detected in current event set.*")
+    lines.append("")
+
+    # ── Graph Correlation Rules ───────────────────────────────────────────────
+    if correlations:
+        lines.append(f"---\n### 🔗 Graph Correlations ({len(correlations)} derived relationships)")
+        rule_groups: Dict[str, list] = {}
+        for c in correlations:
+            rule = c.get("rule", "UNKNOWN")
+            rule_groups.setdefault(rule, []).append(c)
+
+        for rule, items in rule_groups.items():
+            lines.append(f"\n**{rule.replace('_', ' ')}** ({len(items)} instances):")
+            for c in items[:5]:
+                mitre_tag = f" | MITRE `{c['mitre']}`" if c.get("mitre") else ""
+                lines.append(f"- `{c.get('source')}` → `{c.get('target')}`{mitre_tag}")
+            if len(items) > 5:
+                lines.append(f"  *…and {len(items) - 5} more*")
+    lines.append("")
+
+    # ── MITRE ATT&CK Techniques ───────────────────────────────────────────────
+    if enriched_techniques:
+        lines.append(f"---\n### 🎯 MITRE ATT&CK Techniques Observed")
+        for t in enriched_techniques:
+            url = t.get("url", "")
+            lines.append(
+                f"- **[{t['id']}]({url})** — {t['name']} *(Tactic: {t['tactic']})*  \n"
+                f"  {t.get('description', '')}"
+            )
+    lines.append("")
+
+    # ── Recommended Next Steps ────────────────────────────────────────────────
+    lines.append("---\n### 🔍 Recommended Investigative Steps")
+    lines.append("1. **Credential audit** — review all login events near anomaly timestamps.")
+    lines.append("2. **Process isolation** — quarantine hosts with high anomaly scores.")
+    lines.append(
+        "3. **Network capture** — collect PCAPs from hosts showing suspicious outbound connections."
+    )
+    lines.append("4. **Registry inspection** — verify Run/RunOnce keys flagged by persistence rules.")
+    lines.append(
+        "5. **Graph traversal** — use the Graph view to walk parent-child process chains "
+        "derived by correlation rules."
+    )
+    lines.append(
+        "\n> *This report was generated by the ForenSight AI local analysis engine. "
+        "For LLM-powered narrative analysis, configure a Gemini API key or start Ollama.*"
+    )
+
+    return "\n".join(lines)

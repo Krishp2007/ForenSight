@@ -43,7 +43,8 @@ app = FastAPI(
     title="ForenSight AI Backend API",
     description="Event-Driven Modular Digital Forensics & AI Copilot Analysis Platform",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False,   # prevents 307 redirects that strip Authorization header
 )
 
 # Set up CORS middleware rules
@@ -65,6 +66,8 @@ from backend.app.api.graph import router as graph_router
 from backend.app.api.chat import router as chat_router
 from backend.app.api.similarity import router as similarity_router
 from backend.app.api.reports import router as reports_router
+from backend.app.api.audit import router as audit_router
+from backend.app.api.correlations import router as correlations_router
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(org_router, prefix="/api/v1")
@@ -75,6 +78,8 @@ app.include_router(graph_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(similarity_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
+app.include_router(audit_router, prefix="/api/v1")
+app.include_router(correlations_router, prefix="/api/v1")
 
 @app.get("/")
 def get_root():

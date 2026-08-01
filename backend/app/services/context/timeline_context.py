@@ -1,0 +1,104 @@
+"""
+Timeline Context Builder — ForenSight AI
+=========================================
+Fetches a chronological slice of events and groups them into
+activity bursts (sessions) for the copilot and report.
+Architecture Section 5.5.1 — clustering of filesystem events into sessions.
+"""
+
+import logging
+from datetime import timedelta
+from typing import Any, Dict, List, Optional
+from bson import ObjectId
+from backend.app.db.mongodb import db_client
+
+logger = logging.getLogger(__name__)
+
+SESSION_GAP_MINUTES = 15  # Events more than 15 min apart start a new session
+
+
+async def build_timeline_context(
+    case: Dict[str, Any],
+    severity: Optional[str] = None,
+    limit: int = 200,
+) -> Dict[str, Any]:
+    """
+    Fetch chronological events and group them into activity sessions.
+
+    Parameters
+    ----------
+    case     : case document (must have _id, organization_id)
+    severity : optional filter ('high', 'critical', etc.)
+    limit    : max events to fetch
+
+    Returns
+    -------
+    {
+      "events"  : [EventDict, ...],
+      "sessions": [{"start": ts, "end": ts, "count": int, "events": [...]}],
+      "total"   : int,
+      "span_hours": float
+    }
+    """
+    col = db_client.db["events"]
+    query: Dict[str, Any] = {
+        "case_id": case["_id"],
+        "organization_id": case["organization_id"],
+    }
+    if severity:
+        query["severity"] = severity
+
+    cursor = col.find(query).sort("timestamp", 1).limit(limit)
+    events = await cursor.to_list(length=limit)
+
+    for e in events:
+        e["id"] = str(e["_id"])
+        e["case_id"] = str(e["case_id"])
+        e["organization_id"] = str(e["organization_id"])
+        e["evidence_id"] = str(e.get("evidence_id", ""))
+        ts = e.get("timestamp")
+        if ts and hasattr(ts, "isoformat"):
+            e["timestamp_str"] = ts.isoformat()
+
+    # Group into sessions by time gap
+    sessions: List[Dict[str, Any]] = []
+    if events:
+        session: Dict[str, Any] = {
+            "start": events[0].get("timestamp"),
+            "end": events[0].get("timestamp"),
+            "count": 1,
+            "events": [events[0]],
+        }
+        for ev in events[1:]:
+            ts = ev.get("timestamp")
+            prev_ts = session["end"]
+            if ts and prev_ts and (ts - prev_ts) > timedelta(minutes=SESSION_GAP_MINUTES):
+                sessions.append(session)
+                session = {"start": ts, "end": ts, "count": 1, "events": [ev]}
+            else:
+                session["end"] = ts
+                session["count"] += 1
+                session["events"].append(ev)
+        sessions.append(session)
+
+    # Compute total span
+    span_hours = 0.0
+    if events:
+        first = events[0].get("timestamp")
+        last = events[-1].get("timestamp")
+        if first and last and hasattr(first, "__sub__"):
+            try:
+                span_hours = round((last - first).total_seconds() / 3600, 2)
+            except Exception:
+                pass
+
+    logger.debug(
+        f"Timeline: {len(events)} events → {len(sessions)} sessions "
+        f"spanning {span_hours}h for case {case['_id']}"
+    )
+    return {
+        "events": events,
+        "sessions": sessions,
+        "total": len(events),
+        "span_hours": span_hours,
+    }

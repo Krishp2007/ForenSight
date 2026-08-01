@@ -7,6 +7,7 @@ from scapy.utils import PcapReader
 from scapy.layers.inet import IP, TCP, UDP
 from backend.app.parsers.base import BaseParser
 from backend.app.schemas.event import EventSource, EventType, EventSeverity
+from backend.app.knowledge.mitre_mapper import MitreMapper
 
 logger = logging.getLogger(__name__)
 
@@ -111,9 +112,8 @@ class PcapParser(BaseParser):
             # Identify suspicious network ports (e.g. Metasploit, suspected C2 beacons)
             if dport in (4444, 1337, 6667, 8080):
                 severity = EventSeverity.MEDIUM.value
-                techniques = ["T1043"] # Commonly Used Port
+                techniques = MitreMapper.tag_from_text(str(dport))
             elif dport == 22 and src_ip.startswith("10."):
-                # SSH beaconing logic example
                 severity = EventSeverity.LOW.value
                 
             return {

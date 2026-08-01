@@ -10,7 +10,10 @@ celery_app = Celery(
         "backend.app.worker.parser_tasks",
         "backend.app.worker.ml_tasks",
         "backend.app.worker.embedding_tasks",
-        "backend.app.worker.report_tasks"
+        "backend.app.worker.report_tasks",
+        "backend.app.worker.correlation_tasks",
+        "backend.app.worker.similarity_tasks",
+        "backend.app.worker.upload_tasks",
     ]
 )
 

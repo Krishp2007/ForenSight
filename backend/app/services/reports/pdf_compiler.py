@@ -6,11 +6,7 @@ from typing import Dict, Any
 
 from jinja2 import Template
 
-from backend.app.repositories.case_repository import CaseRepository
-from backend.app.repositories.graph_repository import GraphRepository
-from backend.app.services.ai.copilot import CopilotService
-from backend.app.db.mongodb import db_client
-from bson import ObjectId
+from backend.app.services.context.report_context import build_report_context
 
 logger = logging.getLogger(__name__)
 
@@ -76,62 +72,8 @@ def markdown_to_html(md_text: str) -> str:
 class ReportCompiler:
     @classmethod
     async def get_report_context(cls, case_id: str, org_id: str) -> Dict[str, Any]:
-        """Gather all database timeline logs, anomaly counts, graph lists and AI summaries for the case."""
-        case = await CaseRepository.get_by_id(case_id, org_id)
-        if not case:
-            raise ValueError("Case not found or access denied")
-            
-        # 1. Total event stats
-        total_events = await db_client.db["events"].count_documents({
-            "case_id": case["_id"],
-            "organization_id": case["organization_id"]
-        })
-        
-        # 2. Anomaly counts
-        anomalies_count = await db_client.db["events"].count_documents({
-            "case_id": case["_id"],
-            "organization_id": case["organization_id"],
-            "is_anomaly": True
-        })
-        
-        # 3. Critical/High severity counts
-        critical_high_count = await db_client.db["events"].count_documents({
-            "case_id": case["_id"],
-            "organization_id": case["organization_id"],
-            "severity": {"$in": ["critical", "high"]}
-        })
-        
-        # 4. Top anomalies list
-        cursor = db_client.db["events"].find({
-            "case_id": case["_id"],
-            "organization_id": case["organization_id"],
-            "is_anomaly": True
-        }).sort("anomaly_score", -1)
-        anomalies = await cursor.to_list(length=100)
-        
-        # Format timestamps for display
-        for a in anomalies:
-            if isinstance(a.get("timestamp"), datetime):
-                a["timestamp"] = a["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
-                
-        # 5. Graph entities
-        graph = await GraphRepository.get_case_graph(case_id, org_id)
-        
-        # 6. Copilot analysis report
-        copilot_markdown = await CopilotService.analyze_case_timeline(case_id, org_id)
-        copilot_html = markdown_to_html(copilot_markdown)
-        
-        return {
-            "case": case,
-            "case_id": case_id,
-            "total_events": total_events,
-            "anomalies_count": anomalies_count,
-            "critical_high_count": critical_high_count,
-            "anomalies": anomalies,
-            "graph": graph,
-            "copilot_analysis_html": copilot_html,
-            "date_generated": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-        }
+        """Delegate to the centralized report context builder."""
+        return await build_report_context(case_id, org_id)
 
     @classmethod
     async def compile_html_report(cls, case_id: str, org_id: str) -> str:
