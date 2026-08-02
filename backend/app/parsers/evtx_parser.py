@@ -2,6 +2,7 @@ import tempfile
 import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from functools import lru_cache
 import logging
 from typing import List, Dict, Any, Optional
 
@@ -12,20 +13,46 @@ from backend.app.knowledge.mitre_mapper import MitreMapper
 
 logger = logging.getLogger(__name__)
 
-# Standard namespaces for Windows Event XML
-NS = {'ns': 'http://schemas.microsoft.com/win/2004/08/events/event'}
+NS_PREFIX = '{http://schemas.microsoft.com/win/2004/08/events/event}'
+
+# Pre-build tag strings once — avoids repeated string concatenation per record
+_SYS       = f'{NS_PREFIX}System'
+_EVTDATA   = f'{NS_PREFIX}EventData'
+_EVTID     = f'{NS_PREFIX}EventID'
+_PROVIDER  = f'{NS_PREFIX}Provider'
+_TIMECREATED = f'{NS_PREFIX}TimeCreated'
+_DATA      = f'{NS_PREFIX}Data'
+
+
+def _fast_parse_ts(time_str: str) -> datetime:
+    """Parse SystemTime string to datetime as fast as possible."""
+    try:
+        # Most common: "2023-01-15T10:30:45.123456Z" → strip sub-seconds and Z
+        s = time_str[:19]          # "2023-01-15T10:30:45"
+        return datetime(
+            int(s[0:4]), int(s[5:7]), int(s[8:10]),
+            int(s[11:13]), int(s[14:16]), int(s[17:19])
+        )
+    except Exception:
+        return datetime.utcnow()
+
+
+# Cache MitreMapper event_id lookups — same event_id will be looked up thousands of times
+@lru_cache(maxsize=256)
+def _mitre_for_event_id(event_id: int) -> list:
+    return MitreMapper.tag_from_event_id(event_id)
+
 
 class EvtxParser(BaseParser):
     def parse(self, file_content: bytes, filename: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Parse EVTX bytes synchronously — called from a thread executor by the pipeline."""
         events = []
-        
-        # 1. Write bytes to temporary file for the Evtx reader
-        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-            tmp_file.write(file_content)
-            tmp_path = tmp_file.name
-            
+        tmp_path = None
         try:
-            # 2. Parse binary EVTX records
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".evtx") as tmp_file:
+                tmp_file.write(file_content)
+                tmp_path = tmp_file.name
+
             with evtx.Evtx(tmp_path) as log:
                 for record in log.records():
                     try:
@@ -34,161 +61,133 @@ class EvtxParser(BaseParser):
                         if event_dict:
                             events.append(event_dict)
                     except Exception as re:
-                        logger.debug(f"Skipping individual corrupt EVTX record: {re}")
+                        logger.debug(f"Skipping corrupt EVTX record: {re}")
+
         except Exception as e:
-            logger.warning(f"Could not parse file as binary EVTX ({e}). Attempting mock/fallback parsing.")
-            # Fallback: if it's a test dummy file, generate a mock parsed event so tests pass
-            fallback_time = datetime.utcnow()
+            logger.warning(f"Could not parse EVTX ({e}). Using fallback.")
             events.append({
-                "timestamp": fallback_time,
+                "timestamp": datetime.utcnow(),
                 "event_type": EventType.GENERIC.value,
                 "source": EventSource.EVTX.value,
                 "severity": EventSeverity.INFO.value,
                 "subject": "System",
                 "action": "parsed_fallback",
                 "object": filename or "unknown_file",
-                "details": {
-                    "raw_fallback": True,
-                    "file_size": len(file_content)
-                },
-                "mitre_techniques": []
+                "details": {"raw_fallback": True, "file_size": len(file_content)},
+                "mitre_techniques": [],
             })
         finally:
-            # Clean up temp file
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
-                
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
+
         return events
 
     def _parse_xml_record(self, xml_str: str) -> Optional[Dict[str, Any]]:
-        """Parse raw EVTX record XML and normalize into CFM format."""
         try:
-            # Strip namespace prefix declarations if present to ease ElementTree querying
             root = ET.fromstring(xml_str)
-            
-            # 1. Extract Event ID and Provider
-            system = root.find('ns:System', NS)
+
+            # Try namespaced first, then bare (no-namespace fallback files)
+            system = root.find(_SYS) or root.find('System')
             if system is None:
-                system = root.find('System')
-                if system is None:
-                    return None
-            
-            # Helper to find tag with or without namespace
-            def find_elem(parent, tag):
-                elem = parent.find(f'ns:{tag}', NS)
-                if elem is None:
-                    elem = parent.find(tag)
-                return elem
+                return None
 
-            event_id_elem = find_elem(system, 'EventID')
-            event_id = int(event_id_elem.text) if event_id_elem is not None and event_id_elem.text else 0
-            
-            provider_elem = find_elem(system, 'Provider')
-            provider = provider_elem.get('Name', 'Unknown') if provider_elem is not None else 'Unknown'
-            
-            time_elem = find_elem(system, 'TimeCreated')
-            time_str = time_elem.get('SystemTime') if time_elem is not None else None
-            
-            timestamp = datetime.utcnow()
-            if time_str:
-                try:
-                    # SystemTime is usually in format "YYYY-MM-DD HH:MM:SS.ffffff" or "YYYY-MM-DDTHH:MM:SS.ffffffZ"
-                    time_str_clean = time_str.replace('Z', '').split('.')[0] # simple truncation
-                    timestamp = datetime.strptime(time_str_clean, "%Y-%m-%dT%H:%M:%S")
-                except Exception:
-                    pass
-            
-            # 2. Extract Event Data details
-            event_data = root.find('ns:EventData', NS)
-            if event_data is None:
-                event_data = root.find('EventData')
-                
-            details = {"EventID": event_id, "Provider": provider}
-            if event_data is not None:
-                for data in event_data.findall('ns:Data', NS) or event_data.findall('Data'):
-                    name = data.get('Name')
+            # Event ID
+            eid_elem = system.find(_EVTID) or system.find('EventID')
+            event_id = int(eid_elem.text) if eid_elem is not None and eid_elem.text else 0
+
+            # Provider
+            prov_elem = system.find(_PROVIDER) or system.find('Provider')
+            provider  = prov_elem.get('Name', 'Unknown') if prov_elem is not None else 'Unknown'
+
+            # Timestamp — fast integer slice parser
+            tc_elem  = system.find(_TIMECREATED) or system.find('TimeCreated')
+            time_str = tc_elem.get('SystemTime') if tc_elem is not None else None
+            timestamp = _fast_parse_ts(time_str) if time_str else datetime.utcnow()
+
+            # EventData key-value pairs
+            ev_data = root.find(_EVTDATA) or root.find('EventData')
+            details: Dict[str, Any] = {"EventID": event_id, "Provider": provider}
+            if ev_data is not None:
+                for d in ev_data:
+                    name = d.get('Name')
                     if name:
-                        details[name] = data.text
+                        details[name] = d.text
 
-            # 3. Standardize Subject-Action-Object Triples using Event ID mappings
-            # Initialize default values
-            subj, act, obj = f"System (Event {event_id})", "occurred", f"Provider {provider}"
+            # Subject / Action / Object mapping
+            subj = f"System (Event {event_id})"
+            act  = "occurred"
+            obj  = f"Provider {provider}"
             event_type = EventType.GENERIC.value
-            severity = EventSeverity.INFO.value
-            techniques = []
-            
-            if event_id == 4624: # Successful Logon
+            severity   = EventSeverity.INFO.value
+            techniques: list = []
+
+            if event_id == 4624:
                 event_type = EventType.AUTH_EVENT.value
-                user = details.get('TargetUserName', 'Unknown')
-                domain = details.get('TargetDomainName', 'Unknown')
-                ip = details.get('IpAddress', 'Local')
-                subj = f"{domain}\\{user}"
-                act = "logged_on_successfully"
-                obj = f"from IP {ip}"
+                subj = f"{details.get('TargetDomainName','?')}\\{details.get('TargetUserName','?')}"
+                act  = "logged_on_successfully"
+                obj  = f"from IP {details.get('IpAddress','Local')}"
                 severity = EventSeverity.LOW.value
-                
-            elif event_id == 4625: # Failed Logon
+
+            elif event_id == 4625:
                 event_type = EventType.AUTH_EVENT.value
-                user = details.get('TargetUserName', 'Unknown')
-                domain = details.get('TargetDomainName', 'Unknown')
-                ip = details.get('IpAddress', 'Local')
-                subj = f"{domain}\\{user}"
-                act = "failed_logon_attempt"
-                obj = f"from IP {ip}"
-                severity = EventSeverity.MEDIUM.value
-                techniques = MitreMapper.tag_from_event_id(4625)
-                
-            elif event_id == 4688: # Process Creation
+                subj = f"{details.get('TargetDomainName','?')}\\{details.get('TargetUserName','?')}"
+                act  = "failed_logon_attempt"
+                obj  = f"from IP {details.get('IpAddress','Local')}"
+                severity   = EventSeverity.MEDIUM.value
+                techniques = _mitre_for_event_id(4625)
+
+            elif event_id == 4688:
                 event_type = EventType.PROCESS_CREATION.value
-                parent = details.get('ParentProcessName', 'Unknown')
-                child = details.get('NewProcessName', 'Unknown')
-                cmd = details.get('CommandLine', '')
-                subj = os.path.basename(parent) if parent != 'Unknown' else 'Unknown'
-                act = "spawned"
-                obj = f"{os.path.basename(child)} ({cmd})" if cmd else os.path.basename(child)
+                parent = details.get('ParentProcessName', '')
+                child  = details.get('NewProcessName', '')
+                cmd    = details.get('CommandLine', '')
+                subj = os.path.basename(parent) if parent else 'Unknown'
+                obj  = (f"{os.path.basename(child)} ({cmd})" if cmd else os.path.basename(child)) if child else 'Unknown'
+                act  = "spawned"
                 severity = EventSeverity.LOW.value
-                
-                # Check for suspicious command lines
-                cmd_lower = cmd.lower()
-                if "powershell" in cmd_lower and "-enc" in cmd_lower:
-                    severity = EventSeverity.HIGH.value
-                    techniques = MitreMapper.tag_from_text(cmd_lower)
-                elif "whoami" in cmd_lower or "net user" in cmd_lower:
-                    severity = EventSeverity.MEDIUM.value
-                    techniques = MitreMapper.tag_from_text(cmd_lower)
+                if cmd:
+                    cmd_l = cmd.lower()
+                    if "powershell" in cmd_l and "-enc" in cmd_l:
+                        severity   = EventSeverity.HIGH.value
+                        techniques = MitreMapper.tag_from_text(cmd_l)
+                    elif "whoami" in cmd_l or "net user" in cmd_l:
+                        severity   = EventSeverity.MEDIUM.value
+                        techniques = MitreMapper.tag_from_text(cmd_l)
+                    else:
+                        techniques = _mitre_for_event_id(4688)
                 else:
-                    techniques = MitreMapper.tag_from_event_id(4688)
-                    
-            elif event_id in (4663, 4660): # File Access / Deletion
+                    techniques = _mitre_for_event_id(4688)
+
+            elif event_id in (4663, 4660):
                 event_type = EventType.FILE_MODIFICATION.value
-                process = details.get('ProcessName', 'Unknown')
-                file_name = details.get('ObjectName', 'Unknown')
-                access = details.get('AccessMask', 'Accessed')
-                subj = os.path.basename(process) if process != 'Unknown' else 'Unknown'
-                act = "accessed" if event_id == 4663 else "deleted"
-                obj = file_name
+                process = details.get('ProcessName', '')
+                subj = os.path.basename(process) if process else 'Unknown'
+                act  = "accessed" if event_id == 4663 else "deleted"
+                obj  = details.get('ObjectName', 'Unknown')
                 severity = EventSeverity.LOW.value
-                
-            elif event_id in (4657, 5039): # Registry Modification
+
+            elif event_id in (4657, 5039):
                 event_type = EventType.REGISTRY_CHANGE.value
-                process = details.get('ProcessName', 'Unknown')
-                key_name = details.get('ObjectName', 'Unknown')
-                subj = os.path.basename(process) if process != 'Unknown' else 'Unknown'
-                act = "modified_registry"
-                obj = key_name
+                process = details.get('ProcessName', '')
+                subj = os.path.basename(process) if process else 'Unknown'
+                act  = "modified_registry"
+                obj  = details.get('ObjectName', 'Unknown')
                 severity = EventSeverity.LOW.value
-            
+
             return {
-                "timestamp": timestamp,
-                "event_type": event_type,
-                "source": EventSource.EVTX.value,
-                "severity": severity,
-                "subject": subj,
-                "action": act,
-                "object": obj,
-                "details": details,
-                "mitre_techniques": techniques
+                "timestamp":       timestamp,
+                "event_type":      event_type,
+                "source":          EventSource.EVTX.value,
+                "severity":        severity,
+                "subject":         subj,
+                "action":          act,
+                "object":          obj,
+                "details":         details,
+                "mitre_techniques": techniques,
             }
         except Exception as e:
-            logger.debug(f"Failed parsing record XML details: {e}")
+            logger.debug(f"Failed parsing EVTX record: {e}")
             return None

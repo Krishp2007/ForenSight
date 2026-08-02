@@ -82,15 +82,21 @@ class GraphRepository:
             
         if not batch:
             return 0
-            
+
+        # Send in chunks to avoid huge single transactions that stall Neo4j
+        CHUNK_SIZE = 500
+        total_synced = 0
         try:
-            async with driver.session() as session:
-                await session.run(cypher_query, batch=batch)
-            logger.info(f"Successfully synced {len(batch)} event nodes/relationships to Neo4j.")
-            return len(batch)
+            for i in range(0, len(batch), CHUNK_SIZE):
+                chunk = batch[i : i + CHUNK_SIZE]
+                async with driver.session() as session:
+                    await session.run(cypher_query, batch=chunk)
+                total_synced += len(chunk)
+            logger.info(f"Successfully synced {total_synced} event nodes/relationships to Neo4j.")
+            return total_synced
         except Exception as ex:
             logger.error(f"Failed bulk importing events into Neo4j: {ex}")
-            return 0
+            return total_synced
 
     @staticmethod
     async def get_case_graph(case_id: str, org_id: str) -> Dict[str, List[Any]]:
@@ -98,52 +104,65 @@ class GraphRepository:
         driver = neo4j_client.driver
         if not driver:
             return {"nodes": [], "edges": []}
-            
+
+        # First check if ANY Entity nodes exist for this case (helps diagnose empty graph)
+        count_query = """
+        MATCH (n:Entity {case_id: $case_id, organization_id: $org_id})
+        RETURN count(n) AS node_count
+        """
+
         cypher_query = """
-        MATCH (s:Entity {case_id: $case_id, organization_id: $org_id})-[r:FORENSIC_ACTION {case_id: $case_id, organization_id: $org_id}]->(o:Entity {case_id: $case_id, organization_id: $org_id})
+        MATCH (s:Entity {case_id: $case_id, organization_id: $org_id})
+              -[r:FORENSIC_ACTION]->
+              (o:Entity {case_id: $case_id, organization_id: $org_id})
         RETURN s.name AS source_name, s.type AS source_type,
                o.name AS target_name, o.type AS target_type,
-               r.action AS action, r.severity AS severity, r.timestamp AS timestamp, r.event_id AS event_id,
+               r.action AS action, r.severity AS severity,
+               r.timestamp AS timestamp, r.event_id AS event_id,
                r.is_anomaly AS is_anomaly, r.anomaly_score AS anomaly_score
-        LIMIT 1000
+        LIMIT 2000
         """
-        
+
         nodes_dict = {}
         edges = []
-        
+
         try:
             async with driver.session() as session:
+                # Diagnostic count
+                count_result = await session.run(count_query, case_id=case_id, org_id=org_id)
+                count_record = await count_result.single()
+                node_count = count_record["node_count"] if count_record else 0
+                logger.info(f"[GRAPH] Case {case_id}: {node_count} entity nodes found in Neo4j")
+
+                if node_count == 0:
+                    return {"nodes": [], "edges": [], "_debug": "no_nodes_in_neo4j"}
+
                 result = await session.run(cypher_query, case_id=case_id, org_id=org_id)
                 records = await result.data()
-                
-                for record in records:
-                    s_name = record["source_name"]
-                    s_type = record["source_type"]
-                    t_name = record["target_name"]
-                    t_type = record["target_type"]
-                    
-                    # Track unique nodes
-                    if s_name not in nodes_dict:
-                        nodes_dict[s_name] = {"id": s_name, "label": s_name, "type": s_type}
-                    if t_name not in nodes_dict:
-                        nodes_dict[t_name] = {"id": t_name, "label": t_name, "type": t_type}
-                        
-                    # Add edge
-                    edges.append({
-                        "source": s_name,
-                        "target": t_name,
-                        "action": record["action"],
-                        "severity": record["severity"],
-                        "timestamp": record["timestamp"],
-                        "event_id": record["event_id"],
-                        "is_anomaly": record.get("is_anomaly", False),
-                        "anomaly_score": record.get("anomaly_score", 0.0)
-                    })
-                    
-            return {
-                "nodes": list(nodes_dict.values()),
-                "edges": edges
-            }
+
+            for record in records:
+                s_name = record["source_name"]
+                s_type = record["source_type"]
+                t_name = record["target_name"]
+                t_type = record["target_type"]
+
+                if s_name not in nodes_dict:
+                    nodes_dict[s_name] = {"id": s_name, "label": s_name, "type": s_type}
+                if t_name not in nodes_dict:
+                    nodes_dict[t_name] = {"id": t_name, "label": t_name, "type": t_type}
+
+                edges.append({
+                    "source":       s_name,
+                    "target":       t_name,
+                    "action":       record["action"],
+                    "severity":     record["severity"],
+                    "timestamp":    record["timestamp"],
+                    "event_id":     record["event_id"],
+                    "is_anomaly":   record.get("is_anomaly", False),
+                    "anomaly_score": record.get("anomaly_score", 0.0),
+                })
+
+            return {"nodes": list(nodes_dict.values()), "edges": edges}
         except Exception as e:
             logger.error(f"Failed to fetch case graph from Neo4j: {e}")
             return {"nodes": [], "edges": []}

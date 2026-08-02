@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { getEvidence, reprocessEvidence, deleteEvidence } from '../../services/evidenceService'
 import { formatBytes, formatDateTime, humanize } from '../../utils/formatters'
-import { FileText, RefreshCw, RotateCcw, Trash2, GitBranch, Eye } from 'lucide-react'
+import { FileText, RefreshCw, RotateCcw, Trash2, Eye } from 'lucide-react'
 import EmptyState from '../ui/EmptyState'
 import ConfirmModal from '../ui/ConfirmModal'
 import EvidenceDrawer from './EvidenceDrawer'
+import useParseTimerStore from '../../store/parseTimerStore'
 
 const POLLING_INTERVAL = 4000
 const TERMINAL = ['parsed', 'failed']
@@ -16,7 +17,6 @@ const STATUS_COLORS = {
   parsed:   { bg: 'rgba(16,185,129,0.2)',  color: '#34d399' },
   failed:   { bg: 'rgba(239,68,68,0.2)',   color: '#fca5a5' },
 }
-
 const StatusPill = ({ status }) => {
   const s = STATUS_COLORS[status] || STATUS_COLORS.uploaded
   return (
@@ -40,21 +40,52 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
   const timerRef = useRef(null)
   const [reprocessing, setReprocessing] = useState({})
   const [deleting, setDeleting]         = useState({})
-  const [confirmDelete, setConfirmDelete] = useState(null)   // evidence object to delete
-  const [drawerEvidence, setDrawerEvidence] = useState(null) // evidence object for drawer
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [drawerEvidence, setDrawerEvidence] = useState(null)
+
+  // Parse timers live in a Zustand store — survives tab/page navigation
+  const { markStarted, markDone, getStartMs } = useParseTimerStore()
+
+  // Live tick — only active while something is parsing
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const active = items.some(e => e.status === 'parsing')
+    if (!active) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [items])
+
+  // Register / clean up timer entries whenever item statuses change
+  useEffect(() => {
+    items.forEach(e => {
+      if (e.status === 'parsing') {
+        markStarted(e.id, e.parsing_started_at)
+      } else if (e.status === 'parsed' || e.status === 'failed') {
+        markDone(e.id)
+      }
+    })
+  }, [items])
 
   // Poll non-terminal items
   useEffect(() => {
     const pending = items.filter(e => !TERMINAL.includes(e.status))
+
     if (!pending.length) return
+
     timerRef.current = setInterval(async () => {
       for (const ev of pending) {
         try {
           const updated = await getEvidence(ev.id)
-          if (updated.status !== ev.status) onItemUpdated(updated)
-        } catch { /* silent */ }
+
+          if (updated.status !== ev.status) {
+            onItemUpdated(updated)
+          }
+        } catch {
+          /* silent */
+        }
       }
     }, POLLING_INTERVAL)
+
     return () => clearInterval(timerRef.current)
   }, [items])
 
@@ -62,28 +93,56 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
     setReprocessing(p => ({ ...p, [ev.id]: true }))
     try {
       await reprocessEvidence(caseId, ev.id)
-      onItemUpdated({ ...ev, status: 'queued' })
-    } catch (e) { console.error(e) }
-    finally { setReprocessing(p => ({ ...p, [ev.id]: false })) }
+      // Reset the timer so it starts fresh on re-process
+      markDone(ev.id)
+      onItemUpdated({ ...ev, status: 'queued', parsing_started_at: null, parsed_at: null })
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setReprocessing(p => ({ ...p, [ev.id]: false }))
+    }
   }
 
   const handleDelete = async () => {
     if (!confirmDelete) return
+
     const ev = confirmDelete
+
     setConfirmDelete(null)
     setDeleting(p => ({ ...p, [ev.id]: true }))
+
     try {
       await deleteEvidence(caseId, ev.id)
-      if (onItemDeleted) onItemDeleted(ev.id)
-    } catch (e) { console.error('Delete failed', e) }
-    finally { setDeleting(p => ({ ...p, [ev.id]: false })) }
+
+      if (onItemDeleted) {
+        onItemDeleted(ev.id)
+      }
+    } catch (e) {
+      console.error('Delete failed', e)
+    } finally {
+      setDeleting(p => ({ ...p, [ev.id]: false }))
+    }
   }
 
   if (!items.length) return (
-    <EmptyState icon={FileText} title="No evidence yet" description="Upload your first forensic file above." />
+    <EmptyState
+      icon={FileText}
+      title="No evidence yet"
+      description="Upload your first forensic file above."
+    />
   )
 
-  const thStyle = { padding: '10px 14px', textAlign: 'left', color: '#6b7fa3', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #3d4f6a', whiteSpace: 'nowrap' }
+  const thStyle = {
+    padding: '10px 14px',
+    textAlign: 'left',
+    color: '#6b7fa3',
+    fontSize: '10px',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    borderBottom: '1px solid #3d4f6a',
+    whiteSpace: 'nowrap'
+  }
 
   return (
     <>
@@ -101,32 +160,81 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
               <th style={thStyle}>Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {items.map((e, i) => (
-              <tr key={e.id}
-                style={{ background: i % 2 === 0 ? '#2d3748' : '#283141', borderBottom: i < items.length - 1 ? '1px solid #3d4f6a' : 'none', transition: 'background 0.15s' }}
+              <tr
+                key={e.id}
+                style={{
+                  background: i % 2 === 0 ? '#2d3748' : '#283141',
+                  borderBottom: i < items.length - 1 ? '1px solid #3d4f6a' : 'none',
+                  transition: 'background 0.15s'
+                }}
                 onMouseEnter={el => el.currentTarget.style.background = '#323d52'}
                 onMouseLeave={el => el.currentTarget.style.background = i % 2 === 0 ? '#2d3748' : '#283141'}
               >
+
                 <td style={{ padding: '10px 14px', color: '#fff', fontWeight: '500', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {e.filename}
                 </td>
-                <td style={{ padding: '10px 14px', color: '#9aa8c0', textTransform: 'uppercase', fontSize: '11px', whiteSpace: 'nowrap' }}>{e.file_type}</td>
-                <td style={{ padding: '10px 14px', color: '#9aa8c0', whiteSpace: 'nowrap' }}>{formatBytes(e.size_bytes)}</td>
+
+                <td style={{ padding: '10px 14px', color: '#9aa8c0', textTransform: 'uppercase', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                  {e.file_type}
+                </td>
+
+                <td style={{ padding: '10px 14px', color: '#9aa8c0', whiteSpace: 'nowrap' }}>
+                  {formatBytes(e.size_bytes)}
+                </td>
+
                 <td style={{ padding: '10px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                     <StatusPill status={e.status} />
+
                     {!TERMINAL.includes(e.status) && (
-                      <RefreshCw size={11} color="#6b7fa3" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                      <RefreshCw
+                        size={11}
+                        color="#6b7fa3"
+                        style={{
+                          animation: 'spin 1s linear infinite',
+                          flexShrink: 0
+                        }}
+                      />
                     )}
                   </div>
-                  {e.error_message && <p style={{ color: '#fca5a5', fontSize: '11px', margin: '3px 0 0 0' }}>{e.error_message}</p>}
+
+                  {e.error_message && (
+                    <p style={{ color: '#fca5a5', fontSize: '11px', margin: '3px 0 0 0' }}>
+                      {e.error_message}
+                    </p>
+                  )}
                 </td>
+
+                {/* LIVE SCAN TIME */}
                 <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                   {(() => {
-                    if (e.status === 'parsed' && e.parsing_started_at && e.parsed_at) {
-                      const secs = Math.round(
-                        (new Date(e.parsed_at) - new Date(e.parsing_started_at)) / 1000
+                    // Parsing → live counter from store (survives navigation)
+                    if (e.status === 'parsing') {
+                      const startMs = getStartMs(e.id) || now
+                      const secs = Math.max(0, Math.floor((now - startMs) / 1000))
+                      return (
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#fbbf24' }}>
+                          {secs}s
+                        </span>
+                      )
+                    }
+
+                    // Parsed → frozen final time
+                    if (
+                      e.status === 'parsed' &&
+                      e.parsing_started_at &&
+                      e.parsed_at
+                    ) {
+                      const secs = Math.max(
+                        0,
+                        Math.round(
+                          (new Date(e.parsed_at).getTime() -
+                           new Date(e.parsing_started_at).getTime()) / 1000
+                        )
                       )
                       const color = secs < 10 ? '#34d399' : secs < 60 ? '#fbbf24' : '#f87171'
                       return (
@@ -135,16 +243,30 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
                         </span>
                       )
                     }
-                    if (['queued','parsing'].includes(e.status)) {
-                      return <span style={{ fontSize: '11px', color: '#fbbf24' }}>scanning…</span>
+
+                    // Waiting for worker
+                    if (e.status === 'queued') {
+                      return (
+                        <span style={{ fontSize: '11px', color: '#60a5fa' }}>
+                          waiting…
+                        </span>
+                      )
                     }
-                    return <span style={{ color: '#4a5568', fontSize: '11px' }}>—</span>
+
+                    return (
+                      <span style={{ color: '#4a5568', fontSize: '11px' }}>—</span>
+                    )
                   })()}
                 </td>
-                <td style={{ padding: '10px 14px', color: '#9aa8c0', fontSize: '11px', whiteSpace: 'nowrap' }}>{formatDateTime(e.created_at)}</td>
+
+                <td style={{ padding: '10px 14px', color: '#9aa8c0', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                  {formatDateTime(e.created_at)}
+                </td>
+
                 <td style={{ padding: '10px 14px', color: '#4a5568', fontSize: '11px', fontFamily: 'monospace', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {e.sha256?.slice(0, 12)}…
                 </td>
+
                 <td style={{ padding: '10px 14px' }}>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
 
@@ -161,11 +283,22 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
                     {/* Re-process */}
                     <ActionBtn
                       onClick={() => handleReprocess(e)}
-                      disabled={reprocessing[e.id] || !['parsed', 'failed', 'uploaded'].includes(e.status)}
+                      disabled={
+                        reprocessing[e.id] ||
+                        !['parsed', 'failed', 'uploaded'].includes(e.status)
+                      }
                       title="Re-run full pipeline"
                       color="#a78bfa"
                     >
-                      <RotateCcw size={10} style={{ animation: reprocessing[e.id] ? 'spin 1s linear infinite' : 'none' }} />
+                      <RotateCcw
+                        size={10}
+                        style={{
+                          animation: reprocessing[e.id]
+                            ? 'spin 1s linear infinite'
+                            : 'none'
+                        }}
+                      />
+
                       {reprocessing[e.id] ? 'Starting…' : 'Re-process'}
                     </ActionBtn>
 
@@ -179,13 +312,23 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
                       <Trash2 size={10} />
                       {deleting[e.id] ? 'Deleting…' : 'Delete'}
                     </ActionBtn>
+
                   </div>
                 </td>
+
               </tr>
             ))}
           </tbody>
         </table>
-        <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+
+        <style>
+          {`
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
       </div>
 
       {/* Delete confirm modal */}

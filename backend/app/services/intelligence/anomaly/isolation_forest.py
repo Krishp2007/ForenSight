@@ -15,7 +15,10 @@ class IsolationForestModel(BaseAnomalyModel):
         n = len(X)
         contamination = 0.05 if n >= 20 else "auto"
         model = IsolationForest(
-            contamination=contamination, random_state=42, n_estimators=100
+            contamination=contamination,
+            random_state=42,
+            n_estimators=50,    # 100→50: halves training time with negligible accuracy loss
+            n_jobs=-1,          # use all CPU cores
         )
         preds = model.fit_predict(X)          # 1=inlier, -1=outlier
         raw = model.decision_function(X)

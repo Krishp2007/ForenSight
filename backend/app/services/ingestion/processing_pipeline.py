@@ -4,24 +4,26 @@ Processing Pipeline — ForenSight AI
 Runs the full evidence processing chain entirely inside the FastAPI process
 using asyncio background tasks — no Celery worker required.
 
-Pipeline steps:
+Pipeline steps (critical path — affects parse timer):
   1.  Fetch evidence metadata from MongoDB
-  2.  Download raw file from MinIO
-  3.  Parse → structured events list
+  2.  Download raw file from MinIO          (thread executor)
+  3.  Parse → structured events list        (thread executor)
   4.  Enrich with case / org / evidence IDs
   5.  Bulk insert events into MongoDB
-  6.  Sync event graph nodes/edges to Neo4j
-  7.  Mark evidence status → PARSED
-  8.  Run ensemble anomaly detection (IsolationForest)
+  6.  Mark evidence status → PARSED  ← UI timer stops here
+
+Post-parsed background steps (do NOT block the timer):
+  7.  Sync event graph nodes/edges to Neo4j
+  8.  Run ensemble anomaly detection
   9.  Build FAISS semantic search index
   10. Run Cypher graph correlation rules
 """
 
 import asyncio
+import concurrent.futures
 import logging
 import os
 import tempfile
-from datetime import datetime
 from bson import ObjectId
 
 from backend.app.repositories.evidence_repository import EvidenceRepository
@@ -53,28 +55,42 @@ async def _run_full_pipeline(evidence_id: str, org_id: str) -> None:
         return
 
     filename = evidence.get("filename", evidence_id)
-    logger.info(f"[PIPELINE] ▶ Starting: {filename} ({evidence.get('file_type')})")
+    file_type = evidence.get("file_type", "json")
+    logger.info(f"[PIPELINE] ▶ Starting: {filename} ({file_type})")
     await EvidenceRepository.update_status(evidence_id, org_id, EvidenceStatus.PARSING.value)
 
+    loop = asyncio.get_running_loop()
+    _t0 = loop.time()
+
     try:
-        # ── 2. Download from MinIO ───────────────────────────────────────────
+        # ── 2. Download from MinIO (blocking sync SDK → offload to thread) ───
         if minio_client.client is None:
             connect_to_minio()
-        response = minio_client.client.get_object(
-            bucket_name=settings.MINIO_BUCKET_NAME,
-            object_name=evidence["minio_object_name"],
-        )
-        file_content = response.read()
-        response.close()
-        response.release_conn()
-        logger.info(f"[PIPELINE] Downloaded {len(file_content):,} bytes")
 
-        # ── 3. Parse ─────────────────────────────────────────────────────────
-        parser = get_parser(evidence["file_type"])
-        events = parser.parse(file_content, filename=filename)
-        logger.info(f"[PIPELINE] Parsed {len(events)} events")
+        def _download():
+            resp = minio_client.client.get_object(
+                bucket_name=settings.MINIO_BUCKET_NAME,
+                object_name=evidence["minio_object_name"],
+            )
+            data = resp.read()
+            resp.close()
+            resp.release_conn()
+            return data
 
-        # ── 4. Enrich ────────────────────────────────────────────────────────
+        file_content = await loop.run_in_executor(None, _download)
+        logger.info(f"[PIPELINE] ⏱ Download: {loop.time()-_t0:.1f}s  {len(file_content):,} bytes")
+
+        # ── 3. Parse (CPU-bound / blocking I/O → thread executor) ────────────
+        parser = get_parser(file_type)
+        _t1 = loop.time()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            events = await loop.run_in_executor(
+                pool,
+                lambda: parser.parse(file_content, filename=filename),
+            )
+        logger.info(f"[PIPELINE] ⏱ Parse:    {loop.time()-_t1:.1f}s  {len(events)} events")
+
+        # ── 4. Enrich ─────────────────────────────────────────────────────────
         case_oid = ObjectId(str(evidence["case_id"]))
         org_oid  = ObjectId(org_id)
         ev_oid   = ObjectId(evidence_id)
@@ -85,88 +101,21 @@ async def _run_full_pipeline(evidence_id: str, org_id: str) -> None:
                 "organization_id": org_oid,
             })
 
-        # ── 5. MongoDB bulk insert ───────────────────────────────────────────
+        # ── 5. MongoDB bulk insert ────────────────────────────────────────────
+        _t2 = loop.time()
         if events:
             count = await EventRepository.bulk_create(events)
-            logger.info(f"[PIPELINE] Inserted {count} events into MongoDB")
+            logger.info(f"[PIPELINE] ⏱ MongoDB:  {loop.time()-_t2:.1f}s  {count} inserted")
 
-            # ── 6. Neo4j sync ────────────────────────────────────────────────
-            synced = await GraphRepository.bulk_import_events(events)
-            if synced == 0:
-                logger.warning(
-                    "[PIPELINE] ⚠️  Neo4j sync returned 0 — "
-                    "driver unavailable or all events missing subject/object. "
-                    "Graph will be empty until you click Re-process."
-                )
-            else:
-                logger.info(f"[PIPELINE] Synced {synced} events to Neo4j")
-
-        # ── 7. Mark PARSED ───────────────────────────────────────────────────
+        # ── 6. Mark PARSED — UI timer stops here ─────────────────────────────
         await EvidenceRepository.update_status(evidence_id, org_id, EvidenceStatus.PARSED.value)
-        logger.info(f"[PIPELINE] ✅ Status → PARSED for {filename}")
+        logger.info(f"[PIPELINE] ✅ PARSED in {loop.time()-_t0:.1f}s total — {filename}")
 
+        # ── 7-10. Post-parse enrichment runs fully in background ──────────────
         case_id_str = str(evidence["case_id"])
-
-        # ── 8. Anomaly detection ─────────────────────────────────────────────
-        try:
-            from backend.app.services.intelligence.anomaly.evaluator import ensemble_predict
-            from backend.app.db.mongodb import db_client
-            import numpy as np
-            from collections import Counter
-
-            evs = await EventRepository.list_by_case(case_id_str, org_id, limit=5000)
-            n = len(evs)
-            if n >= 5:
-                SEV = {"info": 0.0, "low": 0.25, "medium": 0.5, "high": 0.75, "critical": 1.0}
-                sc = Counter(e.get("subject", "") for e in evs)
-                oc = Counter(e.get("object",  "") for e in evs)
-                ac = Counter(e.get("action",  "") for e in evs)
-                rows = []
-                for e in evs:
-                    ts = e.get("timestamp")
-                    rows.append([
-                        ts.hour      if ts and hasattr(ts, "hour")    else 12,
-                        1.0          if ts and ts.weekday() >= 5      else 0.0,
-                        sc[e.get("subject", "")] / n,
-                        oc[e.get("object",  "")] / n,
-                        ac[e.get("action",  "")] / n,
-                        SEV.get((e.get("severity") or "info").lower(), 0.0),
-                    ])
-                X = np.array(rows, dtype=float)
-                res = ensemble_predict(X)
-                flags, scores = res["flags"], res["scores"]
-                ops = [
-                    db_client.db["events"].update_one(
-                        {"_id": evs[i]["_id"]},
-                        {"$set": {"is_anomaly": bool(flags[i]),
-                                  "anomaly_score": float(scores[i])}},
-                    )
-                    for i in range(n)
-                ]
-                await asyncio.gather(*ops)
-                logger.info(f"[PIPELINE] Anomalies: {sum(flags)}/{n} flagged")
-            else:
-                logger.info(f"[PIPELINE] Only {n} events — skipping anomaly detection")
-        except Exception as ae:
-            logger.warning(f"[PIPELINE] Anomaly detection error (non-fatal): {ae}")
-
-        # ── 9. FAISS embeddings ──────────────────────────────────────────────
-        try:
-            from backend.app.services.ai.vector_store import VectorStore
-            await VectorStore.index_case_events(case_id_str, org_id)
-            logger.info("[PIPELINE] FAISS index built")
-        except Exception as ve:
-            logger.warning(f"[PIPELINE] Embedding error (non-fatal): {ve}")
-
-        # ── 10. Graph correlation rules ──────────────────────────────────────
-        try:
-            from backend.app.services.graph.graph_queries import GraphCorrelationRules
-            corr = await GraphCorrelationRules.run_all_rules(case_id_str, org_id)
-            logger.info(f"[PIPELINE] Correlations: {corr}")
-        except Exception as ce:
-            logger.warning(f"[PIPELINE] Correlation error (non-fatal): {ce}")
-
-        logger.info(f"[PIPELINE] 🏁 Complete for {filename}")
+        asyncio.create_task(_run_post_pipeline(
+            events, case_id_str, org_id, loop
+        ))
 
     except Exception as e:
         logger.error(f"[PIPELINE] ❌ Failed for {filename}: {e}", exc_info=True)
@@ -177,41 +126,108 @@ async def _run_full_pipeline(evidence_id: str, org_id: str) -> None:
         )
 
 
+async def _run_post_pipeline(events, case_id_str: str, org_id: str, loop) -> None:
+    """
+    Post-parse enrichment: Neo4j, anomaly detection, embeddings, correlations.
+    Runs after PARSED is set — never blocks the main pipeline timer.
+    All four run concurrently via asyncio.gather.
+    """
+    from backend.app.repositories.graph_repository import GraphRepository
+    from backend.app.repositories.event_repository import EventRepository
+
+    _tp = loop.time()
+
+    async def _neo4j():
+        try:
+            _t = loop.time()
+            synced = await GraphRepository.bulk_import_events(events)
+            logger.info(f"[POST] ⏱ Neo4j:    {loop.time()-_t:.1f}s  {synced} synced")
+        except Exception as e:
+            logger.warning(f"[POST] Neo4j error (non-fatal): {e}")
+
+    async def _anomaly():
+        try:
+            from backend.app.services.intelligence.anomaly.evaluator import ensemble_predict
+            from backend.app.db.mongodb import db_client
+            from pymongo import UpdateOne
+            import numpy as np
+            from collections import Counter
+
+            # Cap at 2000 — O(n²) LOF gets very slow beyond this
+            evs = await EventRepository.list_by_case(case_id_str, org_id, limit=2000)
+            n = len(evs)
+            if n < 5:
+                return
+            SEV = {"info": 0.0, "low": 0.25, "medium": 0.5, "high": 0.75, "critical": 1.0}
+            sc = Counter(e.get("subject", "") for e in evs)
+            oc = Counter(e.get("object",  "") for e in evs)
+            ac = Counter(e.get("action",  "") for e in evs)
+            rows = [[
+                ts.hour if (ts := e.get("timestamp")) and hasattr(ts, "hour") else 12,
+                1.0 if ts and ts.weekday() >= 5 else 0.0,
+                sc[e.get("subject", "")] / n,
+                oc[e.get("object",  "")] / n,
+                ac[e.get("action",  "")] / n,
+                SEV.get((e.get("severity") or "info").lower(), 0.0),
+            ] for e in evs]
+            X = np.array(rows, dtype=float)
+
+            _t = loop.time()
+            res = await loop.run_in_executor(None, lambda: ensemble_predict(X))
+            flags, scores = res["flags"], res["scores"]
+
+            bulk_ops = [
+                UpdateOne(
+                    {"_id": evs[i]["_id"]},
+                    {"$set": {"is_anomaly": bool(flags[i]), "anomaly_score": float(scores[i])}},
+                )
+                for i in range(n)
+            ]
+            await db_client.db["events"].bulk_write(bulk_ops, ordered=False)
+            logger.info(f"[POST] ⏱ Anomaly:  {loop.time()-_t:.1f}s  {sum(flags)}/{n} flagged")
+        except Exception as e:
+            logger.warning(f"[POST] Anomaly error (non-fatal): {e}")
+
+    async def _embeddings():
+        try:
+            from backend.app.services.ai.vector_store import VectorStore
+            _t = loop.time()
+            await VectorStore.index_case_events(case_id_str, org_id)
+            logger.info(f"[POST] ⏱ FAISS:    {loop.time()-_t:.1f}s")
+        except Exception as e:
+            logger.warning(f"[POST] Embedding error (non-fatal): {e}")
+
+    async def _correlations():
+        try:
+            from backend.app.services.graph.graph_queries import GraphCorrelationRules
+            _t = loop.time()
+            corr = await GraphCorrelationRules.run_all_rules(case_id_str, org_id)
+            logger.info(f"[POST] ⏱ Correlate:{loop.time()-_t:.1f}s  {corr}")
+        except Exception as e:
+            logger.warning(f"[POST] Correlation error (non-fatal): {e}")
+
+    await asyncio.gather(_neo4j(), _anomaly(), _embeddings(), _correlations())
+    logger.info(f"[POST] 🏁 Post-pipeline done in {loop.time()-_tp:.1f}s")
+
+
 class ProcessingPipeline:
     """
     Trigger evidence processing as a FastAPI BackgroundTask.
-
-    Why NOT Celery here:
-      - Celery dispatches to Redis; if no worker is running the task sits
-        in the queue forever → status stays 'queued'.
-      - asyncio background tasks run inside the FastAPI process immediately,
-        require zero extra processes, and work on Windows without any DLL issues.
-      - For scale-out, swap _run_full_pipeline back to a Celery task later.
     """
 
     @staticmethod
     def run_in_background(background_tasks, evidence_id: str, org_id: str) -> None:
-        """
-        Schedule the pipeline via FastAPI BackgroundTasks.
-        Call this from the API endpoint — pass `background_tasks: BackgroundTasks`.
-        """
         background_tasks.add_task(_run_full_pipeline, evidence_id, org_id)
-        logger.info(f"[PIPELINE] Background task scheduled for evidence {evidence_id}")
+        logger.info(f"[PIPELINE] Scheduled background task for evidence {evidence_id}")
 
     @staticmethod
     async def trigger_processing(evidence_id: str, org_id: str) -> bool:
-        """
-        Legacy async trigger kept for backward compat (reprocess endpoint).
-        Schedules the pipeline directly via asyncio.create_task so it runs
-        immediately inside the current event loop — no Celery needed.
-        """
         try:
             await EvidenceRepository.update_status(
                 evidence_id, org_id, status=EvidenceStatus.QUEUED.value
             )
-            # create_task schedules on the running loop immediately — never blocks
             asyncio.create_task(_run_full_pipeline(evidence_id, org_id))
-            logger.info(f"[PIPELINE] asyncio.create_task scheduled for {evidence_id}")
+            logger.info(f"[PIPELINE] create_task scheduled for {evidence_id}")
             return True
         except Exception as e:
             logger.error(f"[PIPELINE] Trigger failed: {e}")

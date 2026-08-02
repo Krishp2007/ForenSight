@@ -30,6 +30,19 @@ logger = logging.getLogger(__name__)
 COLLECTION = "audit_log"
 
 
+def _serialize_row(r: dict) -> dict:
+    """Convert a raw MongoDB audit document to a JSON-serialisable dict."""
+    r = dict(r)
+    r["id"]  = str(r.pop("_id", ""))
+    # Convert any remaining ObjectId / datetime values
+    for k, v in list(r.items()):
+        if hasattr(v, "__str__") and type(v).__name__ in ("ObjectId",):
+            r[k] = str(v)
+        elif hasattr(v, "isoformat"):          # datetime
+            r[k] = v.isoformat()
+    return r
+
+
 def _sha256(data: dict) -> str:
     """Deterministic SHA-256 of a dict, sorted keys, UTF-8 encoded."""
     canonical = json.dumps(data, sort_keys=True, default=str)
@@ -105,13 +118,6 @@ class AuditRepository:
 
     @staticmethod
     async def list_for_case(case_id: str, org_id: str, limit: int = 200) -> list:
-        """
-        Return the chronological audit trail for a case.
-
-        Includes ALL audit entries that belong to the case:
-          - entries where entity_id == case_id  (case.create, case.update, correlations.run…)
-          - entries where metadata.case_id == case_id  (evidence.upload, evidence.reprocess…)
-        """
         col = db_client.db[COLLECTION]
         cursor = col.find(
             {
@@ -124,9 +130,7 @@ class AuditRepository:
             sort=[("created_at", 1)],
         ).limit(limit)
         rows = await cursor.to_list(length=limit)
-        for r in rows:
-            r["id"] = str(r["_id"])
-        return rows
+        return [_serialize_row(r) for r in rows]
 
     @staticmethod
     async def list_for_org(org_id: str, limit: int = 500) -> list:
@@ -137,9 +141,7 @@ class AuditRepository:
             sort=[("created_at", -1)],
         ).limit(limit)
         rows = await cursor.to_list(length=limit)
-        for r in rows:
-            r["id"] = str(r["_id"])
-        return rows
+        return [_serialize_row(r) for r in rows]
 
     @staticmethod
     async def verify_chain(org_id: str) -> dict:

@@ -58,23 +58,26 @@ class VectorStore:
         """Load all events for a case, generate embeddings, and build the FAISS index."""
         logger.info(f"Building vector search index for case_id={case_id}")
         
-        # 1. Fetch events from MongoDB
+        # 1. Fetch events from MongoDB — cap at 3000 to keep embedding fast
         from backend.app.repositories.event_repository import EventRepository
-        events = await EventRepository.list_by_case(case_id, org_id, limit=10000)
+        events = await EventRepository.list_by_case(case_id, org_id, limit=3000)
         if not events:
             logger.warning(f"No events found to index for case {case_id}.")
             return False
-            
+
         # 2. Convert events to sentence texts
         sentences = [cls.format_event_sentence(e) for e in events]
         event_ids = [str(e["_id"]) for e in events]
-        
-        # 3. Compute Embeddings
+
+        # 3. Compute Embeddings in executor so the event loop stays unblocked.
+        #    batch_size=64 keeps memory low and allows the model to pipeline work.
         model = get_embedding_model()
-        # Compute embeddings in a background execution pool
         import asyncio
         loop = asyncio.get_running_loop()
-        embeddings = await loop.run_in_executor(None, lambda: model.encode(sentences, show_progress_bar=False))
+        embeddings = await loop.run_in_executor(
+            None,
+            lambda: model.encode(sentences, show_progress_bar=False, batch_size=64)
+        )
         
         # 4. Build FAISS index
         dimension = embeddings.shape[1]

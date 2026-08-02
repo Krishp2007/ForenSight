@@ -28,26 +28,23 @@ async def get_case_correlations(
     case_id: str,
     current_user: UserResponse = Depends(get_current_user),
 ):
-    """
-    Return all DERIVED_CORRELATION relationships in the case knowledge graph.
-
-    Each entry includes:
-      - rule: which rule derived it (PROCESS_INITIATED_CONNECTION,
-               REGISTRY_RUN_KEY_PERSISTENCE, PARENT_OF)
-      - source / target entity names
-      - MITRE technique tag (where applicable)
-      - derived_at timestamp
-    """
     if not ObjectId.is_valid(case_id):
         raise HTTPException(status_code=400, detail="Invalid case ID format")
-
     case = await CaseRepository.get_by_id(case_id, current_user.organization_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found or access denied")
 
-    summary = await GraphCorrelationRules.get_correlation_summary(
-        case_id, current_user.organization_id
-    )
+    from backend.app.db.neo4j import neo4j_client
+    if not neo4j_client.driver:
+        raise HTTPException(status_code=503, detail="Graph database (Neo4j) is not available. Start Neo4j to use correlations.")
+
+    try:
+        summary = await GraphCorrelationRules.get_correlation_summary(
+            case_id, current_user.organization_id
+        )
+    except Exception as e:
+        logger.error(f"Correlations fetch failed: {e}")
+        raise HTTPException(status_code=503, detail=f"Neo4j error: {e}")
     return summary
 
 
@@ -56,29 +53,24 @@ async def run_case_correlations(
     case_id: str,
     current_user: UserResponse = Depends(get_current_user),
 ):
-    """
-    Manually re-run all three Cypher correlation rules for a case.
-
-    Useful after re-parsing evidence or when new events have been ingested.
-    Returns a count of derived relationships created by each rule.
-
-    Rules applied:
-      1. PROCESS_INITIATED_CONNECTION — process-to-network temporal binding
-      2. REGISTRY_RUN_KEY_PERSISTENCE — Run/RunOnce key detection (T1547.001)
-      3. PARENT_OF                    — parent-child process chain
-    """
     if not ObjectId.is_valid(case_id):
         raise HTTPException(status_code=400, detail="Invalid case ID format")
-
     case = await CaseRepository.get_by_id(case_id, current_user.organization_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found or access denied")
 
-    results = await GraphCorrelationRules.run_all_rules(
-        case_id, current_user.organization_id
-    )
+    from backend.app.db.neo4j import neo4j_client
+    if not neo4j_client.driver:
+        raise HTTPException(status_code=503, detail="Graph database (Neo4j) is not available. Start Neo4j to run correlations.")
 
-    # Audit log
+    try:
+        results = await GraphCorrelationRules.run_all_rules(
+            case_id, current_user.organization_id
+        )
+    except Exception as e:
+        logger.error(f"Correlations run failed: {e}")
+        raise HTTPException(status_code=503, detail=f"Neo4j error: {e}")
+
     await AuditRepository.log(
         actor_id=current_user.id,
         org_id=current_user.organization_id,
@@ -87,5 +79,4 @@ async def run_case_correlations(
         entity_id=case_id,
         metadata={"results": {k: str(v) for k, v in results.items()}},
     )
-
     return {"case_id": case_id, "rules_applied": results}

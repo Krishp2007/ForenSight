@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import cytoscape from 'cytoscape'
-import { getCaseGraph, clearCaseGraph } from '../../services/graphService'
+import { getCaseGraph, clearCaseGraph, syncCaseGraph } from '../../services/graphService'
 import Spinner from '../ui/Spinner'
 import EmptyState from '../ui/EmptyState'
 import ConfirmModal from '../ui/ConfirmModal'
-import { GitBranch, Trash2 } from 'lucide-react'
+import { GitBranch, Trash2, RefreshCw } from 'lucide-react'
 
 const NODE_COLORS = {
   Process:'#3b82f6', File:'#10b981', NetworkAddress:'#f59e0b',
@@ -16,6 +16,9 @@ const GraphView = ({ caseId }) => {
   const cyRef        = useRef(null)
   const [loading, setLoading]         = useState(true)
   const [empty, setEmpty]             = useState(false)
+  const [error, setError]             = useState(null)
+  const [syncing, setSyncing]         = useState(false)
+  const [syncMsg, setSyncMsg]         = useState(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [clearing, setClearing]       = useState(false)
   const [nodeCount, setNodeCount]     = useState(0)
@@ -45,7 +48,10 @@ const GraphView = ({ caseId }) => {
         layout:{ name:'cose', animate:true, padding:40 },
         wheelSensitivity:0.3,
       })
-    } catch(e) { console.error(e) }
+    } catch(e) {
+      const msg = e?.response?.data?.detail || e?.message || 'Failed to load graph'
+      setError(msg)
+    }
     finally { setLoading(false) }
   }
 
@@ -55,6 +61,19 @@ const GraphView = ({ caseId }) => {
     setClearing(true)
     try { await clearCaseGraph(caseId); cyRef.current?.destroy(); setEmpty(true); setNodeCount(0); setEdgeCount(0) }
     finally { setClearing(false); setShowConfirm(false) }
+  }
+
+  const handleSync = async () => {
+    setSyncing(true); setSyncMsg(null); setError(null)
+    try {
+      const res = await syncCaseGraph(caseId)
+      setSyncMsg(`Synced ${res.synced} of ${res.total_events} events to Neo4j. Reloading…`)
+      await loadGraph()
+    } catch (e) {
+      setError(e?.response?.data?.detail || 'Sync failed')
+    } finally {
+      setSyncing(false)
+    }
   }
 
   return (
@@ -80,8 +99,32 @@ const GraphView = ({ caseId }) => {
             <Spinner size="lg" />
           </div>
         )}
-        {!loading && empty
-          ? <EmptyState icon={GitBranch} title="No graph data" description="Parse evidence files to populate the knowledge graph." />
+      {!loading && empty
+          ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', minHeight:'300px', flexDirection:'column', gap:'16px' }}>
+              <EmptyState icon={GitBranch} title="No graph data" description="Neo4j has no nodes for this case. If you have parsed evidence, click Sync Graph to push events from MongoDB into Neo4j." />
+              {syncMsg && <p style={{ color:'#34d399', fontSize:'12px', textAlign:'center' }}>{syncMsg}</p>}
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                style={{
+                  display:'flex', alignItems:'center', gap:'6px',
+                  padding:'8px 18px', background:'#4a7fe8', border:'none',
+                  borderRadius:'8px', color:'#fff', fontSize:'13px',
+                  fontWeight:'500', cursor: syncing ? 'not-allowed' : 'pointer',
+                  fontFamily:'inherit', opacity: syncing ? 0.6 : 1,
+                }}
+              >
+                <RefreshCw size={13} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
+                {syncing ? 'Syncing…' : 'Sync Graph from Events'}
+              </button>
+            </div>
+          : !loading && error
+          ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', padding:'32px' }}>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ color:'#fca5a5', fontSize:'13px', marginBottom:'12px' }}>{error}</p>
+                <button onClick={loadGraph} style={{ background:'#2a3347', border:'1px solid #3d4f6a', color:'#9aa8c0', borderRadius:'8px', padding:'7px 16px', cursor:'pointer', fontSize:'12px', fontFamily:'inherit' }}>Retry</button>
+              </div>
+            </div>
           : <div ref={containerRef} style={{ width:'100%', height:'100%', minHeight:'480px' }} />
         }
       </div>

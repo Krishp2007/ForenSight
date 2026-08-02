@@ -5,15 +5,20 @@ from backend.app.db.mongodb import db_client
 class EventRepository:
     @staticmethod
     async def bulk_create(events: List[Dict[str, Any]]) -> int:
-        """Insert a batch of event documents into MongoDB. Returns number of inserted records."""
+        """Insert events in chunks of 5000 to avoid MongoDB write timeout on large files."""
         if not events:
             return 0
+        CHUNK = 5000
+        total = 0
         try:
-            result = await db_client.db["events"].insert_many(events, ordered=False)
-            return len(result.inserted_ids)
+            for i in range(0, len(events), CHUNK):
+                chunk = events[i : i + CHUNK]
+                result = await db_client.db["events"].insert_many(chunk, ordered=False)
+                total += len(result.inserted_ids)
         except Exception as e:
-            # If some insert fails, insert what we can
-            return 0
+            # Partial success is fine — return what was inserted
+            pass
+        return total
 
     @staticmethod
     async def list_by_case(

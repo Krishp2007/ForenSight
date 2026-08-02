@@ -33,9 +33,22 @@ async def connect_to_neo4j():
         driver = neo4j_client.driver
         await driver.verify_connectivity()
         logger.info("Successfully connected to Neo4j!")
+
+        # Ensure indexes exist so MERGE operations are fast (not full graph scans)
+        try:
+            async with driver.session() as session:
+                await session.run(
+                    "CREATE INDEX entity_lookup IF NOT EXISTS "
+                    "FOR (n:Entity) ON (n.name, n.case_id, n.organization_id)"
+                )
+            logger.info("Neo4j Entity index ensured.")
+        except Exception as idx_err:
+            logger.warning(f"Neo4j index creation skipped (non-fatal): {idx_err}")
+
     except Exception as e:
-        logger.error(f"Failed to connect to Neo4j: {e}")
-        raise e
+        logger.warning(
+            f"Neo4j unavailable — graph features disabled. Start Neo4j to enable them. ({e})"
+        )
 
 async def close_neo4j_connection():
     logger.info("Closing Neo4j connections...")
