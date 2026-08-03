@@ -3,17 +3,35 @@
 # Set Python module search path
 export PYTHONPATH=/app
 
-echo "🚀 Starting ForenSight AI FastAPI Backend on 127.0.0.1:8000..."
-python3 -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --log-level info &
-UVICORN_PID=$!
+echo "🚀 Launching ForenSight AI FastAPI Backend Supervisor on 127.0.0.1:8000..."
 
-# Wait for Uvicorn process to initialize
-sleep 3
+# Start Uvicorn in an auto-restart loop so background server stays alive
+(
+    while true; do
+        python3 -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --log-level info
+        EXIT_CODE=$?
+        echo "⚠️ Uvicorn process exited with status $EXIT_CODE. Restarting in 2 seconds..."
+        sleep 2
+    done
+) &
 
-if kill -0 $UVICORN_PID 2>/dev/null; then
-    echo "✅ FastAPI Backend is running (PID $UVICORN_PID)!"
-else
-    echo "❌ ERROR: FastAPI Backend failed to start or crashed on startup!"
+# Poll backend health check until port 8000 is ready (up to 15 seconds)
+echo "⏳ Waiting for FastAPI Backend to initialize..."
+MAX_WAIT=15
+WAIT_COUNT=0
+while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+    if exec 3<>/dev/tcp/127.0.0.1/8000 2>/dev/null; then
+        exec 3<&-
+        exec 3>&-
+        echo "✅ FastAPI Backend is up and listening on 127.0.0.1:8000!"
+        break
+    fi
+    sleep 1
+    WAIT_COUNT=$((WAIT_COUNT + 1))
+done
+
+if [ $WAIT_COUNT -eq $MAX_WAIT ]; then
+    echo "⚠️ Warning: Backend did not report ready within $MAX_WAIT seconds. Continuing..."
 fi
 
 # Dynamically configure Nginx port if Render passed a custom $PORT
@@ -23,4 +41,5 @@ if [ -n "$PORT" ] && [ "$PORT" != "80" ] && [ "$PORT" != "10000" ]; then
 fi
 
 echo "🌐 Starting Nginx Frontend Web Server..."
-nginx -g "daemon off;"
+exec nginx -g "daemon off;"
+

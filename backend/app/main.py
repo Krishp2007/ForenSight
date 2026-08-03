@@ -64,8 +64,7 @@ async def lifespan(app: FastAPI):
         await connect_to_mongo()
         logger.info("MongoDB successfully connected during application startup!")
     except Exception as e:
-        logger.error(f"MongoDB connection failed on startup: {e}")
-        raise e
+        logger.warning(f"MongoDB connection warning on startup (database queries may fail until connected): {e}")
 
     try:
         await connect_to_neo4j()
