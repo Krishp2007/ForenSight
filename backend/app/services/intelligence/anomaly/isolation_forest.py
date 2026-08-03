@@ -4,7 +4,6 @@ Architecture Section 5.5.2 — statistical / ML-based correlation.
 """
 
 import numpy as np
-from sklearn.ensemble import IsolationForest
 from backend.app.services.intelligence.anomaly.base import BaseAnomalyModel, AnomalyResult
 
 
@@ -12,6 +11,7 @@ class IsolationForestModel(BaseAnomalyModel):
     name = "isolation_forest"
 
     def fit_predict(self, X: np.ndarray) -> AnomalyResult:
+        from sklearn.ensemble import IsolationForest
         n = len(X)
         contamination = 0.05 if n >= 20 else "auto"
         model = IsolationForest(

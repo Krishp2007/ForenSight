@@ -5,7 +5,6 @@ Architecture Section 5.5.2.
 """
 
 import numpy as np
-from sklearn.neighbors import LocalOutlierFactor
 from backend.app.services.intelligence.anomaly.base import BaseAnomalyModel, AnomalyResult
 
 
@@ -13,6 +12,7 @@ class LOFModel(BaseAnomalyModel):
     name = "lof"
 
     def fit_predict(self, X: np.ndarray) -> AnomalyResult:
+        from sklearn.neighbors import LocalOutlierFactor
         n = len(X)
         # Keep neighbors small — LOF is O(n * k) with ball_tree; large k is very slow
         n_neighbors = min(10, n - 1) if n > 1 else 1

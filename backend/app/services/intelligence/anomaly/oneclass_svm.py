@@ -5,8 +5,6 @@ Architecture Section 5.5.2.
 """
 
 import numpy as np
-from sklearn.svm import OneClassSVM
-from sklearn.preprocessing import StandardScaler
 from backend.app.services.intelligence.anomaly.base import BaseAnomalyModel, AnomalyResult
 
 
@@ -14,6 +12,8 @@ class OneClassSVMModel(BaseAnomalyModel):
     name = "oneclass_svm"
 
     def fit_predict(self, X: np.ndarray) -> AnomalyResult:
+        from sklearn.svm import OneClassSVM
+        from sklearn.preprocessing import StandardScaler
         n = len(X)
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)

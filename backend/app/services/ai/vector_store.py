@@ -2,13 +2,11 @@ import os
 import pickle
 import logging
 import numpy as np
-import faiss
 from typing import List, Dict, Any
 
 # Suppress harmless HuggingFace hub rate limit/symlinks warning logs
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
-from sentence_transformers import SentenceTransformer
 from bson import ObjectId
 
 from backend.app.db.mongodb import db_client
@@ -22,6 +20,7 @@ _model = None
 def get_embedding_model():
     global _model
     if _model is None:
+        from sentence_transformers import SentenceTransformer
         logger.info("Loading SentenceTransformer model 'all-MiniLM-L6-v2'...")
         # Force model cache path inside the workspace to keep it self-contained
         cache_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".cache")
@@ -80,6 +79,7 @@ class VectorStore:
         )
         
         # 4. Build FAISS index
+        import faiss
         dimension = embeddings.shape[1]
         index = faiss.IndexFlatL2(dimension)
         index.add(np.array(embeddings).astype("float32"))
@@ -96,6 +96,7 @@ class VectorStore:
     @classmethod
     async def search_similar_events(cls, case_id: str, org_id: str, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Load FAISS index, embed query sentence, search, and fetch matching MongoDB documents."""
+        import faiss
         paths = cls.get_index_paths(case_id)
         if not os.path.exists(paths["index"]) or not os.path.exists(paths["meta"]):
             logger.warning(f"FAISS index files not found for case {case_id}. Attempting automatic rebuild...")
