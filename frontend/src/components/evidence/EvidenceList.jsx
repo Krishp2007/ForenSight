@@ -148,7 +148,7 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
 
   return (
     <>
-      <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #3d4f6a' }}>
+      <div className="touch-horizontal-scroll" style={{ borderRadius: '12px', border: '1px solid #3d4f6a' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead>
             <tr style={{ background: '#1e2a3d' }}>

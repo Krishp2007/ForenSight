@@ -206,11 +206,10 @@ const CaseDetailPage = () => {
       )}
 
       {/* Top Head Tab Bar — contains remaining tabs */}
-      <div style={{
+      <div className="touch-horizontal-scroll" style={{
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        overflowX: 'auto',
         padding: '6px',
         background: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(16px)',

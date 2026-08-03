@@ -16,7 +16,7 @@ import UsersPage from './pages/UsersPage'
 const AppShell = () => (
   <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#0b0f19', color: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
     <Topbar />
-    <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+    <main className="app-main-padding" style={{ flex: 1, overflowY: 'auto' }}>
       <Outlet />
     </main>
   </div>

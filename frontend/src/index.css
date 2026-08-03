@@ -117,3 +117,42 @@ body {
   background: rgba(30, 41, 59, 0.9) !important;
   box-shadow: inset 3px 0 0 var(--forensic-primary) !important;
 }
+
+/* ── Mobile Responsive Layout Utilities ───────────────────────────────────── */
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+  .app-main-padding {
+    padding: 14px 16px !important;
+  }
+  .responsive-header {
+    padding: 0 16px !important;
+  }
+  .mobile-full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .mobile-flex-col {
+    flex-direction: column !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+  .app-main-padding {
+    padding: 24px 28px !important;
+  }
+  .responsive-header {
+    padding: 0 28px !important;
+  }
+}
+
+.touch-horizontal-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+

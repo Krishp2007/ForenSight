@@ -42,7 +42,8 @@ const OrganizationSetupPage = () => {
         maxWidth: '400px',
         background: '#323d52',
         borderRadius: '16px',
-        padding: '40px 36px',
+        padding: '28px 20px',
+        boxSizing: 'border-box',
         boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
       }}>
         {/* Icon + heading */}

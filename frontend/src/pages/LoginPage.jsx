@@ -52,22 +52,23 @@ export default function LoginPage() {
       padding: '24px',
       boxSizing: 'border-box',
     }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '920px',
-        background: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderRadius: '20px',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        overflow: 'hidden',
-        display: 'flex',
-        boxShadow: '0 30px 80px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.15)',
-        animation: 'dashboardFadeIn 0.4s ease-out',
-      }}>
+      <div className="mobile-flex-col"
+        style={{
+          width: '100%',
+          maxWidth: '920px',
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '20px',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          overflow: 'hidden',
+          display: 'flex',
+          boxShadow: '0 30px 80px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.15)',
+          animation: 'dashboardFadeIn 0.4s ease-out',
+        }}>
 
         {/* ── LEFT PANEL: Forensic Branding ── */}
-        <div style={{
+        <div className="desktop-only" style={{
           width: '45%',
           background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)',
           padding: '48px 40px',
