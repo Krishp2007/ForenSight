@@ -19,7 +19,7 @@ import { Spinner } from '../components/ui'
 import {
   Pencil, X,
   LayoutDashboard, FileCheck, Clock, Share2,
-  MessageSquare, FileText, ShieldCheck, Briefcase, ArrowRight
+  MessageSquare, FileText, ShieldCheck, Briefcase, ArrowRight, Link
 } from 'lucide-react'
 
 // Dark cyber status badge
@@ -40,11 +40,12 @@ const CaseStatusBadge = ({ status }) => {
   )
 }
 
-// Top head tab bar configuration — includes Dashboard, Report, and Audit Log
+// Top head tab bar configuration — Dashboard, Correlations, Report, and Audit Log
 const TAB_CONFIG = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'report',    label: 'Report',    icon: FileText },
-  { id: 'audit',     label: 'Audit Log', icon: ShieldCheck },
+  { id: 'dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+  { id: 'correlations', label: 'Correlations', icon: Link },
+  { id: 'report',       label: 'Report',       icon: FileText },
+  { id: 'audit',        label: 'Audit Log',    icon: ShieldCheck },
 ]
 
 
