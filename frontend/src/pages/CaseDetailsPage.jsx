@@ -8,14 +8,8 @@ import { Database, HardDrive, Cpu } from 'lucide-react';
 
 import CaseTimeline from '../components/timeline/CaseTimeline';
 import CaseGraph from '../components/graph/CaseGraph';
-
-const CopilotPlaceholder = () => (
-  <div className="py-20 text-center border border-dashed border-gray-800 rounded-2xl bg-gray-900/30">
-    <HardDrive className="w-10 h-10 text-gray-660 mx-auto mb-3" />
-    <span className="text-gray-400 font-bold text-xs uppercase tracking-wider">AI Copilot Analysis Workspace</span>
-    <p className="text-gray-500 text-xs mt-1">This module will be activated in Sprint 16.</p>
-  </div>
-);
+import CaseCopilot from '../components/chat/CaseCopilot';
+import CaseReportModal from '../components/reports/CaseReportModal';
 
 const CaseDetailsPage = () => {
   const { caseId } = useParams();
@@ -26,6 +20,7 @@ const CaseDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('evidence');
   const [updateError, setUpdateError] = useState('');
+  const [showReport, setShowReport] = useState(false);
   
   const pollingRef = useRef(null);
 
@@ -120,6 +115,7 @@ const CaseDetailsPage = () => {
       <CaseMetaHeader
         caseObj={caseObj}
         onStatusChange={handleStatusChange}
+        onOpenReport={() => setShowReport(true)}
       />
 
       {updateError && (
@@ -171,8 +167,16 @@ const CaseDetailsPage = () => {
 
         {activeTab === 'timeline' && <CaseTimeline caseId={caseId} />}
         {activeTab === 'graph' && <CaseGraph caseId={caseId} />}
-        {activeTab === 'copilot' && <CopilotPlaceholder />}
+        {activeTab === 'copilot' && <CaseCopilot caseId={caseId} />}
       </div>
+
+      {showReport && (
+        <CaseReportModal
+          caseId={caseId}
+          caseTitle={caseObj.title}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   );
 };

@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CasesPage from './pages/CasesPage';
 import CaseDetailsPage from './pages/CaseDetailsPage';
+import DashboardPage from './pages/DashboardPage';
 
 function App() {
   return (
@@ -26,7 +27,8 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<CasesPage />} />
+            <Route index element={<DashboardPage />} />
+            <Route path="cases" element={<CasesPage />} />
             <Route path="cases/:caseId" element={<CaseDetailsPage />} />
           </Route>
 

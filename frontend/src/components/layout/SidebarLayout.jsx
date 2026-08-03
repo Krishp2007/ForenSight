@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Shield, FolderOpen, LogOut, User } from 'lucide-react';
+import { Shield, FolderOpen, LogOut, User, LayoutDashboard } from 'lucide-react';
 
 const SidebarLayout = () => {
   const { user, logout } = useAuth();
@@ -37,6 +37,21 @@ const SidebarLayout = () => {
           <nav className="p-4 space-y-1">
             <NavLink
               to="/"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-accent/15 text-accent border-l-4 border-accent shadow-[inset_0_0_8px_rgba(170,59,255,0.05)]'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`
+              }
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Dashboard
+            </NavLink>
+
+            <NavLink
+              to="/cases"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${
                   isActive
