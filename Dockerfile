@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+ENV PYTHONPATH=/app
 
 # Install Python backend dependencies
 COPY backend/requirements.txt ./backend/requirements.txt
@@ -53,7 +54,7 @@ RUN mkdir -p /app/backend/app/storage/vector_indexes
 
 # Copy startup script
 COPY start-all.sh /app/start-all.sh
-RUN chmod +x /app/start-all.sh
+RUN sed -i 's/\r$//' /app/start-all.sh && chmod +x /app/start-all.sh
 
 EXPOSE 80 8000
 
