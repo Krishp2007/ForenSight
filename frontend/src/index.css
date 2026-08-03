@@ -31,6 +31,23 @@
   --forensic-alert-medium: #eab308;
 }
 
+/* Light Theme Overrides */
+[data-theme="light"] {
+  --forensic-bg-dark: #f8fafc;
+  --forensic-panel-bg: #ffffff;
+  --forensic-card-bg: #f1f5f9;
+  --forensic-border: #cbd5e1;
+  --forensic-text-main: #0f172a;
+  --forensic-text-muted: #64748b;
+  --forensic-primary: #4f46e5;
+  --forensic-primary-hover: #4338ca;
+}
+
+[data-theme="light"] body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

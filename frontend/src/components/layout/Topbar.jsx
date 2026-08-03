@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link, NavLink, useLocation } from 'react-router-dom'
-import { LogOut, Shield, LayoutDashboard, Users, Menu, X, User } from 'lucide-react'
+import { LogOut, LayoutDashboard, Users, Menu, X, User, Sun, Moon } from 'lucide-react'
 import useAuth from '../../hooks/useAuth'
 import { useRole } from '../../store/authStore'
 
@@ -10,6 +10,14 @@ const Topbar = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [theme, setTheme] = useState(() => localStorage.getItem('forensight_theme') || 'dark')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('forensight_theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))
 
   const handleLogout = () => {
     logout()
@@ -31,9 +39,9 @@ const Topbar = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: 'rgba(15, 23, 42, 0.85)',
+        background: 'var(--forensic-panel-bg, rgba(15, 23, 42, 0.85))',
         backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.08))',
         flexShrink: 0,
         position: 'sticky',
         top: 0,
@@ -59,7 +67,7 @@ const Topbar = () => {
                 fontSize: '13px', fontWeight: '700', textDecoration: 'none',
                 background: isDashboardActive ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(99, 102, 241, 0.16)',
                 border: isDashboardActive ? '1px solid #6366f1' : '1px solid rgba(99, 102, 241, 0.4)',
-                color: isDashboardActive ? '#ffffff' : '#e2e8f0',
+                color: isDashboardActive ? '#ffffff' : 'var(--forensic-text-main, #e2e8f0)',
               }}
             >
               <LayoutDashboard size={16} style={{ color: isDashboardActive ? '#ffffff' : '#818cf8' }} />
@@ -75,7 +83,7 @@ const Topbar = () => {
                   fontSize: '13px', fontWeight: isActive ? '600' : '500',
                   textDecoration: 'none',
                   background: isActive ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'transparent',
-                  color: isActive ? '#ffffff' : '#94a3b8',
+                  color: isActive ? '#ffffff' : 'var(--forensic-text-muted, #94a3b8)',
                 })}
               >
                 <Users size={16} />
@@ -85,8 +93,26 @@ const Topbar = () => {
           </nav>
         </div>
 
-        {/* Right Corner: Desktop User Actions */}
+        {/* Right Corner: Desktop User Actions & Theme Toggle */}
         <div className="desktop-only" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              padding: '7.5px 14px', borderRadius: '10px',
+              background: theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(99, 102, 241, 0.12)',
+              border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(99, 102, 241, 0.3)',
+              color: theme === 'dark' ? '#fbbf24' : '#4f46e5',
+              cursor: 'pointer', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: '600',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+          </button>
+
           {user && (
             <Link
               to="/profile"
@@ -95,8 +121,8 @@ const Topbar = () => {
                 display: 'flex', alignItems: 'center', gap: '10px',
                 textDecoration: 'none', padding: '6px 14px', borderRadius: '12px',
                 background: isProfileActive ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(255, 255, 255, 0.05)',
-                border: isProfileActive ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.1)',
-                color: isProfileActive ? '#ffffff' : '#f8fafc',
+                border: isProfileActive ? '1px solid #6366f1' : '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
+                color: isProfileActive ? '#ffffff' : 'var(--forensic-text-main, #f8fafc)',
               }}
             >
               <div style={{
@@ -110,14 +136,14 @@ const Topbar = () => {
               </div>
               <div style={{ lineHeight: 1.2 }}>
                 <div style={{ fontSize: '13px', fontWeight: '600' }}>Profile</div>
-                <div style={{ fontSize: '9.5px', color: isProfileActive ? '#e0e7ff' : '#94a3b8', textTransform: 'capitalize' }}>
+                <div style={{ fontSize: '9.5px', color: isProfileActive ? '#e0e7ff' : 'var(--forensic-text-muted, #94a3b8)', textTransform: 'capitalize' }}>
                   {user.username}
                 </div>
               </div>
             </Link>
           )}
 
-          <div style={{ width: '1px', height: '24px', background: 'rgba(255, 255, 255, 0.1)' }} />
+          <div style={{ width: '1px', height: '24px', background: 'var(--forensic-border, rgba(255, 255, 255, 0.1))' }} />
 
           <button
             onClick={handleLogout}
@@ -143,7 +169,7 @@ const Topbar = () => {
           style={{
             background: 'rgba(255, 255, 255, 0.08)',
             border: '1px solid rgba(255, 255, 255, 0.15)',
-            color: '#f8fafc',
+            color: 'var(--forensic-text-main, #f8fafc)',
             padding: '8px',
             borderRadius: '10px',
             cursor: 'pointer',
@@ -166,16 +192,31 @@ const Topbar = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(11, 15, 25, 0.96)',
+            background: 'var(--forensic-panel-bg, rgba(11, 15, 25, 0.96))',
             backdropFilter: 'blur(20px)',
             zIndex: 49,
             padding: '20px 16px',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
           }}
         >
+          <button
+            onClick={toggleTheme}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '12px 16px', borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
+              color: 'var(--forensic-text-main, #ffffff)', fontWeight: '600',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            {theme === 'dark' ? <Sun size={18} color="#fbbf24" /> : <Moon size={18} color="#6366f1" />}
+            <span>Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode</span>
+          </button>
+
           <Link
             to="/dashboard"
             onClick={() => setMobileMenuOpen(false)}
@@ -183,8 +224,8 @@ const Topbar = () => {
               display: 'flex', alignItems: 'center', gap: '12px',
               padding: '12px 16px', borderRadius: '12px',
               background: isDashboardActive ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#ffffff', textDecoration: 'none', fontWeight: '600',
+              border: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
+              color: 'var(--forensic-text-main, #ffffff)', textDecoration: 'none', fontWeight: '600',
             }}
           >
             <LayoutDashboard size={18} color="#818cf8" /> All Cases / Dashboard
@@ -198,8 +239,8 @@ const Topbar = () => {
                 display: 'flex', alignItems: 'center', gap: '12px',
                 padding: '12px 16px', borderRadius: '12px',
                 background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#ffffff', textDecoration: 'none', fontWeight: '600',
+                border: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
+                color: 'var(--forensic-text-main, #ffffff)', textDecoration: 'none', fontWeight: '600',
               }}
             >
               <Users size={18} color="#818cf8" /> User Management
@@ -213,8 +254,8 @@ const Topbar = () => {
               display: 'flex', alignItems: 'center', gap: '12px',
               padding: '12px 16px', borderRadius: '12px',
               background: isProfileActive ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#ffffff', textDecoration: 'none', fontWeight: '600',
+              border: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
+              color: 'var(--forensic-text-main, #ffffff)', textDecoration: 'none', fontWeight: '600',
             }}
           >
             <User size={18} color="#818cf8" /> Profile & Settings ({user?.username})
