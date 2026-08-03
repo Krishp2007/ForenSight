@@ -13,7 +13,7 @@ class Settings:
 
     # MongoDB Settings
     MONGODB_URL: str = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
-    MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "forensight")
+    MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", os.getenv("MONGO_DB_NAME", "forensight"))
 
     # Neo4j Settings
     NEO4J_URL: str = os.getenv("NEO4J_URL", "bolt://localhost:7687")
