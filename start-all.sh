@@ -15,14 +15,13 @@ echo "🚀 Launching ForenSight AI FastAPI Backend Supervisor on 127.0.0.1:8000.
     done
 ) &
 
-# Poll backend health check until port 8000 is ready (up to 15 seconds)
+# Poll backend health check until port 8000 is ready (up to 30 seconds)
 echo "⏳ Waiting for FastAPI Backend to initialize..."
-MAX_WAIT=15
+MAX_WAIT=30
 WAIT_COUNT=0
 while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-    if exec 3<>/dev/tcp/127.0.0.1/8000 2>/dev/null; then
-        exec 3<&-
-        exec 3>&-
+    ( (exec 3<>/dev/tcp/127.0.0.1/8000) 2>/dev/null )
+    if [ $? -eq 0 ]; then
         echo "✅ FastAPI Backend is up and listening on 127.0.0.1:8000!"
         break
     fi
@@ -31,7 +30,7 @@ while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
 done
 
 if [ $WAIT_COUNT -eq $MAX_WAIT ]; then
-    echo "⚠️ Warning: Backend did not report ready within $MAX_WAIT seconds. Continuing..."
+    echo "⚠️ Warning: Backend initialization taking longer than $MAX_WAIT seconds. Proceeding..."
 fi
 
 # Dynamically configure Nginx port if Render passed a custom $PORT

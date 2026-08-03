@@ -144,7 +144,7 @@ app.include_router(audit_router, prefix="/api/v1")
 app.include_router(correlations_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def get_root():
     return {
         "status": "healthy",
