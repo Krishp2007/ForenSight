@@ -61,7 +61,7 @@ def _parse_xml_record_fast(xml_str: str) -> Optional[Dict[str, Any]]:
 
     details: Dict[str, Any] = {"EventID": event_id, "Provider": provider}
     for name, val in _DATA_RE.findall(xml_str):
-        details[name] = val
+        details[name] = val[:300] + "... [truncated]" if len(val) > 300 else val
 
     subj = f"System (Event {event_id})"
     act  = "occurred"

@@ -181,7 +181,7 @@ const DashboardPage = () => {
       width: '100%',
     }}>
       {/* Background Cyber Forensics Photo Trial */}
-      <div style={{
+      <div className="dark-bg-overlay" style={{
         position: 'fixed',
         inset: 0,
         backgroundImage: 'url("https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2000&auto=format&fit=crop")',
@@ -195,7 +195,7 @@ const DashboardPage = () => {
       }} />
 
       {/* Ambient gradient overlay */}
-      <div style={{
+      <div className="dark-bg-overlay" style={{
         position: 'fixed',
         inset: 0,
         background: 'radial-gradient(ellipse at 50% 0%, rgba(99, 102, 241, 0.2) 0%, rgba(15, 23, 42, 0.85) 75%)',

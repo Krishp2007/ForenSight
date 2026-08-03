@@ -82,15 +82,24 @@ class JsonParser(BaseParser):
             if not isinstance(mitre, list):
                 mitre = []
 
+            # Truncate details to keep MongoDB storage minimal
+            clean_details = {}
+            if isinstance(item, dict):
+                for k, v in item.items():
+                    if isinstance(v, str) and len(v) > 300:
+                        clean_details[k] = v[:300] + "... [truncated]"
+                    elif not isinstance(v, (dict, list)) or len(str(v)) < 1000:
+                        clean_details[k] = v
+
             return {
                 "timestamp":        timestamp,
                 "event_type":       event_type,
                 "source":           EventSource.JSON.value,
                 "severity":         severity,
-                "subject":          str(subj),
-                "action":           str(act),
-                "object":           str(obj),
-                "details":          item,
+                "subject":          str(subj)[:150],
+                "action":           str(act)[:150],
+                "object":           str(obj)[:250],
+                "details":          clean_details,
                 "mitre_techniques": [str(t) for t in mitre],
             }
         except Exception:

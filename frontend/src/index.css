@@ -18,6 +18,7 @@
   --forensic-border: #334155;
   --forensic-text-main: #f8fafc;
   --forensic-text-muted: #94a3b8;
+  --logo-fore-color: #ffffff;
 
   /* 30% Secondary Cool Tones */
   --forensic-primary: #3b82f6;
@@ -41,11 +42,17 @@
   --forensic-text-muted: #64748b;
   --forensic-primary: #4f46e5;
   --forensic-primary-hover: #4338ca;
+  --logo-fore-color: #000000;
 }
 
-[data-theme="light"] body {
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
+[data-theme="light"] .dark-bg-overlay {
+  display: none !important;
+}
+
+html, body {
+  background-color: var(--forensic-bg-dark) !important;
+  color: var(--forensic-text-main) !important;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* Scrollbar styling */

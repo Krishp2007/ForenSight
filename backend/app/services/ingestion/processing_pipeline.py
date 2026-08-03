@@ -164,8 +164,25 @@ async def _run_post_pipeline(events, case_id_str: str, org_id: str, loop) -> Non
             # Cap at 2000 — O(n²) LOF gets very slow beyond this
             evs = await EventRepository.list_by_case(case_id_str, org_id, limit=2000)
             n = len(evs)
-            if n < 5:
+            if n < 1:
                 return
+
+            if n < 5:
+                # For small sample sizes (n < 5), flag high/critical severity or tagged events as anomalies
+                bulk_ops = [
+                    UpdateOne(
+                        {"_id": e["_id"]},
+                        {"$set": {
+                            "is_anomaly": e.get("severity") in ("critical", "high", "medium") or bool(e.get("mitre_techniques")),
+                            "anomaly_score": 0.85 if e.get("severity") in ("critical", "high") else 0.4
+                        }}
+                    )
+                    for e in evs
+                ]
+                await db_client.db["events"].bulk_write(bulk_ops, ordered=False)
+                logger.info(f"[POST] ⏱ Anomaly (small sample n={n}): tagged events.")
+                return
+
             SEV = {"info": 0.0, "low": 0.25, "medium": 0.5, "high": 0.75, "critical": 1.0}
             sc = Counter(e.get("subject", "") for e in evs)
             oc = Counter(e.get("object",  "") for e in evs)

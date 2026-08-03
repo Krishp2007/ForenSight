@@ -38,6 +38,17 @@ async def build_anomaly_context(
     ).sort("anomaly_score", -1).limit(limit)
 
     events = await cursor.to_list(length=limit)
+
+    # Fallback: if no events explicitly flagged as is_anomaly, fetch high-severity/key events
+    if not events:
+        fallback_cursor = col.find(
+            {
+                "case_id": case["_id"],
+                "organization_id": case["organization_id"],
+            }
+        ).sort([("severity", -1), ("timestamp", -1)]).limit(limit)
+        events = await fallback_cursor.to_list(length=limit)
+
     for e in events:
         e["id"] = str(e["_id"])
         e["case_id"] = str(e["case_id"])

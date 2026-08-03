@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ForenSight AI — Full Technical Platform Documentation</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 15mm 20mm 15mm;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9pt;
+      font-family: 'Segoe UI', sans-serif;
+      color: #64748b;
+    }
+    @bottom-left {
+      content: "ForenSight AI Platform Documentation v1.0.0";
+      font-size: 9pt;
+      font-family: 'Segoe UI', sans-serif;
+      color: #64748b;
+    }
+  }
+
+  :root {
+    --primary: #0F172A;
+    --accent: #1F3A5F;
+    --highlight: #0284C7;
+    --highlight-light: #E0F2FE;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --bg-alt: #F8FAFC;
+    --code-bg: #0F172A;
+    --code-text: #F1F5F9;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+    line-height: 1.6;
+    margin: 0 auto;
+    padding: 20px;
+    max-width: 900px;
+    font-size: 10.5pt;
+    background: #ffffff;
+  }
+
+  /* Cover Page */
+  .cover-page {
+    page-break-after: always;
+    min-height: 800px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 40px;
+    background: linear-gradient(135deg, #0F172A 0%, #1F3A5F 100%);
+    color: #ffffff;
+    border-radius: 12px;
+    margin-bottom: 40px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  }
+  .cover-brand {
+    font-size: 44pt;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #38BDF8;
+    margin-bottom: 10px;
+  }
+  .cover-title {
+    font-size: 24pt;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #F8FAFC;
+  }
+  .cover-subtitle {
+    font-size: 13pt;
+    color: #94A3B8;
+    max-width: 680px;
+    margin-bottom: 60px;
+    line-height: 1.6;
+  }
+  .cover-meta {
+    font-size: 11pt;
+    color: #CBD5E1;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    padding-top: 25px;
+    width: 85%;
+  }
+
+  /* Headings */
+  h1 {
+    font-size: 20pt;
+    color: var(--accent);
+    border-bottom: 2px solid var(--highlight);
+    padding-bottom: 8px;
+    margin-top: 40px;
+    margin-bottom: 18px;
+    page-break-after: avoid;
+  }
+  h2 {
+    font-size: 15pt;
+    color: var(--primary);
+    margin-top: 28px;
+    margin-bottom: 12px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 12pt;
+    color: var(--highlight);
+    margin-top: 20px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+  }
+
+  p { margin-top: 0; margin-bottom: 12px; text-align: justify; }
+
+  /* Table of Contents */
+  .toc-container {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    margin-bottom: 35px;
+    page-break-after: always;
+  }
+  .toc-title {
+    font-size: 18pt;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 18px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-item {
+    font-size: 11pt;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+    display: flex;
+    justify-content: space-between;
+  }
+  .toc-item a { text-decoration: none; color: var(--accent); font-weight: 600; }
+  .toc-item a:hover { color: var(--highlight); }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: var(--accent);
+    color: #ffffff;
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+  }
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:nth-child(even) { background-color: var(--bg-alt); }
+
+  /* Callout boxes */
+  .callout {
+    border-left: 4px solid var(--highlight);
+    background: var(--highlight-light);
+    padding: 14px 18px;
+    border-radius: 0 6px 6px 0;
+    margin: 18px 0;
+    font-size: 10pt;
+  }
+  .callout-title { font-weight: 700; color: var(--highlight); margin-bottom: 4px; }
+
+  /* Code blocks */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 14px 18px;
+    border-radius: 6px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8.5pt;
+    overflow-x: auto;
+    page-break-inside: avoid;
+    line-height: 1.45;
+  }
+  code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    background: var(--bg-alt);
+    color: var(--highlight);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 9pt;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 8.5pt;
+    font-weight: 700;
+    border-radius: 12px;
+    color: #fff;
+    background: var(--highlight);
+  }
+  .badge-post { background: #10B981; }
+  .badge-get { background: #3B82F6; }
+  .badge-patch { background: #F59E0B; }
+  .badge-delete { background: #EF4444; }
+
+  .page-break { page-break-after: always; }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover-page">
+  <div class="cover-brand">ForenSight AI</div>
+  <div class="cover-title">Full Platform Technical Documentation & Architecture Manual</div>
+  <div class="cover-subtitle">Enterprise Digital Forensics, Graph Intelligence, Vector Correlation & AI Copilot Platform</div>
+  <div class="cover-meta">
+    <strong>Author:</strong> ForenSight AI Engineering Team &nbsp;|&nbsp; 
+    <strong>Version:</strong> 1.0.0 &nbsp;|&nbsp; 
+    <strong>Classification:</strong> Enterprise Confidential
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc-container">
+  <div class="toc-title">Table of Contents</div>
+  <ul class="toc-list">
+    <li class="toc-item"><a href="#sec1">1. Executive Overview & Core Capabilities</a></li>
+    <li class="toc-item"><a href="#sec2">2. High-Level Architecture & Microservices Matrix</a></li>
+    <li class="toc-item"><a href="#sec3">3. Evidence Ingestion & Forensic Parsing Pipeline</a></li>
+    <li class="toc-item"><a href="#sec4">4. Machine Learning & Anomaly Detection Engine</a></li>
+    <li class="toc-item"><a href="#sec5">5. Knowledge Graph & Cross-Case Vector Intelligence</a></li>
+    <li class="toc-item"><a href="#sec6">6. AI Copilot & Natural Language Forensic Querying (RAG)</a></li>
+    <li class="toc-item"><a href="#sec7">7. Frontend SPA Architecture & User Workflows</a></li>
+    <li class="toc-item"><a href="#sec8">8. Database Schemas & Data Models</a></li>
+    <li class="toc-item"><a href="#sec9">9. Complete REST API Reference</a></li>
+    <li class="toc-item"><a href="#sec10">10. Security, RBAC & Multi-Tenant Isolation</a></li>
+    <li class="toc-item"><a href="#sec11">11. Production Deployment & Operations Blueprint</a></li>
+    <li class="toc-item"><a href="#sec12">12. Developer & Contributor Guide</a></li>
+  </ul>
+</div>
+
+<!-- SECTION 1 -->
+<h1 id="sec1">1. Executive Overview & Core Capabilities</h1>
+<p><strong>ForenSight AI</strong> is a next-generation enterprise digital forensics and incident response (DFIR) platform. It provides automated evidence ingestion, multi-source log parsing, graph-based relationship correlation, machine-learning anomaly detection, and a natural language AI Copilot powered by Google Gemini and vector similarity search.</p>
+
+<div class="callout">
+  <div class="callout-title">Core Mission</div>
+  Transform raw, fragmented, multi-source forensic evidence into structured, searchable intelligence—enabling security teams to reconstruct incident timelines, track adversary movements, and generate court-ready investigation reports in minutes.
+</div>
+
+<h3>Key Capabilities Matrix</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Capability</th>
+      <th>Engine / Technology</th>
+      <th>Operational Benefit</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Automated Artifact Parsing</strong></td>
+      <td>python-evtx, scapy, sqlite3, pandas</td>
+      <td>Parses Windows Event Logs (.evtx), PCAPs, SQLite Browser History, CSV, JSON, and unstructured logs.</td>
+    </tr>
+    <tr>
+      <td><strong>ML Anomaly Detection</strong></td>
+      <td>PyOD (HBOS / Isolation Forest)</td>
+      <td>Automatically detects anomalous logons, unexpected network connections, privilege escalations, and log tampering.</td>
+    </tr>
+    <tr>
+      <td><strong>Knowledge Graph Correlation</strong></td>
+      <td>Neo4j 5.12 + APOC Plugins</td>
+      <td>Maps relationships between users, hostnames, IP addresses, processes, and domains into an interactive visual graph.</td>
+    </tr>
+    <tr>
+      <td><strong>Cross-Case Vector Search</strong></td>
+      <td>Qdrant Vector DB + Sentence Transformers</td>
+      <td>Indexes threat indicators in dense vector space to find matching attack patterns across active and past cases.</td>
+    </tr>
+    <tr>
+      <td><strong>AI Forensic Copilot</strong></td>
+      <td>Google Gemini 1.5/2.0 + RAG Pipeline</td>
+      <td>Translates natural language investigative questions into structured queries with inline evidence citations.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- SECTION 2 -->
+<h1 id="sec2">2. High-Level Architecture & Microservices Matrix</h1>
+<p>ForenSight AI follows a cloud-native, microservices-based architecture orchestrated using Docker Compose. The platform consists of 7 isolated services communicating over internal container networks.</p>
+
+<pre>
+                                +-----------------------------------+
+                                |     React 18 SPA (Vite + Nginx)   |
+                                +-----------------+-----------------+
+                                                  | HTTP / REST
+                                                  v
+                                +-----------------+-----------------+
+                                |  FastAPI ASGI Backend (Port 8000) |
+                                +--+-------+-------+--------+----+--+
+                                   |       |       |        |    |
+           +-----------------------+       |       |        |    +-----------------------+
+           |                               |       |        |                            |
+           v                               v       v        v                            v
+  +--------+--------+          +-----------+--+  +-+--------+--+  +--------------------+  +---------------+
+  |  MongoDB 6.0    |          |  Neo4j 5.12  |  |  Qdrant DB  |  | Redis 7.0 + Celery |  |  MinIO S3     |
+  |  (Evidence DB)  |          | (Graph Engine|  | (Vector Store|  | (Async Bus/Cache)  |  | (Object Store)|
+  +-----------------+          +--------------+  +-------------+  +--------------------+  +---------------+
+</pre>
+
+<h3>Microservices Inventory</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Service Name</th>
+      <th>Port(s)</th>
+      <th>Primary Role & Responsibility</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>web</code></td>
+      <td><code>80 / 443</code></td>
+      <td>Nginx web server hosting the compiled React SPA. Handles SSL termination and reverse proxy.</td>
+    </tr>
+    <tr>
+      <td><code>api</code></td>
+      <td><code>8000</code></td>
+      <td>FastAPI ASGI backend handling REST API endpoints, JWT authentication, and business logic.</td>
+    </tr>
+    <tr>
+      <td><code>mongodb</code></td>
+      <td><code>27017</code></td>
+      <td>Document database storing cases, evidence metadata, user accounts, audit logs, and raw events.</td>
+    </tr>
+    <tr>
+      <td><code>neo4j</code></td>
+      <td><code>7474, 7687</code></td>
+      <td>Graph database maintaining entity relationship nodes (IP $\rightarrow$ Account $\rightarrow$ Process).</td>
+    </tr>
+    <tr>
+      <td><code>qdrant</code></td>
+      <td><code>6333</code></td>
+      <td>Vector store providing dense similarity indexing for RAG context retrieval and cross-case correlation.</td>
+    </tr>
+    <tr>
+      <td><code>redis</code></td>
+      <td><code>6379</code></td>
+      <td>In-memory event bus and cache handling pub/sub real-time streams and Celery async task queue.</td>
+    </tr>
+    <tr>
+      <td><code>minio</code></td>
+      <td><code>9000, 9001</code></td>
+      <td>S3-compatible object storage repository storing uploaded raw evidence files securely.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- SECTION 3 -->
+<h1 id="sec3">3. Evidence Ingestion & Forensic Parsing Pipeline</h1>
+<p>When an investigator uploads a file, it passes through an automated ingestion pipeline designed for evidentiary integrity and rapid processing:</p>
+
+<ol>
+  <li><strong>Upload & Chain of Custody:</strong> File is uploaded to MinIO object storage. The backend immediately computes its SHA-256 cryptographic checksum to preserve evidentiary proof of non-tampering.</li>
+  <li><strong>Parser Selection:</strong> MIME type and extension detection select the appropriate parser from <code>backend/app/parsers/</code>.</li>
+  <li><strong>Normalizing Event Structure:</strong> Raw log lines/records are converted into standardized <code>ForensicEvent</code> objects with normalized timestamps (UTC ISO-8601).</li>
+  <li><strong>Machine Learning Scoring:</strong> The feature matrix is evaluated by PyOD models to assign an anomaly score ($0.0 - 1.0$).</li>
+  <li><strong>Dual Ingestion (Graph & Vector):</strong> Extracted entities (IPs, Usernames, File Hashes) are merged into Neo4j graph relationships, while event descriptions are embedded into Qdrant vector space.</li>
+</ol>
+
+<h3>Supported File Formats & Parsers</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Parser Component</th>
+      <th>Supported Extensions</th>
+      <th>Key Extracted Artifacts</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>evtx_parser.py</code></td>
+      <td><code>.evtx</code></td>
+      <td>Logon events (ID 4624/4625), Service Creation (ID 7045), Log Clearing (ID 1102), Process Execution.</td>
+    </tr>
+    <tr>
+      <td><code>pcap_parser.py</code></td>
+      <td><code>.pcap, .pcapng</code></td>
+      <td>Source/Dest IPs, Ports, Protocols (TCP/UDP/DNS/HTTP), DNS Query Domains, Transferred Bytes.</td>
+    </tr>
+    <tr>
+      <td><code>browser_parser.py</code></td>
+      <td><code>.sqlite, .db</code></td>
+      <td>Browser History (Chrome, Firefox, Edge): Visited URLs, Visit Timestamps, Page Titles, Search Terms.</td>
+    </tr>
+    <tr>
+      <td><code>csv_parser.py</code> / <code>json_parser.py</code></td>
+      <td><code>.csv, .json, .jsonl</code></td>
+      <td>Structured cloud audit logs (AWS CloudTrail, Azure Activity Logs, Okta Logs). Auto-detects columns.</td>
+    </tr>
+    <tr>
+      <td><code>text_parser.py</code></td>
+      <td><code>.txt, .log</code></td>
+      <td>Syslog, Auth.log, Apache/Nginx web logs. Regex extraction of IPs, Emails, Hashes, and File Paths.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- SECTION 4 -->
+<h1 id="sec4">4. Machine Learning & Anomaly Detection Engine</h1>
+<p>ForenSight AI integrates **PyOD** (Python Outlier Detection) to detect hidden threat activity without needing labeled training data.</p>
+
+<h3>Outlier Detection Algorithm: HBOS</h3>
+<p>The primary model used is **Histogram-based Outlier Score (HBOS)**. HBOS evaluates multivariate distributions by constructing univariate histograms for each feature, calculating density scores in $O(N)$ operational time.</p>
+
+<pre>
+# Anomaly Scoring Pipeline (app/services/intelligence/anomaly.py)
+from pyod.models.hbos import HBOS
+
+def calculate_anomaly_scores(feature_matrix):
+    model = HBOS(n_bins=15, contamination=0.05)
+    model.fit(feature_matrix)
+    raw_scores = model.decision_scores_
+    normalized_scores = (raw_scores - raw_scores.min()) / (raw_scores.max() - raw_scores.min() + 1e-6)
+    return normalized_scores
+</pre>
+
+<h3>Rule-Based Heuristic Alerts</h3>
+<ul>
+  <li><strong>Brute Force Velocity:</strong> $\ge 10$ failed logon events (Event ID 4625) from the same IP within 60 seconds.</li>
+  <li><strong>Log Erasure Alert:</strong> Audit log clearing (Event ID 1102) detected during active investigation.</li>
+  <li><strong>Unusual Admin Activity:</strong> Special privileges assigned (Event ID 4672) to an account outside normal working hours.</li>
+  <li><strong>High-Entropy DNS Query:</strong> DNS TXT query domain length $> 45$ characters (indicating potential DNS tunneling).</li>
+</ul>
+
+<!-- SECTION 5 -->
+<h1 id="sec5">5. Knowledge Graph & Cross-Case Vector Intelligence</h1>
+
+<h3>Neo4j Entity Graph Topology</h3>
+<p>ForenSight AI constructs a connected entity graph to reveal hidden relationships across multiple evidence files.</p>
+
+<pre>
+(User:UserAccount {username: "administrator"})
+    -[:LOGGED_INTO {timestamp: "2026-08-04T01:00:00Z"}]-> (Host:Workstation {hostname: "FINANCE-PC"})
+    -[:GENERATED]-> (Event:ForensicEvent {event_id: 4624, severity: "HIGH"})
+    -[:COMMUNICATED_WITH]-> (IP:IPAddress {address: "198.51.100.45"})
+    -[:RESOLVED_TO]-> (Domain:DomainName {name: "malicious-c2-server.com"})
+</pre>
+
+<h3>Qdrant Vector Store & IoC Correlation</h3>
+<p>Events and evidence descriptions are mapped into a 384-dimensional vector space using <code>sentence-transformers/all-MiniLM-L6-v2</code>. When analyzing a new case, Qdrant executes cosine similarity queries across all historical cases to surface matching threat patterns and shared Indicators of Compromise (IoCs).</p>
+
+<div class="page-break"></div>
+
+<!-- SECTION 6 -->
+<h1 id="sec6">6. AI Copilot & Natural Language Forensic Querying (RAG)</h1>
+<p>The **ForenSight AI Copilot** enables investigators to query evidence using natural language. It implements a hybrid Retrieval-Augmented Generation (RAG) pipeline powered by the Google Gemini API.</p>
+
+<pre>
++---------------------+     +--------------------------+     +------------------------+
+| User Query          | --> | Retrieval Engine         | --> | Gemini Prompt Context  |
+| "Show suspicious    |     | Fetch top-5 Qdrant vectors|     | System safety rule +   |
+| logons for admin"   |     | & Neo4j graph sub-tree   |     | Evidence JSON context  |
++---------------------+     +--------------------------+     +-----------+------------+
+                                                                         |
+                                                                         v
+                                                             +------------------------+
+                                                             | Gemini Response        |
+                                                             | Structured answer with |
+                                                             | evidence citations     |
+                                                             +------------------------+
+</pre>
+
+<h3>Specialized Copilot Modes</h3>
+<ul>
+  <li><strong>Timeline Explainer:</strong> Summarizes chronological event sequences into clear incident narrative points.</li>
+  <li><strong>Threat Analyst:</strong> Identifies MITRE ATT&CK techniques based on event patterns.</li>
+  <li><strong>Query Assistant:</strong> Automatically translates natural language requests into Cypher (Neo4j) or MongoDB query syntax.</li>
+  <li><strong>Report Summarizer:</strong> Generates executive summaries for formal investigation reports.</li>
+</ul>
+
+<!-- SECTION 7 -->
+<h1 id="sec7">7. Frontend SPA Architecture & User Workflows</h1>
+<p>The frontend is built with <strong>React 18</strong>, <strong>Vite</strong>, <strong>Tailwind CSS</strong>, and <strong>Lucide React</strong> icons, following a modern dark-mode slate theme.</p>
+
+<h3>Key View & Page Responsibilities</h3>
+<ul>
+  <li><code>LoginPage.jsx</code> & <code>RegisterPage.jsx</code>: Multi-tenant user login, organization setup, JWT token storage.</li>
+  <li><code>DashboardPage.jsx</code>: Executive metrics, active cases summary, recent threat notifications, and system health status.</li>
+  <li><code>CaseDetailPage.jsx</code>: Comprehensive investigation workspace containing 7 interactive tabs:
+    <ul>
+      <li><strong>Overview Tab:</strong> Case description, assigned team members, priority level, and timeline summary.</li>
+      <li><strong>Evidence Tab:</strong> Drag-and-drop file uploader, upload status tracker, SHA-256 verification.</li>
+      <li><strong>Timeline Tab:</strong> Chronological event stream with filters for timestamp range, severity, and event type.</li>
+      <li><strong>Graph Explorer Tab:</strong> Visual canvas rendering the interactive Neo4j entity graph.</li>
+      <li><strong>Cross-Case Correlation Tab:</strong> Vector similarity search results displaying matching historical cases.</li>
+      <li><strong>AI Copilot Tab:</strong> Chat assistant interface with real-time prompt suggestions and evidence links.</li>
+      <li><strong>Reports Tab:</strong> One-click generator for formal HTML and PDF investigation reports.</li>
+    </ul>
+  </li>
+  <li><code>UsersPage.jsx</code> & <code>OrganizationSetupPage.jsx</code>: Administration dashboard for managing roles and access control.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- SECTION 8 -->
+<h1 id="sec8">8. Database Schemas & Data Models</h1>
+
+<h3>MongoDB Collections</h3>
+
+<h4>Collection: <code>users</code></h4>
+<pre>
+{
+  "_id": ObjectId("66af01a..."),
+  "username": "investigator_alice",
+  "email": "alice@forensight.io",
+  "hashed_password": "$2b$12$e8Zb...",
+  "role": "Investigator",  // Admin, Investigator, Analyst, Viewer
+  "organization_id": "org_cyber_sec_01",
+  "created_at": ISODate("2026-08-04T01:00:00Z")
+}
+</pre>
+
+<h4>Collection: <code>cases</code></h4>
+<pre>
+{
+  "_id": ObjectId("66af02b..."),
+  "case_number": "CASE-2026-0804",
+  "title": "Ransomware Intrusion - Finance Workstation",
+  "status": "Active", // Active, Archived, Closed
+  "severity": "HIGH", // LOW, MEDIUM, HIGH, CRITICAL
+  "organization_id": "org_cyber_sec_01",
+  "created_by": "investigator_alice",
+  "created_at": ISODate("2026-08-04T01:05:00Z")
+}
+</pre>
+
+<h4>Collection: <code>evidence</code></h4>
+<pre>
+{
+  "_id": ObjectId("66af03c..."),
+  "case_id": "CASE-2026-0804",
+  "filename": "Security_Logs_DC01.evtx",
+  "file_size_bytes": 15420800,
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "minio_object_path": "evidence/CASE-2026-0804/Security_Logs_DC01.evtx",
+  "parser_type": "evtx",
+  "status": "PARSED", // UPLOADED, PROCESSING, PARSED, ERROR
+  "parsed_events_count": 4120
+}
+</pre>
+
+<!-- SECTION 9 -->
+<h1 id="sec9">9. Complete REST API Reference</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>HTTP Method</th>
+      <th>Endpoint Route</th>
+      <th>Auth Required</th>
+      <th>Description & Usage</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/auth/token</code></td>
+      <td>No</td>
+      <td>Authenticates user credentials and returns OAuth2 JWT token.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/auth/register</code></td>
+      <td>No</td>
+      <td>Registers a new user account linked to an organization.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/cases/</code></td>
+      <td>Yes</td>
+      <td>Lists all active cases for the authenticated user's organization.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/cases/</code></td>
+      <td>Yes</td>
+      <td>Creates a new forensic investigation case.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/evidence/upload/{case_id}</code></td>
+      <td>Yes</td>
+      <td>Streams file upload to MinIO S3 and triggers async parsing.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/events/{case_id}</code></td>
+      <td>Yes</td>
+      <td>Retrieves parsed forensic events with filter & pagination parameters.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/chat/message</code></td>
+      <td>Yes</td>
+      <td>Submits an investigative prompt to the AI Copilot RAG pipeline.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/graph/{case_id}</code></td>
+      <td>Yes</td>
+      <td>Queries Neo4j and returns graph node/edge JSON for visualization.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/similarity/{evidence_id}</code></td>
+      <td>Yes</td>
+      <td>Queries Qdrant for top cross-case matching evidence vectors.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/reports/generate/{case_id}</code></td>
+      <td>Yes</td>
+      <td>Generates a comprehensive PDF / HTML investigation report.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- SECTION 10 -->
+<h1 id="sec10">10. Security, RBAC & Multi-Tenant Isolation</h1>
+<p>ForenSight AI implements strict defense-in-depth security mechanisms across all API layers:</p>
+
+<ul>
+  <li><strong>Authentication:</strong> Passwords are hashed using <code>bcrypt</code> (cost factor 12). API access uses OAuth2 Bearer Tokens (JWT with HS256 algorithm).</li>
+  <li><strong>Role-Based Access Control (RBAC):</strong>
+    <ul>
+      <li><code>Admin</code>: Full organizational access, user role assignment, audit log monitoring.</li>
+      <li><code>Investigator</code>: Case creation, evidence uploading, AI Copilot interaction, report export.</li>
+      <li><code>Analyst</code>: Evidence viewing, timeline analysis, event annotation.</li>
+      <li><code>Viewer</code>: Read-only access to published reports and executive dashboards.</li>
+    </ul>
+  </li>
+  <li><strong>Multi-Tenant Isolation:</strong> Every database query (MongoDB, Neo4j, Qdrant) enforces mandatory <code>organization_id</code> scoping, ensuring total data segregation between organizations.</li>
+</ul>
+
+<!-- SECTION 11 -->
+<h1 id="sec11">11. Production Deployment & Operations Blueprint</h1>
+
+<h3>One-Command Production Deployment</h3>
+<pre>
+# Navigate to project root (d:/ForenSight/ForenSight)
+# 1. Create environment configuration
+cp backend/.env.example backend/.env
+
+# 2. Update production secrets in backend/.env
+# Set JWT_SECRET_KEY, NEO4J_AUTH, MINIO_ROOT_PASSWORD, GEMINI_API_KEY
+
+# 3. Build & start all 7 containers in detached mode
+docker compose up -d --build
+
+# 4. Confirm container health status
+docker compose ps
+</pre>
+
+<h3>Production Health Check Verification</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Endpoint URL</th>
+      <th>Expected Healthy Behavior</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Frontend UI</strong></td>
+      <td><code>http://localhost:80</code></td>
+      <td>Nginx serves compiled React SPA. Login page displays cleanly.</td>
+    </tr>
+    <tr>
+      <td><strong>Backend API</strong></td>
+      <td><code>http://localhost:8000/docs</code></td>
+      <td>FastAPI Swagger UI renders all API routes. <code>/health</code> returns <code>200 OK</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>MinIO Object Storage</strong></td>
+      <td><code>http://localhost:9001</code></td>
+      <td>S3 Web Console loads. Login with <code>MINIO_ROOT_USER</code> credentials.</td>
+    </tr>
+    <tr>
+      <td><strong>Neo4j Browser</strong></td>
+      <td><code>http://localhost:7474</code></td>
+      <td>Cypher query web terminal connects to <code>bolt://localhost:7687</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- SECTION 12 -->
+<h1 id="sec12">12. Developer & Contributor Guide</h1>
+
+<h3>Local Setup Instructions</h3>
+
+<h4>Backend Setup (FastAPI & Python)</h4>
+<pre>
+cd backend
+python -m venv .venv
+# On Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# On Linux/macOS:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+</pre>
+
+<h4>Frontend Setup (React 18 & Vite)</h4>
+<pre>
+cd frontend
+npm install
+npm run dev
+</pre>
+
+<h4>Running Test Suite</h4>
+<pre>
+cd backend
+pytest -v --tb=short
+</pre>
+
+<br/><hr/><br/>
+<p style="text-align: center; color: var(--text-muted); font-size: 9pt;">
+  &copy; 2026 ForenSight AI. All rights reserved. End of Technical Documentation.
+</p>
+
+</body>
+</html>
