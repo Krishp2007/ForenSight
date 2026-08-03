@@ -88,7 +88,7 @@ async def upload_evidence(
 
     from backend.app.services.ingestion.processing_pipeline import ProcessingPipeline
     ProcessingPipeline.run_in_background(background_tasks, str(created["_id"]),
-                                         current_user.organization_id)
+                                         current_user.organization_id, file_bytes=buf.getvalue())
 
     updated = await EvidenceRepository.get_by_id(str(created["_id"]), current_user.organization_id)
     if updated:

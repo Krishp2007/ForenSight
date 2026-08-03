@@ -40,7 +40,7 @@ os.environ.setdefault("SCAPY_CACHE_DIR", _scapy_cache)
 _parse_executor = concurrent.futures.ThreadPoolExecutor(max_workers=min(32, (os.cpu_count() or 4) + 4))
 
 
-async def _run_full_pipeline(evidence_id: str, org_id: str) -> None:
+async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional[bytes] = None) -> None:
     """
     Full async evidence processing pipeline.
     Runs as a FastAPI background task — always executes inside the live event loop.
@@ -66,22 +66,26 @@ async def _run_full_pipeline(evidence_id: str, org_id: str) -> None:
     _t0 = loop.time()
 
     try:
-        # ── 2. Download from MinIO (blocking sync SDK → offload to thread) ───
-        if minio_client.client is None:
-            connect_to_minio()
+        # ── 2. Obtain file content (use in-memory bytes if available, else download from S3)
+        if file_bytes:
+            file_content = file_bytes
+            logger.info(f"[PIPELINE] ⏱ In-memory buffer used (0.0s S3 latency): {len(file_content):,} bytes")
+        else:
+            if minio_client.client is None:
+                connect_to_minio()
 
-        def _download():
-            resp = minio_client.client.get_object(
-                bucket_name=settings.MINIO_BUCKET_NAME,
-                object_name=evidence["minio_object_name"],
-            )
-            data = resp.read()
-            resp.close()
-            resp.release_conn()
-            return data
+            def _download():
+                resp = minio_client.client.get_object(
+                    bucket_name=settings.MINIO_BUCKET_NAME,
+                    object_name=evidence["minio_object_name"],
+                )
+                data = resp.read()
+                resp.close()
+                resp.release_conn()
+                return data
 
-        file_content = await loop.run_in_executor(None, _download)
-        logger.info(f"[PIPELINE] ⏱ Download: {loop.time()-_t0:.1f}s  {len(file_content):,} bytes")
+            file_content = await loop.run_in_executor(None, _download)
+            logger.info(f"[PIPELINE] ⏱ Download: {loop.time()-_t0:.1f}s  {len(file_content):,} bytes")
 
         # ── 3. Parse (CPU-bound / blocking I/O → parallel thread executor) ───
         parser = get_parser(file_type)
@@ -220,12 +224,12 @@ class ProcessingPipeline:
     """
 
     @staticmethod
-    def run_in_background(background_tasks, evidence_id: str, org_id: str) -> None:
+    def run_in_background(background_tasks, evidence_id: str, org_id: str, file_bytes: Optional[bytes] = None) -> None:
         try:
-            asyncio.create_task(_run_full_pipeline(evidence_id, org_id))
+            asyncio.create_task(_run_full_pipeline(evidence_id, org_id, file_bytes))
             logger.info(f"[PIPELINE] Scheduled immediate asyncio task for evidence {evidence_id}")
         except Exception:
-            background_tasks.add_task(_run_full_pipeline, evidence_id, org_id)
+            background_tasks.add_task(_run_full_pipeline, evidence_id, org_id, file_bytes)
             logger.info(f"[PIPELINE] Scheduled background task for evidence {evidence_id}")
 
     @staticmethod
