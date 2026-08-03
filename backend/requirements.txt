@@ -23,7 +23,7 @@ bcrypt>=4.1.2
 # Forensic & File Parsing
 python-evtx>=0.7.4       # EVTX parser
 scapy>=2.5.0             # PCAP parser
-python-magic-bin>=0.4.14 # File identification (Windows binaries included)
+python-magic>=0.4.27        # File identification (Linux native libmagic wrapper)
 pandas>=2.2.1
 numpy>=1.26.4
 
