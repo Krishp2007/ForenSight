@@ -62,13 +62,30 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing infrastructure database clients...")
     try:
         await connect_to_mongo()
-        await connect_to_neo4j()
-        await connect_to_redis()
-        connect_to_minio()
-        logger.info("All infrastructure services (MongoDB, Neo4j, Redis, MinIO) successfully connected on startup!")
+        logger.info("MongoDB successfully connected during application startup!")
     except Exception as e:
-        logger.error(f"Startup infrastructure initialization failed: {e}")
+        logger.error(f"MongoDB connection failed on startup: {e}")
         raise e
+
+    try:
+        await connect_to_neo4j()
+        logger.info("Neo4j successfully connected!")
+    except Exception as e:
+        logger.warning(f"Neo4j connection warning (graph queries disabled): {e}")
+
+    try:
+        await connect_to_redis()
+        logger.info("Redis successfully connected!")
+    except Exception as e:
+        logger.warning(f"Redis connection warning (caching/pubsub disabled): {e}")
+
+    try:
+        connect_to_minio()
+        logger.info("MinIO/S3 successfully connected!")
+    except Exception as e:
+        logger.warning(f"MinIO/S3 connection warning (file uploads disabled): {e}")
+
+    logger.info("FastAPI Application Startup Complete!")
 
     # ── Recovery: re-queue any evidence stuck in queued/parsing from a previous crash
     asyncio.create_task(_recover_stuck_evidence())
