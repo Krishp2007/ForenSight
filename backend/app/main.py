@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
         await connect_to_neo4j()
         await connect_to_redis()
         connect_to_minio()
-        logger.info("All services successfully connected during application startup!")
+        logger.info("All infrastructure services (MongoDB, Neo4j, Redis, MinIO) successfully connected on startup!")
     except Exception as e:
         logger.error(f"Startup infrastructure initialization failed: {e}")
         raise e
