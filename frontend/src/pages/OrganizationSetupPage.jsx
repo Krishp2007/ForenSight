@@ -21,7 +21,7 @@ const OrganizationSetupPage = () => {
       await createOrganization(name)
       navigate('/register')
     } catch (e) {
-      setError(e.response?.data?.detail || 'Failed to create organization')
+      setError(e.response?.data?.detail || e.message || 'Failed to create organization. Please ensure the database is running.')
     } finally {
       setLoading(false)
     }
