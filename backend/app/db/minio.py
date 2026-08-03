@@ -18,14 +18,20 @@ def connect_to_minio():
             secret_key=settings.MINIO_SECRET_KEY,
             secure=settings.MINIO_SECURE.lower() == 'true' if isinstance(settings.MINIO_SECURE, str) else settings.MINIO_SECURE
         )
-        # Test connection by listing buckets
-        minio_client.client.list_buckets()
+        # Test connection by listing buckets if permitted
+        try:
+            minio_client.client.list_buckets()
+        except Exception as err:
+            logger.warning(f"MinIO/S3 list_buckets warning (proceeding): {err}")
         
         # Auto-create case evidence bucket if it doesn't exist
         bucket_name = settings.MINIO_BUCKET_NAME
-        if not minio_client.client.bucket_exists(bucket_name):
-            minio_client.client.make_bucket(bucket_name)
-            logger.info(f"Created MinIO bucket: '{bucket_name}'")
+        try:
+            if not minio_client.client.bucket_exists(bucket_name):
+                minio_client.client.make_bucket(bucket_name)
+                logger.info(f"Created MinIO bucket: '{bucket_name}'")
+        except Exception as bucket_err:
+            logger.warning(f"MinIO/S3 bucket check warning: {bucket_err}")
             
         logger.info("Successfully connected to MinIO!")
     except Exception as e:

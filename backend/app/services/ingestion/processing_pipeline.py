@@ -221,8 +221,12 @@ class ProcessingPipeline:
 
     @staticmethod
     def run_in_background(background_tasks, evidence_id: str, org_id: str) -> None:
-        background_tasks.add_task(_run_full_pipeline, evidence_id, org_id)
-        logger.info(f"[PIPELINE] Scheduled background task for evidence {evidence_id}")
+        try:
+            asyncio.create_task(_run_full_pipeline(evidence_id, org_id))
+            logger.info(f"[PIPELINE] Scheduled immediate asyncio task for evidence {evidence_id}")
+        except Exception:
+            background_tasks.add_task(_run_full_pipeline, evidence_id, org_id)
+            logger.info(f"[PIPELINE] Scheduled background task for evidence {evidence_id}")
 
     @staticmethod
     async def trigger_processing(evidence_id: str, org_id: str) -> bool:
