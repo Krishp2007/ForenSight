@@ -56,6 +56,6 @@ RUN mkdir -p /app/backend/app/storage/vector_indexes
 COPY start-all.sh /app/start-all.sh
 RUN sed -i 's/\r$//' /app/start-all.sh && chmod +x /app/start-all.sh
 
-EXPOSE 80 8000
+EXPOSE 80 10000 8000
 
 CMD ["/app/start-all.sh"]
