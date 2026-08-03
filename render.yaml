@@ -1,0 +1,26 @@
+# ── ForenSight AI — Render Infrastructure Blueprint ─────────────────────────────
+services:
+  # ── 1. Frontend Web App (Nginx + React SPA)
+  - type: web
+    name: forensight-frontend
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    region: singapore
+    plan: free
+    branch: main
+
+  # ── 2. Backend API (FastAPI)
+  - type: web
+    name: forensight-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: singapore
+    plan: free
+    branch: main
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: JWT_SECRET_KEY
+        generateValue: true
