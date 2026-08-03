@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { User, Mail, Lock, ShieldCheck, Save, CheckCircle, AlertCircle, Eye, EyeOff, Building } from 'lucide-react'
 import useAuth from '../hooks/useAuth'
 import { updateMe } from '../services/authService'
-import Spinner from '../components/ui/Spinner'
+import { Spinner } from '../components/ui'
 
 /* ── small reusable field ──────────────────────────────────────── */
 const Field = ({ label, icon: Icon, children }) => (

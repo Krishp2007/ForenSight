@@ -2,31 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 
+  ForenSight Evidence-Based Forensic UI Design System (WCAG 2.2 Compliant)
+  ================================================------------------------
+  60% Neutral Tones  : Deep Slate (#030712, #0f172a, #1e293b) - Low fatigue, high contrast
+  30% Secondary Tones: Cool Blue (#3b82f6), Slate (#64748b), Soft Green (#22c55e)
+  10% Accent Tones   : Critical Red (#dc2626), Warning Orange (#ea580c), Caution Yellow (#eab308)
+*/
+
+:root {
+  /* 60% Neutrals */
+  --forensic-bg-dark: #030712;
+  --forensic-panel-bg: #0f172a;
+  --forensic-card-bg: #1e293b;
+  --forensic-border: #334155;
+  --forensic-text-main: #f8fafc;
+  --forensic-text-muted: #94a3b8;
+
+  /* 30% Secondary Cool Tones */
+  --forensic-primary: #3b82f6;
+  --forensic-primary-hover: #2563eb;
+  --forensic-verified: #22c55e;
+  --forensic-info: #0284c7;
+
+  /* 10% Accents (Critical & Warnings) */
+  --forensic-alert-critical: #dc2626;
+  --forensic-alert-high: #ea580c;
+  --forensic-alert-medium: #eab308;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #111827;
+  background: var(--forensic-panel-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: var(--forensic-border);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: var(--forensic-primary);
 }
 
-/* Base */
+/* Base body */
 body {
-  background-color: #030712;
-  color: #f9fafb;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--forensic-bg-dark);
+  color: var(--forensic-text-main);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Cytoscape canvas background */
+/* Cytoscape canvas container */
 .cy-container {
-  background: #111827;
+  background: var(--forensic-panel-bg);
+}
+
+/* Dashboard Animations */
+@keyframes dashboardFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dashboardModalPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-dashboard-card {
+  animation: dashboardFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-dashboard-modal {
+  animation: dashboardModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Focused, non-distracting Card & Button Interactions */
+.cyber-card-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.cyber-card-hover:hover {
+  transform: translateY(-3px) !important;
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 10px 24px -6px rgba(15, 23, 42, 0.6), 0 0 16px rgba(59, 130, 246, 0.2) !important;
+}
+
+.cyber-button-hover {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.cyber-button-hover:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35) !important;
+  filter: brightness(1.08) !important;
+}
+
+.cyber-table-row {
+  transition: background 0.15s ease !important;
+}
+.cyber-table-row:hover {
+  background: rgba(30, 41, 59, 0.9) !important;
+  box-shadow: inset 3px 0 0 var(--forensic-primary) !important;
 }

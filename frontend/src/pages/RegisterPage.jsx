@@ -1,34 +1,48 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { register } from '../services/authService'
-import { listOrganizations } from '../services/organizationService'
-import Spinner from '../components/ui/Spinner'
+import api from '../services/api'
+import { Spinner } from '../components/ui'
+import { ShieldCheck, UserPlus, Eye, EyeOff, Check, AlertCircle, Building, Shield } from 'lucide-react'
 
-// Password strength checker
+
+
+const listOrganizations = () => api.get('/organizations/').then(r => r.data)
+
 const getStrength = (pw) => {
   if (!pw) return { label: '', color: '#ccc', width: '0%' }
   let score = 0
-  if (pw.length >= 8)            score++
-  if (/[A-Z]/.test(pw))          score++
-  if (/[0-9]/.test(pw))          score++
-  if (/[^A-Za-z0-9]/.test(pw))   score++
-  if (pw.length >= 12)           score++
+  if (pw.length >= 8)          score++
+  if (/[A-Z]/.test(pw))        score++
+  if (/[0-9]/.test(pw))        score++
+  if (/[^A-Za-z0-9]/.test(pw)) score++
+  if (pw.length >= 12)         score++
   if (score <= 1) return { label: 'weak',   color: '#ef4444', width: '25%' }
   if (score === 2) return { label: 'fair',   color: '#f59e0b', width: '50%' }
-  if (score === 3) return { label: 'good',   color: '#4a7fe8', width: '75%' }
-  return                         { label: 'strong', color: '#10b981', width: '100%' }
+  if (score === 3) return { label: 'good',   color: '#3b82f6', width: '75%' }
+  return           { label: 'strong', color: '#22c55e', width: '100%' }
 }
 
 const inputStyle = {
   width: '100%', boxSizing: 'border-box',
-  padding: '11px 14px',
-  background: '#2a3347',
-  border: '1.5px solid #3d4f6a',
-  borderRadius: '8px',
-  color: '#ffffff', fontSize: '14px',
+  padding: '12px 14px',
+  background: '#0f172a',
+  border: '1.5px solid #334155',
+  borderRadius: '10px',
+  color: '#f8fafc', fontSize: '14px',
   outline: 'none',
   transition: 'border-color 0.2s',
   fontFamily: 'inherit',
+}
+
+const labelStyle = {
+  display: 'block',
+  color: '#94a3b8',
+  fontSize: '11px',
+  fontWeight: '700',
+  letterSpacing: '1px',
+  textTransform: 'uppercase',
+  marginBottom: '7px',
 }
 
 export default function RegisterPage() {
@@ -76,68 +90,67 @@ export default function RegisterPage() {
     }
   }
 
-  const labelStyle = {
-    display: 'block',
-    color: '#8a9ab8',
-    fontSize: '11px',
-    fontWeight: '600',
-    letterSpacing: '1px',
-    textTransform: 'uppercase',
-    marginBottom: '7px',
-  }
-
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#2a3347',
+      width: '100vw',
+      backgroundImage: `linear-gradient(135deg, rgba(3, 7, 18, 0.9) 0%, rgba(15, 23, 42, 0.92) 100%), url('https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070&auto=format&fit=crop')`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       padding: '32px 16px',
+      boxSizing: 'border-box',
     }}>
       <div style={{
         width: '100%',
-        maxWidth: '480px',
-        background: '#323d52',
-        borderRadius: '16px',
+        maxWidth: '520px',
+        background: 'rgba(15, 23, 42, 0.88)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        borderRadius: '20px',
+        border: '1px solid rgba(59, 130, 246, 0.3)',
         padding: '44px 40px',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+        boxShadow: '0 30px 80px rgba(0,0,0,0.7), 0 0 30px rgba(59, 130, 246, 0.15)',
+        animation: 'dashboardModalPop 0.3s ease-out',
       }}>
-        {/* Logo + Title */}
+        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{
-              width: '42px', height: '42px',
-              background: 'rgba(96,165,250,0.15)',
-              border: '1px solid rgba(96,165,250,0.4)',
-              borderRadius: '10px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '20px',
-            }}>🔎</div>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ color: '#ffffff', fontWeight: '700', fontSize: '18px', letterSpacing: '-0.3px' }}>
-                ForenSight
-              </div>
-              <div style={{ color: '#6b7fa3', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                AI Forensics
-              </div>
-            </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <img
+              src="/logo.svg?v=7"
+              alt="ForenSight AI"
+              style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+            />
           </div>
-          <h1 style={{ color: '#ffffff', fontSize: '26px', fontWeight: '600', margin: '0 0 8px 0' }}>
-            Create Account
+
+
+
+
+
+
+
+
+
+
+
+          <h1 style={{ color: '#f8fafc', fontSize: '26px', fontWeight: '700', margin: '0 0 6px 0' }}>
+            Create Investigator Account
           </h1>
-          <p style={{ color: '#9aa8c0', fontSize: '13px', margin: 0 }}>
-            Have an account already?{' '}
+          <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
+            Already registered?{' '}
             <Link to="/login" style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: '600' }}>
-              Sign in
+              Sign In
             </Link>
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* First + Last name row */}
+          {/* Full name */}
           <div>
             <label style={labelStyle}>Full Name</label>
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -145,75 +158,77 @@ export default function RegisterPage() {
                 value={firstName} onChange={e => setFirstName(e.target.value)}
                 required placeholder="First name"
                 style={{ ...inputStyle, flex: 1 }}
-                onFocus={e => e.target.style.borderColor = '#60a5fa'}
-                onBlur={e => e.target.style.borderColor = '#3d4f6a'}
+                onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                onBlur={e => e.target.style.borderColor = '#334155'}
               />
               <input
                 value={lastName} onChange={e => setLastName(e.target.value)}
                 required placeholder="Last name"
                 style={{ ...inputStyle, flex: 1 }}
-                onFocus={e => e.target.style.borderColor = '#60a5fa'}
-                onBlur={e => e.target.style.borderColor = '#3d4f6a'}
+                onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                onBlur={e => e.target.style.borderColor = '#334155'}
               />
             </div>
           </div>
 
-          {/* Email with green tick */}
+          {/* Email with validation tick */}
           <div>
-            <label style={labelStyle}>Email</label>
+            <label style={labelStyle}>Investigator Email</label>
             <div style={{ position: 'relative' }}>
               <input
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
-                required placeholder="name@company.com"
+                required placeholder="investigator@agency.gov"
                 style={{
                   ...inputStyle,
-                  borderColor: emailValid && email ? '#10b981' : '#3d4f6a',
+                  borderColor: emailValid && email ? '#22c55e' : '#334155',
                   paddingRight: '44px',
                 }}
-                onFocus={e => e.target.style.borderColor = emailValid ? '#10b981' : '#60a5fa'}
-                onBlur={e => e.target.style.borderColor = emailValid && email ? '#10b981' : '#3d4f6a'}
+                onFocus={e => e.target.style.borderColor = emailValid ? '#22c55e' : '#3b82f6'}
+                onBlur={e => e.target.style.borderColor = emailValid && email ? '#22c55e' : '#334155'}
               />
               {emailValid && email && (
                 <div style={{
                   position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                   width: '22px', height: '22px', borderRadius: '50%',
-                  background: '#10b981',
+                  background: '#22c55e',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: '12px',
-                }}>✓</div>
+                  color: '#fff',
+                }}>
+                  <Check size={14} />
+                </div>
               )}
             </div>
           </div>
 
-          {/* Password with strength */}
+          {/* Password */}
           <div>
             <label style={labelStyle}>Password</label>
             <div style={{ position: 'relative' }}>
               <input
                 type={showPw ? 'text' : 'password'} value={password}
                 onChange={e => setPassword(e.target.value)}
-                required minLength={8} placeholder="Password"
+                required minLength={8} placeholder="Password (min 8 chars)"
                 style={{ ...inputStyle, paddingRight: '110px' }}
-                onFocus={e => e.target.style.borderColor = '#60a5fa'}
-                onBlur={e => e.target.style.borderColor = '#3d4f6a'}
+                onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                onBlur={e => e.target.style.borderColor = '#334155'}
               />
               <div style={{
                 position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                 display: 'flex', alignItems: 'center', gap: '8px',
               }}>
                 {password && (
-                  <span style={{ color: strength.color, fontSize: '11px', fontWeight: '700' }}>
+                  <span style={{ color: strength.color, fontSize: '11px', fontWeight: '700', textTransform: 'uppercase' }}>
                     {strength.label}
                   </span>
                 )}
                 <button type="button" onClick={() => setShowPw(!showPw)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7fa3', fontSize: '15px', padding: 0 }}>
-                  {showPw ? '🙈' : '👁'}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: 0 }}>
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
             {password && (
-              <div style={{ marginTop: '6px', height: '3px', background: '#2a3347', borderRadius: '99px', overflow: 'hidden' }}>
+              <div style={{ marginTop: '6px', height: '4px', background: '#1e293b', borderRadius: '99px', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: strength.width, background: strength.color, borderRadius: '99px', transition: 'width 0.3s, background 0.3s' }} />
               </div>
             )}
@@ -226,23 +241,23 @@ export default function RegisterPage() {
               <input
                 type={showConfirm ? 'text' : 'password'} value={confirm}
                 onChange={e => setConfirm(e.target.value)}
-                required placeholder="Confirm password"
+                required placeholder="Re-enter password"
                 style={{
                   ...inputStyle, paddingRight: '110px',
-                  borderColor: pwMatch ? '#10b981' : pwMismatch ? '#ef4444' : '#3d4f6a',
+                  borderColor: pwMatch ? '#22c55e' : pwMismatch ? '#dc2626' : '#334155',
                 }}
-                onFocus={e => e.target.style.borderColor = pwMatch ? '#10b981' : '#60a5fa'}
-                onBlur={e => e.target.style.borderColor = pwMatch ? '#10b981' : pwMismatch ? '#ef4444' : '#3d4f6a'}
+                onFocus={e => e.target.style.borderColor = pwMatch ? '#22c55e' : '#3b82f6'}
+                onBlur={e => e.target.style.borderColor = pwMatch ? '#22c55e' : pwMismatch ? '#dc2626' : '#334155'}
               />
               <div style={{
                 position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                 display: 'flex', alignItems: 'center', gap: '8px',
               }}>
-                {pwMatch && <span style={{ color: '#10b981', fontSize: '11px', fontWeight: '700' }}>correct</span>}
-                {pwMismatch && <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700' }}>mismatch</span>}
+                {pwMatch && <span style={{ color: '#22c55e', fontSize: '11px', fontWeight: '700' }}>Match</span>}
+                {pwMismatch && <span style={{ color: '#dc2626', fontSize: '11px', fontWeight: '700' }}>Mismatch</span>}
                 <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7fa3', fontSize: '15px', padding: 0 }}>
-                  {showConfirm ? '🙈' : '👁'}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: 0 }}>
+                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -250,24 +265,25 @@ export default function RegisterPage() {
 
           {/* Organization */}
           <div>
-            <label style={labelStyle}>Organization</label>
+            <label style={labelStyle}>Assigned Agency / Organization</label>
             {orgs.length > 0 ? (
               <select value={orgId} onChange={e => setOrgId(e.target.value)} required
-                style={{ ...inputStyle, appearance: 'none', cursor: 'pointer', color: orgId ? '#ffffff' : '#6b7fa3' }}>
-                <option value="">Select organization…</option>
+                style={{ ...inputStyle, appearance: 'none', cursor: 'pointer', color: orgId ? '#f8fafc' : '#64748b' }}>
+                <option value="">Select forensic agency…</option>
                 {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             ) : (
               <div style={{
                 padding: '11px 14px',
-                background: 'rgba(245,158,11,0.1)',
-                border: '1.5px solid rgba(245,158,11,0.4)',
-                borderRadius: '8px',
-                color: '#f59e0b', fontSize: '13px',
+                background: 'rgba(234, 179, 8, 0.1)',
+                border: '1.5px solid rgba(234, 179, 8, 0.4)',
+                borderRadius: '10px',
+                color: '#fbbf24', fontSize: '13px',
+                display: 'flex', alignItems: 'center', gap: '8px',
               }}>
-                No organizations found.{' '}
+                <Building size={16} /> No agencies found.{' '}
                 <Link to="/setup" style={{ color: '#60a5fa', fontWeight: '600', textDecoration: 'none' }}>
-                  Create one first →
+                  Create agency →
                 </Link>
               </div>
             )}
@@ -275,46 +291,47 @@ export default function RegisterPage() {
 
           {/* Role */}
           <div>
-            <label style={labelStyle}>Role</label>
+            <label style={labelStyle}>Forensic Role</label>
             <select value={role} onChange={e => setRole(e.target.value)}
               style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}>
-              <option value="investigator">Investigator</option>
-              <option value="admin">Admin</option>
-              <option value="viewer">Viewer</option>
+              <option value="investigator">Investigator (Full Case Access)</option>
+              <option value="admin">Admin (System & User Manager)</option>
+              <option value="viewer">Viewer (Read-Only Forensic Audit)</option>
             </select>
           </div>
 
           {/* Error */}
           {error && (
             <div style={{
-              background: 'rgba(239,68,68,0.1)',
-              border: '1px solid rgba(239,68,68,0.4)',
-              borderRadius: '8px', padding: '10px 14px',
-              color: '#fca5a5', fontSize: '13px',
+              background: 'rgba(220, 38, 38, 0.12)',
+              border: '1px solid rgba(220, 38, 38, 0.4)',
+              borderRadius: '10px', padding: '11px 14px',
+              color: '#fca5a5', fontSize: '13px', fontWeight: '500',
+              display: 'flex', alignItems: 'center', gap: '8px',
             }}>
-              {error}
+              <AlertCircle size={16} /> {error}
             </div>
           )}
 
-          {/* Sign up button */}
-          <button type="submit" disabled={loading}
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="cyber-button-hover"
             style={{
-              width: '100%', padding: '12px',
-              marginTop: '4px',
-              background: loading ? '#3b6bc4' : '#4a7fe8',
-              border: 'none', borderRadius: '8px',
-              color: '#fff', fontSize: '14px', fontWeight: '600',
+              width: '100%', padding: '13px',
+              marginTop: '6px',
+              background: loading ? '#2563eb' : '#3b82f6',
+              border: 'none', borderRadius: '10px',
+              color: '#ffffff', fontSize: '14px', fontWeight: '600',
               cursor: loading ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              transition: 'background 0.2s',
-              opacity: loading ? 0.8 : 1,
+              boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
               fontFamily: 'inherit',
             }}
-            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#3b6bc4' }}
-            onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#4a7fe8' }}
           >
-            {loading && <Spinner size="sm" />}
-            Sign up
+            {loading ? <Spinner size="sm" /> : <UserPlus size={16} />}
+            {loading ? 'Creating Account…' : 'Create Account'}
           </button>
         </form>
       </div>

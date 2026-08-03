@@ -143,13 +143,50 @@ async def reprocess_evidence(
 
 # ── Delete ─────────────────────────────────────────────────────────────────────
 
+async def _cleanup_evidence_resources(evidence_id: str, case_id: str, organization_id: str, minio_object_name: str):
+    """Background task to delete heavy MinIO objects, MongoDB events, and Neo4j graph nodes without blocking the HTTP response."""
+    # 1. MinIO
+    if minio_object_name:
+        try:
+            minio_client.client.remove_object(
+                bucket_name=settings.MINIO_BUCKET_NAME,
+                object_name=minio_object_name,
+            )
+        except Exception as e:
+            logger.warning(f"MinIO delete skipped: {e}")
+
+    # 2. MongoDB events
+    try:
+        from backend.app.db.mongodb import db_client as mongo
+        res = await mongo.db["events"].delete_many({
+            "evidence_id": ObjectId(evidence_id),
+            "organization_id": ObjectId(organization_id),
+        })
+        logger.info(f"Deleted {res.deleted_count} events for evidence {evidence_id}")
+    except Exception as e:
+        logger.error(f"MongoDB events cleanup error: {e}")
+
+    # 3. Neo4j edges
+    try:
+        from backend.app.db.neo4j import neo4j_client
+        if neo4j_client.driver:
+            async with neo4j_client.driver.session() as sess:
+                await sess.run(
+                    "MATCH ()-[r:FORENSIC_ACTION {evidence_id:$eid}]->() DELETE r",
+                    eid=evidence_id,
+                )
+    except Exception as e:
+        logger.warning(f"Neo4j cleanup skipped: {e}")
+
+
 @router.delete("/cases/{case_id}/evidence/{evidence_id}",
                status_code=status.HTTP_204_NO_CONTENT)
 async def delete_evidence(
     case_id: str, evidence_id: str,
+    background_tasks: BackgroundTasks,
     current_user: UserResponse = Depends(get_current_user),
 ):
-    """Delete evidence — cascades to MinIO file, MongoDB events, and Neo4j graph edges."""
+    """Delete evidence — instantly removes record from UI, offloads heavy cleanup to background task."""
     require_investigator(current_user.role)
     if not ObjectId.is_valid(case_id) or not ObjectId.is_valid(evidence_id):
         raise HTTPException(status_code=400, detail="Invalid ID format")
@@ -160,43 +197,17 @@ async def delete_evidence(
     if not evidence:
         raise HTTPException(status_code=404, detail="Evidence not found")
 
-    # 1. MinIO
-    try:
-        minio_client.client.remove_object(
-            bucket_name=settings.MINIO_BUCKET_NAME,
-            object_name=evidence["minio_object_name"],
-        )
-    except Exception as e:
-        logger.warning(f"MinIO delete skipped: {e}")
-
-    # 2. MongoDB events
-    from backend.app.db.mongodb import db_client as mongo
-    res = await mongo.db["events"].delete_many({
-        "evidence_id": ObjectId(evidence_id),
-        "organization_id": ObjectId(current_user.organization_id),
-    })
-    logger.info(f"Deleted {res.deleted_count} events for evidence {evidence_id}")
-
-    # 3. Neo4j edges + orphan nodes
-    try:
-        from backend.app.db.neo4j import neo4j_client
-        if neo4j_client.driver:
-            async with neo4j_client.driver.session() as sess:
-                await sess.run(
-                    "MATCH ()-[r:FORENSIC_ACTION {evidence_id:$eid, case_id:$cid, organization_id:$oid}]->() DELETE r",
-                    eid=evidence_id, cid=case_id, oid=current_user.organization_id,
-                )
-                await sess.run(
-                    """MATCH (n:Entity {case_id:$cid, organization_id:$oid})
-                       WHERE NOT (n)-[:FORENSIC_ACTION]-() AND NOT ()-[:FORENSIC_ACTION]->(n)
-                       DELETE n""",
-                    cid=case_id, oid=current_user.organization_id,
-                )
-    except Exception as e:
-        logger.warning(f"Neo4j cleanup skipped: {e}")
-
-    # 4. MongoDB evidence doc
+    # Delete primary Evidence document instantly
     await EvidenceRepository.delete(evidence_id, current_user.organization_id)
+
+    # Offload heavy MinIO, Mongo Events, and Neo4j deletion to BackgroundTasks
+    background_tasks.add_task(
+        _cleanup_evidence_resources,
+        evidence_id,
+        case_id,
+        current_user.organization_id,
+        evidence.get("minio_object_name"),
+    )
 
     await AuditRepository.log(
         actor_id=current_user.id, org_id=current_user.organization_id,
@@ -204,6 +215,7 @@ async def delete_evidence(
         metadata={"filename": evidence.get("filename"), "case_id": case_id},
     )
     return None
+
 
 
 # ── Per-evidence graph ──────────────────────────────────────────────────────────

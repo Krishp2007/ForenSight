@@ -4,22 +4,26 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 class EventSource(str, Enum):
-    EVTX = "evtx"
-    PCAP = "pcap"
+    EVTX    = "evtx"
+    PCAP    = "pcap"
     BROWSER = "browser"
-    CSV = "csv"
-    JSON = "json"
+    CSV     = "csv"
+    JSON    = "json"
+    TEXT    = "text"
 
 class EventType(str, Enum):
-    PROCESS_CREATION = "process_creation"
+    PROCESS_CREATION   = "process_creation"
     NETWORK_CONNECTION = "network_connection"
-    FILE_MODIFICATION = "file_modification"
-    REGISTRY_CHANGE = "registry_change"
-    AUTH_EVENT = "auth_event"
-    BROWSER_HISTORY = "browser_history"
-    BROWSER_DOWNLOAD = "browser_download"
+    FILE_MODIFICATION  = "file_modification"
+    REGISTRY_CHANGE    = "registry_change"
+    AUTH_EVENT         = "auth_event"
+    BROWSER_HISTORY    = "browser_history"
+    BROWSER_DOWNLOAD   = "browser_download"
     BROWSER_CREDENTIAL = "browser_credential"
-    GENERIC = "generic"
+    HASH_RECORD        = "hash_record"
+    CSV                = "csv"
+    JSON               = "json"
+    GENERIC            = "generic"
 
 class EventSeverity(str, Enum):
     INFO = "info"

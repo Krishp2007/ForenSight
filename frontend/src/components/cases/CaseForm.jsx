@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CASE_STATUSES } from '../../utils/constants'
 import { humanize } from '../../utils/formatters'
-import Spinner from '../ui/Spinner'
+import { Spinner } from '../ui'
 
 const CaseForm = ({ initial = {}, onSubmit, onCancel, loading }) => {
   const [title, setTitle] = useState(initial.title || '')
@@ -16,24 +16,24 @@ const CaseForm = ({ initial = {}, onSubmit, onCancel, loading }) => {
   const inputStyle = {
     width: '100%',
     boxSizing: 'border-box',
-    padding: '10px 14px',
-    background: '#2a3347',
-    border: '1.5px solid #3d4f6a',
-    borderRadius: '8px',
-    color: '#ffffff',
-    fontSize: '13px',
+    padding: '11px 15px',
+    background: '#1e293b',
+    border: '1.5px solid #334155',
+    borderRadius: '10px',
+    color: '#f8fafc',
+    fontSize: '13.5px',
     outline: 'none',
     fontFamily: 'inherit',
-    transition: 'border-color 0.2s',
+    transition: 'all 0.2s ease',
     resize: 'none',
   }
 
   const labelStyle = {
     display: 'block',
-    color: '#8a9ab8',
-    fontSize: '11px',
+    color: '#94a3b8',
+    fontSize: '11.5px',
     fontWeight: '600',
-    letterSpacing: '0.8px',
+    letterSpacing: '0.6px',
     textTransform: 'uppercase',
     marginBottom: '6px',
   }
@@ -48,8 +48,8 @@ const CaseForm = ({ initial = {}, onSubmit, onCancel, loading }) => {
           required minLength={3} maxLength={150}
           placeholder="e.g. APT29 Phishing Investigation"
           style={inputStyle}
-          onFocus={e => e.target.style.borderColor = '#60a5fa'}
-          onBlur={e => e.target.style.borderColor = '#3d4f6a'}
+          onFocus={e => { e.target.style.borderColor = '#6366f1'; e.target.style.boxShadow = '0 0 12px rgba(99, 102, 241, 0.3)' }}
+          onBlur={e => { e.target.style.borderColor = '#334155'; e.target.style.boxShadow = 'none' }}
         />
       </div>
       <div>
@@ -60,8 +60,8 @@ const CaseForm = ({ initial = {}, onSubmit, onCancel, loading }) => {
           rows={3}
           placeholder="Optional case scope or incident details…"
           style={inputStyle}
-          onFocus={e => e.target.style.borderColor = '#60a5fa'}
-          onBlur={e => e.target.style.borderColor = '#3d4f6a'}
+          onFocus={e => { e.target.style.borderColor = '#6366f1'; e.target.style.boxShadow = '0 0 12px rgba(99, 102, 241, 0.3)' }}
+          onBlur={e => { e.target.style.borderColor = '#334155'; e.target.style.boxShadow = 'none' }}
         />
       </div>
       {initial.id && (
@@ -71,8 +71,8 @@ const CaseForm = ({ initial = {}, onSubmit, onCancel, loading }) => {
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             style={{ ...inputStyle, cursor: 'pointer', appearance: 'none' }}
-            onFocus={e => e.target.style.borderColor = '#60a5fa'}
-            onBlur={e => e.target.style.borderColor = '#3d4f6a'}
+            onFocus={e => { e.target.style.borderColor = '#6366f1'; e.target.style.boxShadow = '0 0 12px rgba(99, 102, 241, 0.3)' }}
+            onBlur={e => { e.target.style.borderColor = '#334155'; e.target.style.boxShadow = 'none' }}
           >
             {CASE_STATUSES.map((s) => (
               <option key={s} value={s}>{humanize(s)}</option>
@@ -85,18 +85,19 @@ const CaseForm = ({ initial = {}, onSubmit, onCancel, loading }) => {
           type="button"
           onClick={onCancel}
           style={{
-            padding: '8px 16px',
+            padding: '9px 18px',
             fontSize: '13px',
-            borderRadius: '8px',
-            border: '1px solid #3d4f6a',
-            background: 'transparent',
-            color: '#9aa8c0',
+            fontWeight: '500',
+            borderRadius: '10px',
+            border: '1px solid #334155',
+            background: 'rgba(255, 255, 255, 0.05)',
+            color: '#cbd5e1',
             cursor: 'pointer',
             fontFamily: 'inherit',
-            transition: 'background 0.15s, color 0.15s',
+            transition: 'all 0.15s ease',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#2a3347'; e.currentTarget.style.color = '#ffffff' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9aa8c0' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(0)' }}
         >
           Cancel
         </button>
@@ -104,29 +105,34 @@ const CaseForm = ({ initial = {}, onSubmit, onCancel, loading }) => {
           type="submit"
           disabled={loading}
           style={{
-            padding: '8px 16px',
+            padding: '9px 20px',
             fontSize: '13px',
-            borderRadius: '8px',
+            fontWeight: '600',
+            borderRadius: '10px',
             border: 'none',
-            background: loading ? '#3b6bc4' : '#4a7fe8',
+            background: loading ? '#4f46e5' : 'linear-gradient(135deg, #6366f1, #4f46e5)',
             color: '#ffffff',
             cursor: loading ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             fontFamily: 'inherit',
+            boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
             opacity: loading ? 0.7 : 1,
-            transition: 'background 0.2s',
+            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#3b6bc4' }}
-          onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#4a7fe8' }}
+          onMouseEnter={e => { if (!loading) { e.currentTarget.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.65)'; e.currentTarget.style.transform = 'translateY(-2px)' } }}
+          onMouseLeave={e => { if (!loading) { e.currentTarget.style.boxShadow = '0 4px 14px rgba(99, 102, 241, 0.4)'; e.currentTarget.style.transform = 'translateY(0)' } }}
         >
           {loading && <Spinner size="sm" />}
           {initial.id ? 'Update Case' : 'Create Case'}
         </button>
+
       </div>
     </form>
   )
 }
 
 export default CaseForm
+
+

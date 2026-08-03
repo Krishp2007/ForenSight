@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { getEvidence, reprocessEvidence, deleteEvidence } from '../../services/evidenceService'
 import { formatBytes, formatDateTime, humanize } from '../../utils/formatters'
 import { FileText, RefreshCw, RotateCcw, Trash2, Eye } from 'lucide-react'
-import EmptyState from '../ui/EmptyState'
-import ConfirmModal from '../ui/ConfirmModal'
+import { EmptyState, ConfirmModal } from '../ui'
 import EvidenceDrawer from './EvidenceDrawer'
 import useParseTimerStore from '../../store/parseTimerStore'
+import useRole from '../../hooks/useRole'
 
 const POLLING_INTERVAL = 4000
 const TERMINAL = ['parsed', 'failed']
@@ -42,6 +42,8 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
   const [deleting, setDeleting]         = useState({})
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [drawerEvidence, setDrawerEvidence] = useState(null)
+
+  const { canReprocess, canDelete } = useRole()
 
   // Parse timers live in a Zustand store — survives tab/page navigation
   const { markStarted, markDone, getStartMs } = useParseTimerStore()
@@ -270,7 +272,7 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
                 <td style={{ padding: '10px 14px' }}>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
 
-                    {/* View Graph + Report */}
+                    {/* View Graph + Report — all roles */}
                     <ActionBtn
                       onClick={() => setDrawerEvidence(e)}
                       disabled={e.status !== 'parsed'}
@@ -280,38 +282,37 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
                       <Eye size={10} /> View
                     </ActionBtn>
 
-                    {/* Re-process */}
-                    <ActionBtn
-                      onClick={() => handleReprocess(e)}
-                      disabled={
-                        reprocessing[e.id] ||
-                        !['parsed', 'failed', 'uploaded'].includes(e.status)
-                      }
-                      title="Re-run full pipeline"
-                      color="#a78bfa"
-                    >
-                      <RotateCcw
-                        size={10}
-                        style={{
-                          animation: reprocessing[e.id]
-                            ? 'spin 1s linear infinite'
-                            : 'none'
-                        }}
-                      />
+                    {/* Re-process — investigator + admin only */}
+                    {canReprocess && (
+                      <ActionBtn
+                        onClick={() => handleReprocess(e)}
+                        disabled={
+                          reprocessing[e.id] ||
+                          !['parsed', 'failed', 'uploaded'].includes(e.status)
+                        }
+                        title="Re-run full pipeline"
+                        color="#a78bfa"
+                      >
+                        <RotateCcw
+                          size={10}
+                          style={{ animation: reprocessing[e.id] ? 'spin 1s linear infinite' : 'none' }}
+                        />
+                        {reprocessing[e.id] ? 'Starting…' : 'Re-process'}
+                      </ActionBtn>
+                    )}
 
-                      {reprocessing[e.id] ? 'Starting…' : 'Re-process'}
-                    </ActionBtn>
-
-                    {/* Delete */}
-                    <ActionBtn
-                      onClick={() => setConfirmDelete(e)}
-                      disabled={deleting[e.id]}
-                      title="Delete this evidence file"
-                      color="#f87171"
-                    >
-                      <Trash2 size={10} />
-                      {deleting[e.id] ? 'Deleting…' : 'Delete'}
-                    </ActionBtn>
+                    {/* Delete — investigator + admin only */}
+                    {canDelete && (
+                      <ActionBtn
+                        onClick={() => setConfirmDelete(e)}
+                        disabled={deleting[e.id]}
+                        title="Delete this evidence file"
+                        color="#f87171"
+                      >
+                        <Trash2 size={10} />
+                        {deleting[e.id] ? 'Deleting…' : 'Delete'}
+                      </ActionBtn>
+                    )}
 
                   </div>
                 </td>

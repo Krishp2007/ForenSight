@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import cytoscape from 'cytoscape'
 import { getEvidenceGraph, getEvidenceReport } from '../../services/evidenceService'
-import Spinner from '../ui/Spinner'
+import { Spinner } from '../ui'
 import { X, GitBranch, FileText, RefreshCw, FileDown } from 'lucide-react'
 
 const NODE_COLORS = {
@@ -71,11 +71,56 @@ export default function EvidenceDrawer({ evidence, caseId, onClose }) {
       container: containerRef.current,
       elements,
       style: [
-        { selector: 'node', style: { label: 'data(label)', 'background-color': 'data(color)', color: '#fff', 'font-size': '9px', 'text-valign': 'bottom', 'text-margin-y': 4, width: 26, height: 26, 'border-width': 2, 'border-color': '#1e2a3d' } },
-        { selector: 'edge', style: { label: 'data(label)', 'font-size': '7px', color: '#6b7fa3', 'line-color': '#3d4f6a', 'target-arrow-color': '#3d4f6a', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', width: 1.5 } },
-        { selector: 'node:selected', style: { 'border-color': '#60a5fa', 'border-width': 3 } },
+        {
+          selector: 'node',
+          style: {
+            label: 'data(label)',
+            'background-color': 'data(color)',
+            color: '#ffffff',
+            'font-size': '10px',
+            'font-weight': '600',
+            'text-valign': 'bottom',
+            'text-margin-y': 6,
+            width: 32,
+            height: 32,
+            'border-width': 2,
+            'border-color': '#1e2a3d',
+            'min-zoomed-font-size': 6,
+          }
+        },
+        {
+          selector: 'edge',
+          style: {
+            label: 'data(label)',
+            'font-size': '8px',
+            color: '#94a3b8',
+            'line-color': '#475569',
+            'target-arrow-color': '#475569',
+            'target-arrow-shape': 'triangle',
+            'arrow-scale': 1.2,
+            'curve-style': 'bezier',
+            'control-point-step-size': 45,
+            width: 2,
+          }
+        },
+        { selector: 'node:selected', style: { 'border-color': '#60a5fa', 'border-width': 3.5 } },
       ],
-      layout: { name: 'cose', animate: true, padding: 30, randomize: false },
+      layout: {
+        name: 'cose',
+        animate: true,
+        animationDuration: 700,
+        padding: 60,
+        randomize: true,
+        fit: true,
+        nodeRepulsion: () => 2500000,
+        idealEdgeLength: () => 180,
+        edgeElasticity: () => 100,
+        gravity: 0.15,
+        numIter: 2500,
+        componentSpacing: 140,
+        nodeOverlap: 0,
+      },
+
       wheelSensitivity: 0.3,
     })
     return () => { if (cyRef.current) { cyRef.current.destroy(); cyRef.current = null } }

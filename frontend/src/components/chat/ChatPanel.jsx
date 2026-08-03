@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
-import { askCopilot } from '../../services/chatService'
-import { searchEvents } from '../../services/similarityService'
+import api from '../../services/api'
 import ChatMessage from './ChatMessage'
-import Spinner from '../ui/Spinner'
+import { Spinner } from '../ui'
 import { Send, Search, Bot } from 'lucide-react'
+
+// Inlined from chatService + similarityService
+const askCopilot   = (caseId, question) => api.post(`/cases/${caseId}/copilot`, { question }).then(r => r.data)
+const searchEvents = (caseId, query, limit = 10) => api.get(`/cases/${caseId}/search`, { params: { query, limit } }).then(r => r.data)
 
 const SUGGESTIONS = [
   'Summarise the case timeline',

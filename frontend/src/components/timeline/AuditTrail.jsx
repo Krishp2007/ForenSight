@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getCaseAuditLog, verifyAuditChain } from '../../services/auditService'
+import api from '../../services/api'
 import { formatDateTime, humanize } from '../../utils/formatters'
-import Spinner from '../ui/Spinner'
-import EmptyState from '../ui/EmptyState'
+import { Spinner, EmptyState } from '../ui'
 import { ShieldCheck, Hash, ChevronDown, ChevronUp, RefreshCw, CheckCircle, XCircle } from 'lucide-react'
+import { useRole } from '../../store/authStore'
+
+// Inlined from auditService
+const getCaseAuditLog  = (caseId, limit = 200) => api.get(`/cases/${caseId}/audit`, { params: { limit } }).then(r => r.data)
+const verifyAuditChain = () => api.get('/audit/verify').then(r => r.data)
 
 const ACTION_COLORS = {
   'case.create':           '#34d399',
@@ -29,6 +33,8 @@ const AuditTrail = ({ caseId }) => {
   const [expanded, setExpanded] = useState(null)
   const [chain,    setChain]    = useState(null)
   const [verifying, setVerifying] = useState(false)
+
+  const { isAdmin } = useRole()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -96,8 +102,8 @@ const AuditTrail = ({ caseId }) => {
         </span>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {/* Chain integrity badge */}
-          {chain && (
+          {/* Chain integrity badge — only shown after verify, admin only */}
+          {chain && isAdmin && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '6px',
               padding: '4px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '600',
@@ -112,6 +118,8 @@ const AuditTrail = ({ caseId }) => {
             </div>
           )}
 
+          {/* Verify chain — admin only */}
+          {isAdmin && (
           <button
             onClick={handleVerify}
             disabled={verifying}
@@ -127,6 +135,7 @@ const AuditTrail = ({ caseId }) => {
             <ShieldCheck size={12} />
             {verifying ? 'Verifying…' : 'Verify chain'}
           </button>
+          )}
 
           <button
             onClick={load}

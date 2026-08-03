@@ -36,6 +36,12 @@ class FileDetector:
             logger.info(f"Detected SQLite database signature for {filename}")
             return EvidenceType.BROWSER_SQLITE
 
+        # Check plain-text hash files by extension early (before magic, which misreads them)
+        ext_early = filename.split(".")[-1].lower() if "." in filename else ""
+        if ext_early in ("md5", "sha1", "sha256", "sha512", "hash"):
+            logger.info(f"Detected hash manifest by extension for {filename}")
+            return EvidenceType.TEXT
+
         # 2. Inspect MIME type using python-magic
         try:
             mime = magic.from_buffer(file_content, mime=True)
@@ -66,6 +72,8 @@ class FileDetector:
             return EvidenceType.CSV
         elif ext == "json":
             return EvidenceType.JSON
-            
+        elif ext in ("md5", "sha1", "sha256", "txt", "log", "text", "hash"):
+            return EvidenceType.TEXT
+
         # Default fallback
         return EvidenceType.JSON

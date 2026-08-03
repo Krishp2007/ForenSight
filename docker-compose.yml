@@ -125,42 +125,6 @@ services:
       --port 8000
       --workers 2
 
-  worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: forensight-worker
-    env_file:
-      - ./backend/.env
-    environment:
-      - MONGODB_URL=mongodb://mongodb:27017
-      - NEO4J_URL=bolt://neo4j:7687
-      - REDIS_URL=redis://redis:6379/0
-      - MINIO_ENDPOINT=minio:9000
-    volumes:
-      - evidence_store:/app/app/storage
-    depends_on:
-      - api
-      - redis
-    restart: unless-stopped
-    # Run Celery worker — includes all 4 task modules
-    command: >
-      celery -A app.worker.celery_app worker
-      --loglevel=info
-      --concurrency=2
-      --queues=celery
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: forensight-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_models:/root/.ollama
-    restart: unless-stopped
-    # Pull llama3.1 on first start
-    # Run manually after startup: docker exec forensight-ollama ollama pull llama3.1
-
   web:
     build:
       context: ./frontend
@@ -180,4 +144,3 @@ volumes:
   redis_data:
   minio_data:
   evidence_store:
-  ollama_models:

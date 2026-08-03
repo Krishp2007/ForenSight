@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { getHtmlReport } from '../../services/reportService'
+import api from '../../services/api'
 import { listEvidence } from '../../services/evidenceService'
-import Spinner from '../ui/Spinner'
+import { Spinner } from '../ui'
 import { RefreshCw, FileDown, AlertCircle, Clock, FileText } from 'lucide-react'
+
+// Inline from reportService
+const getHtmlReport = (caseId) => api.get(`/cases/${caseId}/report/html`, { headers: { Accept: 'text/html' }, responseType: 'text' }).then(r => r.data)
 
 const ReportPanel = ({ caseId }) => {
   const [html, setHtml]                 = useState(null)

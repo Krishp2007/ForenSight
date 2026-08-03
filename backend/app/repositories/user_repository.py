@@ -43,3 +43,17 @@ class UserRepository:
             return result
         except Exception:
             return None
+
+    @staticmethod
+    async def list_by_org(org_id: str) -> list:
+        """List all users in an organization (admin use)."""
+        try:
+            if not ObjectId.is_valid(org_id):
+                return []
+            cursor = db_client.db["users"].find(
+                {"organization_id": ObjectId(org_id)},
+                {"hashed_password": 0},   # never return password hash
+            ).sort("created_at", -1)
+            return await cursor.to_list(length=500)
+        except Exception:
+            return []

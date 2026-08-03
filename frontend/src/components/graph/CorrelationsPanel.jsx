@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
-import { getCorrelations, runCorrelations } from '../../services/correlationService'
-import Spinner from '../ui/Spinner'
-import EmptyState from '../ui/EmptyState'
+import api from '../../services/api'
+import { Spinner, EmptyState } from '../ui'
 import { Link2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { humanize } from '../../utils/formatters'
+
+// Inlined from correlationService
+const getCorrelations = (caseId) => api.get(`/cases/${caseId}/correlations`).then(r => r.data)
+const runCorrelations = (caseId) => api.post(`/cases/${caseId}/correlations/run`).then(r => r.data)
 
 const RULE_STYLES = {
   PROCESS_INITIATED_CONNECTION: { bg: 'rgba(74,127,232,0.2)', color: '#93c5fd' },

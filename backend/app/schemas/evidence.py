@@ -4,11 +4,12 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 class EvidenceType(str, Enum):
-    EVTX = "evtx"
-    PCAP = "pcap"
+    EVTX           = "evtx"
+    PCAP           = "pcap"
     BROWSER_SQLITE = "browser_sqlite"
-    CSV = "csv"
-    JSON = "json"
+    CSV            = "csv"
+    JSON           = "json"
+    TEXT           = "text"
 
 class EvidenceStatus(str, Enum):
     UPLOADED = "uploaded"

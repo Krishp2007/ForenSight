@@ -36,6 +36,9 @@ _scapy_cache = os.path.join(tempfile.gettempdir(), "scapy_cache_forensight")
 os.makedirs(_scapy_cache, exist_ok=True)
 os.environ.setdefault("SCAPY_CACHE_DIR", _scapy_cache)
 
+# Shared multi-core thread pool executor for CPU-bound forensic parsing
+_parse_executor = concurrent.futures.ThreadPoolExecutor(max_workers=min(32, (os.cpu_count() or 4) + 4))
+
 
 async def _run_full_pipeline(evidence_id: str, org_id: str) -> None:
     """
@@ -80,14 +83,15 @@ async def _run_full_pipeline(evidence_id: str, org_id: str) -> None:
         file_content = await loop.run_in_executor(None, _download)
         logger.info(f"[PIPELINE] ⏱ Download: {loop.time()-_t0:.1f}s  {len(file_content):,} bytes")
 
-        # ── 3. Parse (CPU-bound / blocking I/O → thread executor) ────────────
+        # ── 3. Parse (CPU-bound / blocking I/O → parallel thread executor) ───
         parser = get_parser(file_type)
         _t1 = loop.time()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            events = await loop.run_in_executor(
-                pool,
-                lambda: parser.parse(file_content, filename=filename),
-            )
+        events = await loop.run_in_executor(
+            _parse_executor,
+            lambda: parser.parse(file_content, filename=filename),
+        )
+
+
         logger.info(f"[PIPELINE] ⏱ Parse:    {loop.time()-_t1:.1f}s  {len(events)} events")
 
         # ── 4. Enrich ─────────────────────────────────────────────────────────

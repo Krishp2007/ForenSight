@@ -2,13 +2,16 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../services/authService'
 import useAuth from '../hooks/useAuth'
-import Spinner from '../components/ui/Spinner'
+import { Spinner } from '../components/ui'
+import { Shield, FileCheck, Lock, HardDrive, KeyRound, Eye, EyeOff, Search } from 'lucide-react'
+
+
 
 const features = [
-  { emoji: '🛡️', text: 'Anti-tampering evidence chain' },
-  { emoji: '📄', text: 'Forensic report with legal value' },
-  { emoji: '🔐', text: 'Certified forensic audit trail' },
-  { emoji: '💾', text: 'Secure encrypted evidence storage' },
+  { icon: Shield, text: 'Cryptographic anti-tampering evidence chain' },
+  { icon: FileCheck, text: 'Court-admissible certified forensic reports' },
+  { icon: Lock, text: 'Chain of Custody SHA-256 audit logging' },
+  { icon: HardDrive, text: 'Encrypted S3 & MongoDB evidence vault' },
 ]
 
 export default function LoginPage() {
@@ -38,133 +41,161 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#2a3347',
+      width: '100vw',
+      backgroundImage: `linear-gradient(135deg, rgba(3, 7, 18, 0.88) 0%, rgba(15, 23, 42, 0.92) 100%), url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop')`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       padding: '24px',
+      boxSizing: 'border-box',
     }}>
       <div style={{
         width: '100%',
-        maxWidth: '860px',
-        background: '#323d52',
-        borderRadius: '16px',
+        maxWidth: '920px',
+        background: 'rgba(15, 23, 42, 0.85)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        borderRadius: '20px',
+        border: '1px solid rgba(59, 130, 246, 0.3)',
         overflow: 'hidden',
         display: 'flex',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+        boxShadow: '0 30px 80px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.15)',
+        animation: 'dashboardFadeIn 0.4s ease-out',
       }}>
 
-        {/* ── LEFT PANEL ── */}
+        {/* ── LEFT PANEL: Forensic Branding ── */}
         <div style={{
-          width: '42%',
-          background: '#2a3347',
+          width: '45%',
+          background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)',
           padding: '48px 40px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
+          borderRight: '1px solid rgba(51, 65, 85, 0.6)',
         }}>
           {/* Logo */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <div style={{
-                width: '42px', height: '42px',
-                background: 'rgba(96,165,250,0.15)',
-                border: '1px solid rgba(96,165,250,0.4)',
-                borderRadius: '10px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px',
-              }}>🔎</div>
-              <div>
-                <div style={{ color: '#fff', fontWeight: '700', fontSize: '18px', letterSpacing: '-0.3px' }}>
-                  ForenSight
-                </div>
-                <div style={{ color: '#6b7fa3', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                  AI Forensics
-                </div>
-              </div>
+            <div style={{ marginBottom: '20px' }}>
+              <img
+                src="/logo.svg?v=7"
+                alt="ForenSight AI"
+                style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+              />
+            </div>
+
+
+
+
+
+
+
+
+
+
+
+            <div style={{
+              display: 'inline-block',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              background: 'rgba(34, 197, 94, 0.12)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              color: '#4ade80',
+              fontSize: '11px',
+              fontWeight: '600',
+            }}>
+              ● Secure Investigator Portal
             </div>
           </div>
 
+
           {/* Description */}
-          <div style={{ margin: '32px 0' }}>
-            <p style={{ color: '#9aa8c0', fontSize: '13.5px', lineHeight: '1.7', margin: 0 }}>
-              ForenSight AI allows investigators to acquire, parse and certify digital evidence
-              with legal value. Each investigation produces a complete forensic evidence
-              package — cryptographically signed and securely stored.
+          <div style={{ margin: '28px 0' }}>
+            <p style={{ color: '#94a3b8', fontSize: '13.5px', lineHeight: '1.7', margin: 0 }}>
+              Acquire, analyze, and certify electronic evidence with cryptographic court-admissible standards. 
+              Built for digital forensics teams and cyber incident responders.
             </p>
           </div>
 
           {/* Features */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {features.map(({ emoji, text }) => (
+            {features.map(({ icon: Icon, text }) => (
               <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
-                  width: '30px', height: '30px',
-                  background: 'rgba(96,165,250,0.12)',
+                  width: '32px', height: '32px',
+                  background: 'rgba(59, 130, 246, 0.12)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
                   borderRadius: '8px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '14px', flexShrink: 0,
+                  color: '#60a5fa', flexShrink: 0,
                 }}>
-                  {emoji}
+                  <Icon size={15} />
                 </div>
-                <span style={{ color: '#9aa8c0', fontSize: '13px' }}>{text}</span>
+                <span style={{ color: '#cbd5e1', fontSize: '13px', fontWeight: '500' }}>{text}</span>
               </div>
             ))}
           </div>
 
-          <div style={{ color: '#4a5568', fontSize: '11px', marginTop: '40px' }}>
-            © 2026 ForenSight AI
+          <div style={{ color: '#64748b', fontSize: '11px', marginTop: '36px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Lock size={12} /> Encrypted Session · ISO 27001 Certified
           </div>
         </div>
 
-        {/* ── RIGHT PANEL ── */}
+        {/* ── RIGHT PANEL: Sign In Form ── */}
         <div style={{
           flex: 1,
           padding: '48px 44px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
+          background: 'rgba(15, 23, 42, 0.6)',
         }}>
-          <h2 style={{ color: '#fff', fontSize: '26px', fontWeight: '600', margin: '0 0 28px 0' }}>
-            Sign in
-          </h2>
+          <div style={{ marginBottom: '24px' }}>
+            <h2 style={{ color: '#f8fafc', fontSize: '26px', fontWeight: '700', margin: '0 0 6px 0' }}>
+              Sign In
+            </h2>
+            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
+              Enter your credentials to access case evidence files
+            </p>
+          </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
             {/* Email */}
             <div>
               <label style={{
-                display: 'block', color: '#8a9ab8',
-                fontSize: '11px', fontWeight: '600',
+                display: 'block', color: '#94a3b8',
+                fontSize: '11px', fontWeight: '700',
                 letterSpacing: '1px', textTransform: 'uppercase',
                 marginBottom: '7px',
-              }}>Email</label>
+              }}>Investigator Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                placeholder="name@company.com"
+                placeholder="investigator@agency.gov"
                 style={{
                   width: '100%', boxSizing: 'border-box',
-                  padding: '11px 14px',
-                  background: '#2a3347',
-                  border: '1.5px solid #4a90e2',
-                  borderRadius: '8px',
-                  color: '#fff', fontSize: '14px',
-                  outline: 'none',
+                  padding: '12px 14px',
+                  background: '#0f172a',
+                  border: '1.5px solid #334155',
+                  borderRadius: '10px',
+                  color: '#f8fafc', fontSize: '14px',
+                  outline: 'none', transition: 'all 0.2s',
                 }}
-                onFocus={e => e.target.style.borderColor = '#60a5fa'}
-                onBlur={e => e.target.style.borderColor = '#4a90e2'}
+                onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                onBlur={e => e.target.style.borderColor = '#334155'}
               />
             </div>
 
             {/* Password */}
             <div>
               <label style={{
-                display: 'block', color: '#8a9ab8',
-                fontSize: '11px', fontWeight: '600',
+                display: 'block', color: '#94a3b8',
+                fontSize: '11px', fontWeight: '700',
                 letterSpacing: '1px', textTransform: 'uppercase',
                 marginBottom: '7px',
               }}>Password</label>
@@ -174,18 +205,18 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  placeholder="Password"
+                  placeholder="••••••••••••"
                   style={{
                     width: '100%', boxSizing: 'border-box',
-                    padding: '11px 40px 11px 14px',
-                    background: '#2a3347',
-                    border: '1.5px solid #3d4f6a',
-                    borderRadius: '8px',
-                    color: '#fff', fontSize: '14px',
-                    outline: 'none',
+                    padding: '12px 42px 12px 14px',
+                    background: '#0f172a',
+                    border: '1.5px solid #334155',
+                    borderRadius: '10px',
+                    color: '#f8fafc', fontSize: '14px',
+                    outline: 'none', transition: 'all 0.2s',
                   }}
-                  onFocus={e => e.target.style.borderColor = '#60a5fa'}
-                  onBlur={e => e.target.style.borderColor = '#3d4f6a'}
+                  onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={e => e.target.style.borderColor = '#334155'}
                 />
                 <button
                   type="button"
@@ -194,10 +225,10 @@ export default function LoginPage() {
                     position: 'absolute', right: '12px', top: '50%',
                     transform: 'translateY(-50%)',
                     background: 'none', border: 'none',
-                    color: '#6b7fa3', cursor: 'pointer', fontSize: '15px', padding: 0,
+                    color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0,
                   }}
                 >
-                  {showPw ? '🙈' : '👁'}
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -205,10 +236,10 @@ export default function LoginPage() {
             {/* Error */}
             {error && (
               <div style={{
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.4)',
-                borderRadius: '8px', padding: '10px 14px',
-                color: '#fca5a5', fontSize: '13px',
+                background: 'rgba(220, 38, 38, 0.12)',
+                border: '1px solid rgba(220, 38, 38, 0.4)',
+                borderRadius: '10px', padding: '11px 14px',
+                color: '#fca5a5', fontSize: '13px', fontWeight: '500',
               }}>
                 {error}
               </div>
@@ -218,38 +249,39 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
+              className="cyber-button-hover"
               style={{
-                width: '100%', padding: '12px',
+                width: '100%', padding: '13px',
                 marginTop: '4px',
-                background: loading ? '#3b6bc4' : '#4a7fe8',
-                border: 'none', borderRadius: '8px',
-                color: '#fff', fontSize: '14px', fontWeight: '600',
+                background: loading ? '#2563eb' : '#3b82f6',
+                border: 'none', borderRadius: '10px',
+                color: '#ffffff', fontSize: '14px', fontWeight: '600',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                transition: 'background 0.2s',
+                boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
               }}
-              onMouseEnter={e => { if (!loading) e.target.style.background = '#3b6bc4' }}
-              onMouseLeave={e => { if (!loading) e.target.style.background = '#4a7fe8' }}
             >
-              {loading && <Spinner size="sm" />}
-              Sign in
+              {loading ? <Spinner size="sm" /> : <KeyRound size={16} />}
+              {loading ? 'Authenticating…' : 'Sign In'}
             </button>
           </form>
 
           {/* Footer links */}
-          <p style={{
-            textAlign: 'center', color: '#6b7fa3',
-            fontSize: '12px', marginTop: '28px',
+          <div style={{
+            textAlign: 'center', color: '#94a3b8',
+            fontSize: '13px', marginTop: '28px',
+            paddingTop: '20px',
+            borderTop: '1px solid rgba(51, 65, 85, 0.5)',
           }}>
-            Don't have an account?{' '}
-            <Link to="/register" style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: '500' }}>
-              Create account
+            Need an account?{' '}
+            <Link to="/register" style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: '600' }}>
+              Create Account
             </Link>
-            {' · '}
-            <Link to="/setup" style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: '500' }}>
-              Setup organization
+            <span style={{ margin: '0 8px', color: '#475569' }}>•</span>
+            <Link to="/setup" style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: '600' }}>
+              Setup Agency
             </Link>
-          </p>
+          </div>
         </div>
 
       </div>

@@ -3,6 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from backend.app.config import settings
 from backend.app.db.mongodb import connect_to_mongo, close_mongo_connection
@@ -89,7 +90,7 @@ app = FastAPI(
     redirect_slashes=False,   # prevents 307 redirects that strip Authorization header
 )
 
-# Set up CORS middleware rules
+# Set up CORS and GZip compression middleware rules
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Adjust in production
@@ -97,6 +98,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 
 # Import and include API routers
 from backend.app.api.auth import router as auth_router
@@ -110,6 +113,7 @@ from backend.app.api.similarity import router as similarity_router
 from backend.app.api.reports import router as reports_router
 from backend.app.api.audit import router as audit_router
 from backend.app.api.correlations import router as correlations_router
+from backend.app.api.users import router as users_router
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(org_router, prefix="/api/v1")
@@ -122,6 +126,7 @@ app.include_router(similarity_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(audit_router, prefix="/api/v1")
 app.include_router(correlations_router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
 
 @app.get("/")
 def get_root():

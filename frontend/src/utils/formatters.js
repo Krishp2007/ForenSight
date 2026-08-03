@@ -1,17 +1,35 @@
-// Date/time
+// Date/time formatters — handles UTC conversion & local timezone
 export const formatDateTime = (iso) => {
   if (!iso) return '—'
-  return new Date(iso).toLocaleString('en-GB', {
-    year: 'numeric', month: 'short', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  })
+  let s = String(iso)
+  // If ISO string lacks timezone offset or 'Z', append 'Z' to force UTC parsing
+  if (s && !s.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+    s += 'Z'
+  }
+  try {
+    return new Date(s).toLocaleString(undefined, {
+      year: 'numeric', month: 'short', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: true,
+    })
+  } catch (e) {
+    return String(iso)
+  }
 }
 
 export const formatDateShort = (iso) => {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-GB', {
-    year: 'numeric', month: 'short', day: '2-digit',
-  })
+  let s = String(iso)
+  if (s && !s.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+    s += 'Z'
+  }
+  try {
+    return new Date(s).toLocaleDateString(undefined, {
+      year: 'numeric', month: 'short', day: '2-digit',
+    })
+  } catch (e) {
+    return String(iso)
+  }
 }
 
 // File size
@@ -27,39 +45,15 @@ export const formatBytes = (bytes) => {
   return `${val.toFixed(1)} ${units[i]}`
 }
 
-// Severity → Tailwind color classes
-export const severityColor = (severity) => {
-  const map = {
-    critical: 'bg-red-600 text-white',
-    high: 'bg-orange-500 text-white',
-    medium: 'bg-yellow-400 text-black',
-    low: 'bg-blue-400 text-white',
-    info: 'bg-gray-400 text-white',
-  }
-  return map[severity] || 'bg-gray-300 text-black'
-}
-
-// Case status → color classes
+// Case status → inline style object { background, color }
 export const statusColor = (status) => {
   const map = {
-    open: 'bg-emerald-500 text-white',
-    in_progress: 'bg-blue-500 text-white',
-    suspended: 'bg-yellow-400 text-black',
-    resolved: 'bg-gray-500 text-white',
+    open:        { background: 'rgba(16,185,129,0.2)',  color: '#34d399' },
+    in_progress: { background: 'rgba(96,165,250,0.2)',  color: '#60a5fa' },
+    suspended:   { background: 'rgba(245,158,11,0.2)',  color: '#fbbf24' },
+    resolved:    { background: 'rgba(107,127,163,0.2)', color: '#9aa8c0' },
   }
-  return map[status] || 'bg-gray-300 text-black'
-}
-
-// Evidence status → color classes
-export const evidenceStatusColor = (status) => {
-  const map = {
-    uploaded: 'bg-gray-400 text-white',
-    queued: 'bg-blue-300 text-black',
-    parsing: 'bg-yellow-400 text-black',
-    parsed: 'bg-emerald-500 text-white',
-    failed: 'bg-red-500 text-white',
-  }
-  return map[status] || 'bg-gray-300 text-black'
+  return map[status] || { background: 'rgba(107,127,163,0.2)', color: '#9aa8c0' }
 }
 
 // Human-readable label

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate, Token
+from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate, Token, UserRole
 from backend.app.repositories.user_repository import UserRepository
 from backend.app.repositories.organization_repository import OrganizationRepository
 from backend.app.auth.password import hash_password, verify_password
@@ -13,47 +13,34 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(payload: UserCreate):
-    """Register a new investigator user within an organization."""
-    # 1. Verify organization exists
+    """Register a new user. Role defaults to 'investigator'. Admin role requires an existing admin to set it."""
     if not ObjectId.is_valid(payload.organization_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid organization ID format"
-        )
-        
+        raise HTTPException(status_code=400, detail="Invalid organization ID format")
+
     org = await OrganizationRepository.get_by_id(payload.organization_id)
     if not org:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
-        
-    # 2. Check if user already exists
+        raise HTTPException(status_code=404, detail="Organization not found")
+
     existing_user = await UserRepository.get_by_email(payload.email)
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email address already registered"
-        )
-        
-    # 3. Hash password and insert
+        raise HTTPException(status_code=400, detail="Email address already registered")
+
+    # Prevent self-assigned admin role on registration — default to investigator
+    safe_role = payload.role if payload.role.value != "admin" else UserRole.INVESTIGATOR
+
     now = datetime.utcnow()
-    hashed_pwd = hash_password(payload.password)
-    
     user_dict = {
         "email": payload.email,
         "username": payload.username,
         "organization_id": ObjectId(payload.organization_id),
-        "role": payload.role.value,
-        "hashed_password": hashed_pwd,
+        "role": safe_role.value,
+        "hashed_password": hash_password(payload.password),
         "is_active": payload.is_active,
         "created_at": now,
-        "updated_at": now
+        "updated_at": now,
     }
-    
+
     created_user = await UserRepository.create(user_dict)
-    
-    # Map MongoDB document to UserResponse
     created_user["id"] = str(created_user["_id"])
     created_user["organization_id"] = str(created_user["organization_id"])
     return created_user

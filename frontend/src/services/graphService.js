@@ -1,12 +1,18 @@
 import api from './api'
 
-// GET /cases/:id/graph
+// GET /cases/:id/graph  (all files)
 export const getCaseGraph = async (caseId) => {
   const res = await api.get(`/cases/${caseId}/graph`)
-  return res.data // { nodes: [], edges: [] }
+  return res.data
 }
 
-// POST /cases/:id/graph/sync  — push MongoDB events → Neo4j
+// GET /cases/:id/evidence/:evidenceId/graph  (single file)
+export const getEvidenceGraph = async (caseId, evidenceId) => {
+  const res = await api.get(`/cases/${caseId}/evidence/${evidenceId}/graph`)
+  return res.data
+}
+
+// POST /cases/:id/graph/sync
 export const syncCaseGraph = async (caseId) => {
   const res = await api.post(`/cases/${caseId}/graph/sync`)
   return res.data

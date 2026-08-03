@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createOrganization } from '../services/organizationService'
+import api from '../services/api'
 import { Shield, Building2 } from 'lucide-react'
-import Spinner from '../components/ui/Spinner'
+import { Spinner } from '../components/ui'
+
+// Inlined from deleted organizationService
+const createOrganization = (name) => api.post('/organizations/', { name }).then(r => r.data)
 
 const OrganizationSetupPage = () => {
   const [name, setName] = useState('')

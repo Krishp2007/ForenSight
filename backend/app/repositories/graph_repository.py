@@ -119,6 +119,7 @@ class GraphRepository:
                o.name AS target_name, o.type AS target_type,
                r.action AS action, r.severity AS severity,
                r.timestamp AS timestamp, r.event_id AS event_id,
+               r.evidence_id AS evidence_id,
                r.is_anomaly AS is_anomaly, r.anomaly_score AS anomaly_score
         LIMIT 2000
         """
@@ -141,24 +142,27 @@ class GraphRepository:
                 records = await result.data()
 
             for record in records:
-                s_name = record["source_name"]
-                s_type = record["source_type"]
-                t_name = record["target_name"]
-                t_type = record["target_type"]
+                s_name   = record["source_name"]
+                s_type   = record["source_type"]
+                t_name   = record["target_name"]
+                t_type   = record["target_type"]
+                ev_id    = record.get("evidence_id", "")
 
+                # Track first seen evidence_id per node for colour coding
                 if s_name not in nodes_dict:
-                    nodes_dict[s_name] = {"id": s_name, "label": s_name, "type": s_type}
+                    nodes_dict[s_name] = {"id": s_name, "label": s_name, "type": s_type, "evidence_id": ev_id}
                 if t_name not in nodes_dict:
-                    nodes_dict[t_name] = {"id": t_name, "label": t_name, "type": t_type}
+                    nodes_dict[t_name] = {"id": t_name, "label": t_name, "type": t_type, "evidence_id": ev_id}
 
                 edges.append({
-                    "source":       s_name,
-                    "target":       t_name,
-                    "action":       record["action"],
-                    "severity":     record["severity"],
-                    "timestamp":    record["timestamp"],
-                    "event_id":     record["event_id"],
-                    "is_anomaly":   record.get("is_anomaly", False),
+                    "source":        s_name,
+                    "target":        t_name,
+                    "action":        record["action"],
+                    "severity":      record["severity"],
+                    "timestamp":     record["timestamp"],
+                    "event_id":      record["event_id"],
+                    "evidence_id":   ev_id,
+                    "is_anomaly":    record.get("is_anomaly", False),
                     "anomaly_score": record.get("anomaly_score", 0.0),
                 })
 

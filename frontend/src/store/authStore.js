@@ -43,4 +43,25 @@ const useAuthStore = create((set, get) => ({
   },
 }))
 
+// Inline useRole — role helpers derived from auth store
+const useRole = () => {
+  const { user } = useAuthStore()
+  const role = user?.role || 'viewer'
+  return {
+    role,
+    isAdmin:        role === 'admin',
+    isInvestigator: role === 'admin' || role === 'investigator',
+    isViewer:       true,
+    canUpload:      role === 'admin' || role === 'investigator',
+    canReprocess:   role === 'admin' || role === 'investigator',
+    canDelete:      role === 'admin' || role === 'investigator',
+    canEdit:        role === 'admin' || role === 'investigator',
+    canRunRules:    role === 'admin' || role === 'investigator',
+    canSyncGraph:   role === 'admin' || role === 'investigator',
+    canClearGraph:  role === 'admin' || role === 'investigator',
+    canManageUsers: role === 'admin',
+  }
+}
+
+export { useRole }
 export default useAuthStore

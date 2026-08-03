@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react'
-import { listEvents } from '../../services/eventService'
-import Spinner from '../ui/Spinner'
-import EmptyState from '../ui/EmptyState'
+import api from '../../services/api'
+import { Spinner, EmptyState } from '../ui'
 import { Clock, Filter } from 'lucide-react'
 import { formatDateTime, humanize } from '../../utils/formatters'
 import { SEVERITY_LEVELS, EVENT_TYPES } from '../../utils/constants'
+
+// Inlined from deleted eventService
+const listEvents = (caseId, { severity, event_type, limit = 100 } = {}) => {
+  const params = { limit }
+  if (severity)   params.severity   = severity
+  if (event_type) params.event_type = event_type
+  return api.get(`/cases/${caseId}/events`, { params }).then(r => r.data)
+}
 
 const SEV_COLORS = {
   critical: { bg: 'rgba(239,68,68,0.2)',   color: '#fca5a5' },

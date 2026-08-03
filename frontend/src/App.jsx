@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom'
 import useAuth from './hooks/useAuth'
+import Topbar from './components/layout/Topbar'
 
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -8,7 +9,18 @@ import OrganizationSetupPage from './pages/OrganizationSetupPage'
 import DashboardPage from './pages/DashboardPage'
 import CaseDetailPage from './pages/CaseDetailPage'
 import ProfilePage from './pages/ProfilePage'
-import AppShell from './components/layout/AppShell'
+import UsersPage from './pages/UsersPage'
+
+// Inlined AppShell without Sidebar
+const AppShell = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#0b0f19', color: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+    <Topbar />
+    <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+      <Outlet />
+    </main>
+  </div>
+)
+
 
 // Only redirect to login if there is NO token at all
 const Protected = ({ children }) => {
@@ -36,8 +48,9 @@ const AppRoutes = () => {
       <Route element={<Protected><AppShell /></Protected>}>
         <Route path="/dashboard"          element={<DashboardPage />} />
         <Route path="/profile"            element={<ProfilePage />} />
+        <Route path="/users"              element={<UsersPage />} />
         <Route path="/cases/:caseId/:tab" element={<CaseDetailPage />} />
-        <Route path="/"                 element={<Navigate to="/dashboard" replace />} />
+        <Route path="/"                   element={<Navigate to="/dashboard" replace />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
