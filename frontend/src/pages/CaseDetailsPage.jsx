@@ -6,22 +6,8 @@ import EvidenceIngestionPanel from '../components/evidence/EvidenceIngestionPane
 import EvidenceRepositoryList from '../components/evidence/EvidenceRepositoryList';
 import { Database, HardDrive, Cpu } from 'lucide-react';
 
-// Modules for Next Sprints placeholders
-const TimelinePlaceholder = () => (
-  <div className="py-20 text-center border border-dashed border-gray-800 rounded-2xl bg-gray-900/30">
-    <Cpu className="w-10 h-10 text-gray-650 mx-auto mb-3 animate-pulse" />
-    <span className="text-gray-400 font-bold text-xs uppercase tracking-wider">Timeline Event Viewer</span>
-    <p className="text-gray-500 text-xs mt-1">This module will be activated in Sprint 15.</p>
-  </div>
-);
-
-const GraphPlaceholder = () => (
-  <div className="py-20 text-center border border-dashed border-gray-800 rounded-2xl bg-gray-900/30">
-    <Database className="w-10 h-10 text-gray-655 mx-auto mb-3" />
-    <span className="text-gray-400 font-bold text-xs uppercase tracking-wider">Neo4j Threat Graph Visualizer</span>
-    <p className="text-gray-500 text-xs mt-1">This module will be activated in Sprint 15.</p>
-  </div>
-);
+import CaseTimeline from '../components/timeline/CaseTimeline';
+import CaseGraph from '../components/graph/CaseGraph';
 
 const CopilotPlaceholder = () => (
   <div className="py-20 text-center border border-dashed border-gray-800 rounded-2xl bg-gray-900/30">
@@ -183,8 +169,8 @@ const CaseDetailsPage = () => {
           </div>
         )}
 
-        {activeTab === 'timeline' && <TimelinePlaceholder />}
-        {activeTab === 'graph' && <GraphPlaceholder />}
+        {activeTab === 'timeline' && <CaseTimeline caseId={caseId} />}
+        {activeTab === 'graph' && <CaseGraph caseId={caseId} />}
         {activeTab === 'copilot' && <CopilotPlaceholder />}
       </div>
     </div>
