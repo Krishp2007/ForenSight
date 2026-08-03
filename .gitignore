@@ -11,6 +11,8 @@ build/
 venv/
 env/
 backend/.cache/
+.cache/
+**/.cache/
 
 # Environment
 .env
