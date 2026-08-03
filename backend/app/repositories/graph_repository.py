@@ -136,7 +136,19 @@ class GraphRepository:
                 logger.info(f"[GRAPH] Case {case_id}: {node_count} entity nodes found in Neo4j")
 
                 if node_count == 0:
-                    return {"nodes": [], "edges": [], "_debug": "no_nodes_in_neo4j"}
+                    logger.info(f"[GRAPH] Auto-syncing case {case_id} events from MongoDB to Neo4j on-the-fly...")
+                    from backend.app.repositories.event_repository import EventRepository
+                    from bson import ObjectId
+                    events = await EventRepository.list_by_case(case_id, org_id, limit=5000)
+                    if events:
+                        await cls.bulk_import_events(events)
+                        # Re-check count after sync
+                        count_result = await session.run(count_query, case_id=case_id, org_id=org_id)
+                        count_record = await count_result.single()
+                        node_count = count_record["node_count"] if count_record else 0
+
+                    if node_count == 0:
+                        return {"nodes": [], "edges": []}
 
                 result = await session.run(cypher_query, case_id=case_id, org_id=org_id)
                 records = await result.data()

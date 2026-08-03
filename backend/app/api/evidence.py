@@ -238,8 +238,9 @@ async def get_evidence_graph(
 
     cypher = """
     MATCH (s:Entity {case_id:$cid, organization_id:$oid})
-          -[r:FORENSIC_ACTION {case_id:$cid, organization_id:$oid, evidence_id:$eid}]->
+          -[r:FORENSIC_ACTION]->
           (o:Entity {case_id:$cid, organization_id:$oid})
+    WHERE r.evidence_id = $eid OR toString(r.evidence_id) = $eid
     RETURN s.name AS sn, s.type AS st, o.name AS tn, o.type AS tt,
            r.action AS action, r.severity AS severity,
            r.is_anomaly AS is_anomaly
@@ -248,15 +249,32 @@ async def get_evidence_graph(
     nodes_dict, edges = {}, []
     try:
         async with neo4j_client.driver.session() as sess:
-            result = await sess.run(cypher, cid=case_id,
-                                    oid=current_user.organization_id, eid=evidence_id)
-            for rec in await result.data():
-                for name, ntype in [(rec["sn"], rec["st"]), (rec["tn"], rec["tt"])]:
-                    if name not in nodes_dict:
-                        nodes_dict[name] = {"id": name, "label": name, "type": ntype}
-                edges.append({"source": rec["sn"], "target": rec["tn"],
-                               "action": rec["action"], "severity": rec["severity"],
-                               "is_anomaly": rec.get("is_anomaly", False)})
+            result = await sess.run(cypher, cid=case_id, oid=current_user.organization_id, eid=evidence_id)
+            records = await result.data()
+
+        # If Neo4j graph is empty for this file, auto-sync events on-the-fly from MongoDB
+        if not records:
+            from backend.app.db.mongodb import db_client as mongo
+            from backend.app.repositories.graph_repository import GraphRepository
+            ev_docs = await mongo.db["events"].find({
+                "evidence_id": ObjectId(evidence_id),
+                "organization_id": ObjectId(current_user.organization_id)
+            }).to_list(1000)
+            if ev_docs:
+                await GraphRepository.bulk_import_events(ev_docs)
+                async with neo4j_client.driver.session() as sess:
+                    result = await sess.run(cypher, cid=case_id, oid=current_user.organization_id, eid=evidence_id)
+                    records = await result.data()
+
+        for rec in records:
+            for name, ntype in [(rec["sn"], rec["st"]), (rec["tn"], rec["tt"])]:
+                if name not in nodes_dict:
+                    nodes_dict[name] = {"id": name, "label": name, "type": ntype}
+            edges.append({
+                "source": rec["sn"], "target": rec["tn"],
+                "action": rec["action"], "severity": rec["severity"],
+                "is_anomaly": rec.get("is_anomaly", False)
+            })
     except Exception as e:
         logger.error(f"Per-evidence graph: {e}")
 
