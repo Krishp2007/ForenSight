@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom'
 import useAuth from './hooks/useAuth'
+import { useDynamicFavicon } from './hooks/useDynamicFavicon'
 import Topbar from './components/layout/Topbar'
 
 import LoginPage from './pages/LoginPage'
@@ -32,12 +33,14 @@ const Protected = ({ children }) => {
 
 const AppRoutes = () => {
   const { token, fetchMe } = useAuth()
+  useDynamicFavicon()
 
   // Silently try to load the user profile on mount if token exists
   // Failure is ignored — the app stays on the protected route
   useEffect(() => {
     if (token) fetchMe()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
 
   return (
     <Routes>

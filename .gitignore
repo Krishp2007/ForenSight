@@ -14,6 +14,7 @@ env/
 # Environment
 .env
 backend/.env
+**/.env
 
 # Runtime generated data (never commit)
 /faiss_indexes/
