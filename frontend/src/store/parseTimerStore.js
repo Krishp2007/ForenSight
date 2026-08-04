@@ -18,15 +18,27 @@ const useParseTimerStore = create((set, get) => ({
    */
   markStarted: (evidenceId, serverStartedAt) => {
     const existing = get().startTimes[evidenceId]
-    if (existing) return // already recorded — don't reset
+    if (existing) return
 
-    const serverMs = serverStartedAt ? new Date(serverStartedAt).getTime() : null
+    const parseUtc = (d) => {
+      if (!d) return null
+      const str = String(d).trim()
+      const isoStr = (str.includes('Z') || str.includes('+') || (str.length > 10 && str.lastIndexOf('-') > 10)) ? str : str + 'Z'
+      const ms = new Date(isoStr).getTime()
+      return isNaN(ms) ? null : ms
+    }
+
+    const serverMs = serverStartedAt ? parseUtc(serverStartedAt) : null
     const now = Date.now()
-    const startMs =
-      serverMs && now - serverMs < 10 * 60 * 1000
-        ? serverMs
-        : now
+    const startMs = (serverMs && Math.abs(now - serverMs) < 10 * 60 * 1000) ? serverMs : now
 
+    set(state => ({
+      startTimes: { ...state.startTimes, [evidenceId]: startMs },
+    }))
+  },
+
+  /** Force reset timer for re-processing */
+  resetTimer: (evidenceId, startMs = Date.now()) => {
     set(state => ({
       startTimes: { ...state.startTimes, [evidenceId]: startMs },
     }))

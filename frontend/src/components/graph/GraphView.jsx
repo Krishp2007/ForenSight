@@ -73,6 +73,15 @@ const GraphView = ({ caseId, evidence = [] }) => {
   }
 
   const loadGraph = async (evId) => {
+    if (evidence.length === 0) {
+      if (cyRef.current) { cyRef.current.destroy(); cyRef.current = null }
+      setEmpty(true)
+      setNodeCount(0)
+      setEdgeCount(0)
+      setLegend([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     setSyncMsg(null)

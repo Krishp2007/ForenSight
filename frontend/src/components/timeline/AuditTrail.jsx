@@ -92,6 +92,16 @@ const AuditTrail = ({ caseId }) => {
   // Show newest first
   const sorted = [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
+  const handleClearAuditLogs = async () => {
+    if (!window.confirm('Are you sure you want to clear historical evidence audit logs for this case?')) return
+    try {
+      await api.delete(`/cases/${caseId}/audit`)
+      await load()
+    } catch (e) {
+      setError(e?.response?.data?.detail || 'Failed to clear audit logs')
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
@@ -102,6 +112,20 @@ const AuditTrail = ({ caseId }) => {
         </span>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {/* Clear Audit Logs button */}
+          <button
+            onClick={handleClearAuditLogs}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)',
+              color: '#fca5a5', borderRadius: '8px',
+              padding: '5px 12px', cursor: 'pointer',
+              fontSize: '12px', fontFamily: 'inherit',
+            }}
+          >
+            Clear Audit Logs
+          </button>
+
           {/* Chain integrity badge — only shown after verify, admin only */}
           {chain && isAdmin && (
             <div style={{

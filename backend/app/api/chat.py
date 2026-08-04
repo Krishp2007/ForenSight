@@ -14,12 +14,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["copilot"])
 
 
+from typing import Optional, List, Dict, Any
+
 class CopilotQuery(BaseModel):
     question: Optional[str] = None
+    history: Optional[List[Dict[str, Any]]] = None
 
 
 class CopilotResponse(BaseModel):
     analysis: str
+    confidence: str = "High"
+    sources: Optional[List[Dict[str, Any]]] = None
 
 
 @router.post("/cases/{case_id}/copilot", response_model=CopilotResponse)
@@ -36,12 +41,19 @@ async def ask_copilot(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found or access denied")
     try:
-        report_text = await CopilotService.analyze_case_timeline(
+        res = await CopilotService.analyze_case_timeline(
             case_id=case_id,
             org_id=current_user.organization_id,
             question=query.question,
+            history=query.history,
         )
-        return CopilotResponse(analysis=report_text)
+        if isinstance(res, dict):
+            return CopilotResponse(
+                analysis=res.get("analysis", ""),
+                confidence=res.get("confidence", "High"),
+                sources=res.get("sources", []),
+            )
+        return CopilotResponse(analysis=str(res), confidence="High", sources=[])
     except Exception as e:
         logger.error(f"Copilot failed: {e}")
         raise HTTPException(status_code=500, detail=f"Copilot failed: {e}")

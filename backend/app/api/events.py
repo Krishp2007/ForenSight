@@ -61,3 +61,17 @@ async def list_case_events(
         responses.append(EventResponse(**event))
         
     return responses
+
+
+@router.get("/cases/{case_id}/stats")
+async def get_case_event_stats(
+    case_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Retrieve exact uncapped event counts (total, anomalies, critical) for a case."""
+    if not ObjectId.is_valid(case_id):
+        raise HTTPException(status_code=400, detail="Invalid case ID format")
+    case = await CaseRepository.get_by_id(case_id, current_user.organization_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found or access denied")
+    return await EventRepository.count_case_stats(case_id, current_user.organization_id)

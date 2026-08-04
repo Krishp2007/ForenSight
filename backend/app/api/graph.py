@@ -79,9 +79,24 @@ async def sync_case_graph(
         raise HTTPException(status_code=503, detail="Neo4j is not available.")
     try:
         from backend.app.repositories.event_repository import EventRepository
+        from backend.app.repositories.evidence_repository import EvidenceRepository
+
+        # Check if 0 evidence files exist for this case — if so, purge stale events and clear graph!
+        ev_items = await EvidenceRepository.list_by_case(case_id, current_user.organization_id)
+        if not ev_items:
+            from backend.app.db.mongodb import db_client as mongo
+            cid_obj = ObjectId(case_id) if ObjectId.is_valid(case_id) else case_id
+            oid_obj = ObjectId(current_user.organization_id) if ObjectId.is_valid(current_user.organization_id) else current_user.organization_id
+            await mongo.db["events"].delete_many({
+                "$or": [{"case_id": cid_obj}, {"case_id": str(case_id)}],
+                "$and": [{"$or": [{"organization_id": oid_obj}, {"organization_id": str(current_user.organization_id)}]}]
+            })
+            await GraphRepository.clear_case_graph(case_id, current_user.organization_id)
+            return {"synced": 0, "total_events": 0, "detail": "No evidence files exist for this case. Purged stale events and cleared graph."}
+
         events = await EventRepository.list_by_case(case_id, current_user.organization_id, limit=10000)
         if not events:
-            return {"synced": 0, "detail": "No events found in MongoDB for this case."}
+            return {"synced": 0, "total_events": 0, "detail": "No events found in MongoDB for this case."}
         synced = await GraphRepository.bulk_import_events(events)
         return {"synced": synced, "total_events": len(events)}
     except Exception as e:

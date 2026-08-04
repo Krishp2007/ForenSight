@@ -237,10 +237,10 @@ export default function ProfilePage() {
             borderRadius: '10px', padding: '14px 18px',
             fontSize: '12px', color: '#6b7fa3', minWidth: '200px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#9aa8c0' }}>
-              <Building size={12} /> Organization
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', color: '#60a5fa', fontWeight: '700', fontSize: '13px' }}>
+              <Building size={14} /> {user?.organization_name || 'Enterprise Forensics Org'}
             </div>
-            <div style={{ color: '#cbd5e1', fontSize: '11px', wordBreak: 'break-all', marginBottom: '8px' }}>
+            <div style={{ color: '#cbd5e1', fontSize: '11px', wordBreak: 'break-all', marginBottom: '10px' }}>
               <span style={{ color: '#6b7fa3' }}>ID: </span>{user?.organization_id}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#9aa8c0', marginBottom: '3px' }}>

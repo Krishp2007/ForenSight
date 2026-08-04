@@ -60,8 +60,15 @@ class VectorStore:
         # 1. Fetch events from MongoDB — cap at 3000 to keep embedding fast
         from backend.app.repositories.event_repository import EventRepository
         events = await EventRepository.list_by_case(case_id, org_id, limit=3000)
+        paths = cls.get_index_paths(case_id)
         if not events:
-            logger.warning(f"No events found to index for case {case_id}.")
+            logger.warning(f"No events found to index for case {case_id}. Deleting stale vector index files from disk.")
+            if os.path.exists(paths["index"]):
+                try: os.remove(paths["index"])
+                except Exception: pass
+            if os.path.exists(paths["meta"]):
+                try: os.remove(paths["meta"])
+                except Exception: pass
             return False
 
         # 2. Convert events to sentence texts

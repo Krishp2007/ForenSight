@@ -12,6 +12,7 @@ class UserBase(BaseModel):
     email: EmailStr = Field(..., description="Unique email address of the user")
     username: str = Field(..., min_length=3, max_length=50, description="Username of the investigator")
     organization_id: str = Field(..., description="MongoDB Organization ID this user belongs to")
+    organization_name: Optional[str] = Field(None, description="Human-readable Organization Name")
     role: UserRole = Field(default=UserRole.INVESTIGATOR, description="Access role for RBAC")
     is_active: bool = Field(default=True, description="Whether this account is active")
 

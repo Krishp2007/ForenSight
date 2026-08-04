@@ -1,30 +1,30 @@
 # ── ForenSight AI — Render Infrastructure Blueprint ─────────────────────────────
-services:
-  # ── 1. Frontend Web App (Nginx + React SPA)
-  - type: web
-    name: forensight-frontend
-    env: docker
-    dockerfilePath: ./frontend/Dockerfile
-    dockerContext: ./frontend
-    region: singapore
-    plan: free
-    branch: main
+# Deploy as a single Unified Web Service on Render (React SPA + FastAPI Backend)
+# Or as separate microservices.
 
-  # ── 2. Backend API (FastAPI)
+services:
+  # ── 1. Unified Web Service (Frontend SPA + FastAPI Backend + Local RAG Engine)
   - type: web
-    name: forensight-backend
+    name: forensight-app
     env: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     region: singapore
     plan: free
     branch: main
+    autoDeploy: true
     envVars:
-      - key: ENVIRONMENT
+      - key: APP_ENV
         value: production
-      - key: JWT_SECRET_KEY
+      - key: SECRET_KEY
         generateValue: true
       - key: LLM_PROVIDER
-        value: gemini
+        value: local
+      - key: MONGODB_URL
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: forensight
+      - key: FRONTEND_URL
+        sync: false
       - key: GEMINI_API_KEY
         sync: false

@@ -7,7 +7,7 @@ import { RefreshCw, FileDown, AlertCircle, Clock, FileText } from 'lucide-react'
 // Inline from reportService
 const getHtmlReport = (caseId) => api.get(`/cases/${caseId}/report/html`, { headers: { Accept: 'text/html' }, responseType: 'text' }).then(r => r.data)
 
-const ReportPanel = ({ caseId }) => {
+const ReportPanel = ({ caseId, evidenceCount }) => {
   const [html, setHtml]                 = useState(null)
   const [loading, setLoading]           = useState(false)
   const [pdfLoading, setPdfLoading]     = useState(false)
@@ -16,15 +16,27 @@ const ReportPanel = ({ caseId }) => {
   const iframeRef                       = useRef(null)
 
   useEffect(() => {
+    setHtml(null)
     const check = async () => {
       try {
+        if (evidenceCount === 0) {
+          setEvidenceReady(false)
+          return
+        }
         const ev = await listEvidence(caseId)
-        if (!ev.length) { setEvidenceReady(false); return }
+        if (!ev || !ev.length) {
+          setEvidenceReady(false)
+          setHtml(null)
+          return
+        }
         setEvidenceReady(ev.some(e => e.status === 'parsed'))
-      } catch { setEvidenceReady(false) }
+      } catch {
+        setEvidenceReady(false)
+        setHtml(null)
+      }
     }
     check()
-  }, [caseId])
+  }, [caseId, evidenceCount])
 
   const loadReport = async () => {
     setLoading(true); setError(null)
@@ -117,9 +129,9 @@ const ReportPanel = ({ caseId }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         {/* Generate */}
         <button
-          onClick={loadReport} disabled={loading}
-          style={{ ...btnBase, background: '#4a7fe8', color: '#fff', opacity: loading ? 0.7 : 1 }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#3b6bc4' }}
+          onClick={loadReport} disabled={loading || evidenceCount === 0}
+          style={{ ...btnBase, background: '#4a7fe8', color: '#fff', opacity: (loading || evidenceCount === 0) ? 0.5 : 1, cursor: evidenceCount === 0 ? 'not-allowed' : 'pointer' }}
+          onMouseEnter={e => { if (!loading && evidenceCount !== 0) e.currentTarget.style.background = '#3b6bc4' }}
           onMouseLeave={e => e.currentTarget.style.background = '#4a7fe8'}
         >
           {loading ? <Spinner size="sm" /> : <RefreshCw size={14} />}

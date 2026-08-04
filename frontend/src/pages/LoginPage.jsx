@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [forgotMessage, setForgotMessage]     = useState(null)
   const [forgotError, setForgotError]         = useState(null)
 
-  const { setToken }            = useAuth()
+  const { setToken, fetchMe }  = useAuth()
   const navigate                = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -36,6 +36,7 @@ export default function LoginPage() {
     try {
       const data = await login(email, password)
       setToken(data.access_token)
+      await fetchMe()
       navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(err.response?.data?.detail || 'Incorrect email or password.')

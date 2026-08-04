@@ -5,7 +5,7 @@ import { Spinner } from '../ui'
 import { Send, Search, Bot, Trash2 } from 'lucide-react'
 
 // Inlined from chatService + similarityService
-const askCopilot   = (caseId, question) => api.post(`/cases/${caseId}/copilot`, { question }).then(r => r.data)
+const askCopilot   = (caseId, question, history = []) => api.post(`/cases/${caseId}/copilot`, { question, history }).then(r => r.data)
 const searchEvents = (caseId, query, limit = 10) => api.get(`/cases/${caseId}/search`, { params: { query, limit } }).then(r => r.data)
 
 const SUGGESTIONS = [
@@ -94,7 +94,7 @@ const ChatPanel = ({ caseId }) => {
     setInput('')
     setMessages(m => [...m, { role: 'user', content: q }])
     setLoading(true)
-    setCooldown(4) // 4-second safety cooldown between questions
+    setCooldown(1) // 1-second safety cooldown between questions
     try {
       if (mode === 'search') {
         const results = await searchEvents(caseId, q, 5)
@@ -108,8 +108,13 @@ const ChatPanel = ({ caseId }) => {
           setMessages(m => [...m, { role: 'assistant', content: intro + items + '\n\nLet me know if you would like me to analyze any of these specific log entries!' }])
         }
       } else {
-        const res = await askCopilot(caseId, q)
-        setMessages(m => [...m, { role: 'assistant', content: res.analysis }])
+        const res = await askCopilot(caseId, q, messages)
+        setMessages(m => [...m, {
+          role: 'assistant',
+          content: res.analysis,
+          confidence: res.confidence || 'High',
+          sources: res.sources || []
+        }])
       }
     } catch (e) {
       setMessages(m => [...m, { role: 'assistant', content: `⚠️ Error: ${e.response?.data?.detail || e.message}` }])
@@ -185,7 +190,15 @@ const ChatPanel = ({ caseId }) => {
             </p>
           </div>
         )}
-        {messages.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
+        {messages.map((m, i) => (
+          <ChatMessage
+            key={i}
+            role={m.role}
+            content={m.content}
+            confidence={m.confidence}
+            sources={m.sources}
+          />
+        ))}
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
             <div style={{ background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(96, 165, 250, 0.3)', borderRadius: '12px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>

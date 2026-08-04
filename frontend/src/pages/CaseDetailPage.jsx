@@ -92,10 +92,13 @@ const CaseDetailPage = () => {
   }
 
   const handleEvidenceUploaded = (ev) => setEvidence((prev) => [ev, ...prev])
-  const handleEvidenceUpdated = (updated) =>
-    setEvidence((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))
-  const handleEvidenceDeleted = (deletedId) =>
-    setEvidence((prev) => prev.filter((e) => e.id !== deletedId))
+  const handleEvidenceUpdated = (updated) => {
+    const uId = updated.id || updated._id
+    setEvidence((prev) => prev.map((e) => ((e.id || e._id) === uId ? updated : e)))
+  }
+  const handleEvidenceDeleted = (deletedId) => {
+    setEvidence((prev) => prev.filter((e) => (e.id || e._id) !== deletedId))
+  }
 
   const goTab = (t) => navigate(`/cases/${caseId}/${t}`)
 
@@ -270,7 +273,7 @@ const CaseDetailPage = () => {
         {activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Event & Evidence Statistics */}
-            <CaseStats caseId={caseId} initialEvidenceCount={evidence.length} />
+            <CaseStats caseId={caseId} evidenceList={evidence} />
 
 
             {/* Case Overview Highlights & Interactive Shortcut Cards */}
@@ -399,9 +402,9 @@ const CaseDetailPage = () => {
         )}
         {activeTab === 'timeline'     && <EventTimeline caseId={caseId} />}
         {activeTab === 'graph'        && <GraphView caseId={caseId} evidence={evidence} />}
-        {activeTab === 'correlations' && <CorrelationsPanel caseId={caseId} />}
+        {activeTab === 'correlations' && <CorrelationsPanel caseId={caseId} evidenceCount={evidence.length} />}
         {activeTab === 'chat'         && <ChatPanel caseId={caseId} />}
-        {activeTab === 'report'       && <ReportPanel caseId={caseId} />}
+        {activeTab === 'report'       && <ReportPanel caseId={caseId} evidenceCount={evidence.length} />}
         {activeTab === 'audit'        && <AuditTrail caseId={caseId} />}
       </div>
     </div>

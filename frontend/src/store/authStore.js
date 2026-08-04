@@ -46,7 +46,7 @@ const useAuthStore = create((set, get) => ({
 // Inline useRole — role helpers derived from auth store
 const useRole = () => {
   const { user } = useAuthStore()
-  const role = user?.role || 'viewer'
+  const role = user?.role || 'investigator'
   return {
     role,
     isAdmin:        role === 'admin',

@@ -14,7 +14,7 @@ const RULE_STYLES = {
   PARENT_OF:                     { bg: 'rgba(167,139,250,0.2)', color: '#c4b5fd' },
 }
 
-const CorrelationsPanel = ({ caseId }) => {
+const CorrelationsPanel = ({ caseId, evidenceCount }) => {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
@@ -22,15 +22,21 @@ const CorrelationsPanel = ({ caseId }) => {
   const [error, setError] = useState(null)
 
   const load = async () => {
+    if (evidenceCount === 0) {
+      setLoading(false)
+      setData({ correlations: [] })
+      return
+    }
     setLoading(true)
     try { setData(await getCorrelations(caseId)) }
     catch (e) { setError(e.response?.data?.detail || 'Failed to load correlations') }
     finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [caseId])
+  useEffect(() => { load() }, [caseId, evidenceCount])
 
   const handleRun = async () => {
+    if (evidenceCount === 0) return
     setRunning(true); setError(null)
     try { await runCorrelations(caseId); await load() }
     catch (e) { setError(e.response?.data?.detail || 'Failed to run correlations') }
@@ -42,16 +48,26 @@ const CorrelationsPanel = ({ caseId }) => {
     const r = c.rule || 'UNKNOWN'; acc[r] = acc[r] || []; acc[r].push(c); return acc
   }, {})
 
+  if (evidenceCount === 0) {
+    return (
+      <EmptyState
+        icon={Link2}
+        title="No Evidence Files Uploaded"
+        description="Upload an evidence file (.evtx, .pcapng, .sqlite, .csv) to detect process correlations and network relationships."
+      />
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <p style={{ color: '#9aa8c0', fontSize: '13px', margin: 0 }}>{correlations.length} derived relationships from 3 Cypher rules</p>
-        <button onClick={handleRun} disabled={running} style={{
+        <button onClick={handleRun} disabled={running || evidenceCount === 0} style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '6px 12px', background: '#4a7fe8', border: 'none',
           borderRadius: '7px', color: '#fff', fontSize: '12px', fontWeight: '500',
-          cursor: running ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-          opacity: running ? 0.6 : 1,
+          cursor: running || evidenceCount === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+          opacity: running || evidenceCount === 0 ? 0.6 : 1,
         }}>
           {running ? <Spinner size="sm" /> : <RefreshCw size={13} />}
           Re-run Rules

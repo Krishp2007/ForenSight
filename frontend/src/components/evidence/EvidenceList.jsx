@@ -7,7 +7,7 @@ import EvidenceDrawer from './EvidenceDrawer'
 import useParseTimerStore from '../../store/parseTimerStore'
 import useRole from '../../hooks/useRole'
 
-const POLLING_INTERVAL = 4000
+const POLLING_INTERVAL = 2000
 const TERMINAL = ['parsed', 'failed']
 
 const STATUS_COLORS = {
@@ -36,6 +36,19 @@ const ActionBtn = ({ onClick, disabled, title, color, children }) => (
   </button>
 )
 
+const parseUtcDate = (d) => {
+  if (!d) return null
+  if (typeof d === 'number') return d
+  const str = String(d).trim()
+  if (!str) return null
+  // If string has no timezone specifier, append 'Z' so JS parses as UTC
+  const isoStr = (str.includes('Z') || str.includes('+') || (str.length > 10 && str.lastIndexOf('-') > 10))
+    ? str
+    : str + 'Z'
+  const ms = new Date(isoStr).getTime()
+  return isNaN(ms) ? null : ms
+}
+
 const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
   const timerRef = useRef(null)
   const [reprocessing, setReprocessing] = useState({})
@@ -46,12 +59,12 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
   const { canReprocess, canDelete } = useRole()
 
   // Parse timers live in a Zustand store — survives tab/page navigation
-  const { markStarted, markDone, getStartMs } = useParseTimerStore()
+  const { markStarted, resetTimer, markDone, getStartMs } = useParseTimerStore()
 
-  // Live tick — only active while something is parsing
+  // Live tick — active while any evidence item is processing
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
-    const active = items.some(e => e.status === 'parsing')
+    const active = items.some(e => !TERMINAL.includes(e.status))
     if (!active) return
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
@@ -60,15 +73,15 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
   // Register / clean up timer entries whenever item statuses change
   useEffect(() => {
     items.forEach(e => {
-      if (e.status === 'parsing') {
-        markStarted(e.id, e.parsing_started_at)
-      } else if (e.status === 'parsed' || e.status === 'failed') {
-        markDone(e.id)
+      if (!TERMINAL.includes(e.status)) {
+        markStarted(e.id || e._id, e.parsing_started_at || e.created_at)
+      } else {
+        markDone(e.id || e._id)
       }
     })
   }, [items])
 
-  // Poll non-terminal items
+  // Poll non-terminal items every 2 seconds
   useEffect(() => {
     const pending = items.filter(e => !TERMINAL.includes(e.status))
 
@@ -77,9 +90,13 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
     timerRef.current = setInterval(async () => {
       for (const ev of pending) {
         try {
-          const updated = await getEvidence(ev.id)
-
-          if (updated.status !== ev.status) {
+          const targetId = ev.id || ev._id
+          const updated = await getEvidence(targetId)
+          if (
+            updated.status !== ev.status ||
+            updated.parsed_at !== ev.parsed_at ||
+            updated.error_message !== ev.error_message
+          ) {
             onItemUpdated(updated)
           }
         } catch {
@@ -92,16 +109,23 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
   }, [items])
 
   const handleReprocess = async (ev) => {
-    setReprocessing(p => ({ ...p, [ev.id]: true }))
+    const targetId = ev.id || ev._id
+    setReprocessing(p => ({ ...p, [targetId]: true }))
     try {
-      await reprocessEvidence(caseId, ev.id)
-      // Reset the timer so it starts fresh on re-process
-      markDone(ev.id)
-      onItemUpdated({ ...ev, status: 'queued', parsing_started_at: null, parsed_at: null })
+      await reprocessEvidence(caseId, targetId)
+      const nowIso = new Date().toISOString()
+      resetTimer(targetId, Date.now())
+      onItemUpdated({
+        ...ev,
+        status: 'parsing',
+        created_at: nowIso,
+        parsing_started_at: nowIso,
+        parsed_at: null
+      })
     } catch (e) {
       console.error(e)
     } finally {
-      setReprocessing(p => ({ ...p, [ev.id]: false }))
+      setReprocessing(p => ({ ...p, [targetId]: false }))
     }
   }
 
@@ -109,20 +133,27 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
     if (!confirmDelete) return
 
     const ev = confirmDelete
+    const targetId = ev.id || ev._id
 
     setConfirmDelete(null)
-    setDeleting(p => ({ ...p, [ev.id]: true }))
+    setDeleting(p => ({ ...p, [targetId]: true }))
 
     try {
-      await deleteEvidence(caseId, ev.id)
+      await deleteEvidence(caseId, targetId)
 
       if (onItemDeleted) {
-        onItemDeleted(ev.id)
+        onItemDeleted(targetId)
       }
     } catch (e) {
       console.error('Delete failed', e)
+      if (e?.response?.status === 404) {
+        // Item is already gone from server — remove from UI table
+        if (onItemDeleted) onItemDeleted(targetId)
+      } else {
+        alert(`Delete failed: ${e?.response?.data?.detail || e.message}`)
+      }
     } finally {
-      setDeleting(p => ({ ...p, [ev.id]: false }))
+      setDeleting(p => ({ ...p, [targetId]: false }))
     }
   }
 
@@ -211,12 +242,15 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
                   )}
                 </td>
 
-                {/* LIVE SCAN TIME */}
+                {/* LIVE SCAN TIME (Starts from uploaded created_at for 100% continuous freeze) */}
                 <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                   {(() => {
-                    // Parsing → live counter from store (survives navigation)
-                    if (e.status === 'parsing') {
-                      const startMs = getStartMs(e.id) || now
+                    const targetId = e.id || e._id
+                    // Always anchor to created_at (file upload start) for 100% smooth continuous duration
+                    const startMs = parseUtcDate(e.created_at) || getStartMs(targetId) || parseUtcDate(e.parsing_started_at) || now
+
+                    // Parsing / Queued / Uploaded → live ticking counter
+                    if (['parsing', 'queued', 'uploaded'].includes(e.status)) {
                       const secs = Math.max(0, Math.floor((now - startMs) / 1000))
                       return (
                         <span style={{ fontSize: '12px', fontWeight: '600', color: '#fbbf24' }}>
@@ -225,32 +259,15 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
                       )
                     }
 
-                    // Parsed → frozen final time
-                    if (
-                      e.status === 'parsed' &&
-                      e.parsing_started_at &&
-                      e.parsed_at
-                    ) {
-                      const secs = Math.max(
-                        0,
-                        Math.round(
-                          (new Date(e.parsed_at).getTime() -
-                           new Date(e.parsing_started_at).getTime()) / 1000
-                        )
-                      )
+                    // Parsed → frozen final scan duration from upload creation (created_at) to completion (parsed_at)
+                    if (e.status === 'parsed') {
+                      const endMs = parseUtcDate(e.parsed_at) || now
+                      const rawSecs = Math.round((endMs - startMs) / 1000)
+                      const secs = Math.max(1, rawSecs)
                       const color = secs < 10 ? '#34d399' : secs < 60 ? '#fbbf24' : '#f87171'
                       return (
                         <span style={{ fontSize: '12px', fontWeight: '600', color }}>
                           {secs}s
-                        </span>
-                      )
-                    }
-
-                    // Waiting for worker
-                    if (e.status === 'queued') {
-                      return (
-                        <span style={{ fontSize: '11px', color: '#60a5fa' }}>
-                          waiting…
                         </span>
                       )
                     }

@@ -136,9 +136,21 @@ class GraphRepository:
                 logger.info(f"[GRAPH] Case {case_id}: {node_count} entity nodes found in Neo4j")
 
                 if node_count == 0:
+                    from backend.app.repositories.evidence_repository import EvidenceRepository
+                    ev_items = await EvidenceRepository.list_by_case(case_id, org_id)
+                    if not ev_items:
+                        from backend.app.db.mongodb import db_client as mongo
+                        cid_obj = ObjectId(case_id) if ObjectId.is_valid(case_id) else case_id
+                        oid_obj = ObjectId(org_id) if ObjectId.is_valid(org_id) else org_id
+                        await mongo.db["events"].delete_many({
+                            "$or": [{"case_id": cid_obj}, {"case_id": str(case_id)}],
+                            "$and": [{"$or": [{"organization_id": oid_obj}, {"organization_id": str(org_id)}]}]
+                        })
+                        await cls.clear_case_graph(case_id, org_id)
+                        return {"nodes": [], "edges": []}
+
                     logger.info(f"[GRAPH] Auto-syncing case {case_id} events from MongoDB to Neo4j on-the-fly...")
                     from backend.app.repositories.event_repository import EventRepository
-                    from bson import ObjectId
                     events = await EventRepository.list_by_case(case_id, org_id, limit=5000)
                     if events:
                         await cls.bulk_import_events(events)

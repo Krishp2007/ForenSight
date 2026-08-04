@@ -55,32 +55,49 @@ const Stat = ({ icon: Icon, label, value, iconBg, loading }) => (
   </div>
 )
 
-const CaseStats = ({ caseId, initialEvidenceCount }) => {
+const CaseStats = ({ caseId, evidenceList, initialEvidenceCount }) => {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  const effectiveCount = Array.isArray(evidenceList) 
+    ? evidenceList.length 
+    : (initialEvidenceCount !== undefined ? initialEvidenceCount : null)
+
+  const parsedCount = Array.isArray(evidenceList)
+    ? evidenceList.filter(e => e.status === 'parsed').length
+    : 0
 
   useEffect(() => {
     let isMounted = true
     const load = async () => {
+      setLoading(true)
       try {
-        const [events, evidence] = await Promise.all([
-          listEvents(caseId, { limit: 2000 }),
-          initialEvidenceCount !== undefined ? Promise.resolve({ length: initialEvidenceCount }) : listEvidence(caseId),
-        ])
-        const anomalies = events.filter((e) => e.is_anomaly).length
-        const critical = events.filter((e) => e.severity === 'critical').length
+        let fileCount = effectiveCount
+        if (fileCount === null) {
+          const evs = await listEvidence(caseId)
+          fileCount = evs.length
+        }
+
+        if (fileCount === 0) {
+          if (isMounted) {
+            setStats({ total: 0, anomalies: 0, critical: 0, files: 0 })
+          }
+          return
+        }
+
+        const resStats = await api.get(`/cases/${caseId}/stats`).then(r => r.data)
         if (isMounted) {
-          setStats({ total: events.length, anomalies, critical, files: evidence.length })
+          setStats({ total: resStats.total, anomalies: resStats.anomalies, critical: resStats.critical, files: fileCount })
         }
       } catch (e) {
-        if (isMounted) setStats({ total: 0, anomalies: 0, critical: 0, files: initialEvidenceCount || 0 })
+        if (isMounted) setStats({ total: 0, anomalies: 0, critical: 0, files: effectiveCount || 0 })
       } finally {
         if (isMounted) setLoading(false)
       }
     }
     load()
     return () => { isMounted = false }
-  }, [caseId, initialEvidenceCount])
+  }, [caseId, effectiveCount, parsedCount])
 
   return (
     <div style={{

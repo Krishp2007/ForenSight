@@ -15,32 +15,48 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
   const [error, setError] = useState(null)
   const inputRef = useRef(null)
 
+  const [currentFileIndex, setCurrentFileIndex] = useState(0)
+  const [totalFilesCount, setTotalFilesCount]   = useState(0)
+  const [currentFileName, setCurrentFileName]   = useState('')
+
   // Viewers see nothing — upload is investigator/admin only
   if (!canUpload) return null
 
-  const handleFile = async (file) => {
-    if (!file) return
+  const handleFiles = async (fileList) => {
+    if (!fileList || fileList.length === 0) return
+    const files = Array.from(fileList)
     setUploading(true)
     setError(null)
-    setProgress(0)
-    try {
-      const evidence = await uploadEvidence(caseId, file, (e) => {
-        setProgress(Math.round((e.loaded / e.total) * 100))
-      })
-      onUploaded(evidence)
-    } catch (e) {
-      setError(e.response?.data?.detail || 'Upload failed')
-    } finally {
-      setUploading(false)
+    setTotalFilesCount(files.length)
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      setCurrentFileIndex(i + 1)
+      setCurrentFileName(file.name)
       setProgress(0)
+      try {
+        const evidence = await uploadEvidence(caseId, file, (e) => {
+          if (e.total) {
+            setProgress(Math.round((e.loaded / e.total) * 100))
+          }
+        })
+        if (onUploaded) onUploaded(evidence)
+      } catch (e) {
+        setError(`Failed uploading "${file.name}": ${e.response?.data?.detail || 'Upload failed'}`)
+      }
     }
+
+    setUploading(false)
+    setProgress(0)
+    setTotalFilesCount(0)
+    if (inputRef.current) inputRef.current.value = ''
   }
 
   return (
     <div
       onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
-      onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]) }}
+      onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
       onClick={() => !uploading && inputRef.current?.click()}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -68,15 +84,18 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
       <input
         ref={inputRef}
         type="file"
+        multiple
         accept={ACCEPTED}
         style={{ display: 'none' }}
-        onChange={(e) => handleFile(e.target.files[0])}
+        onChange={(e) => handleFiles(e.target.files)}
       />
       {uploading ? (
         <>
           <Spinner size="lg" />
-          <p style={{ color: '#cbd5e1', fontSize: '13px', margin: 0, fontWeight: '500' }}>Uploading… {progress}%</p>
-          <div style={{ width: '220px', height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '99px', overflow: 'hidden' }}>
+          <p style={{ color: '#ffffff', fontSize: '13.5px', margin: 0, fontWeight: '600' }}>
+            Uploading file {currentFileIndex} of {totalFilesCount}: <span style={{ color: '#60a5fa' }}>{currentFileName}</span> ({progress}%)
+          </p>
+          <div style={{ width: '260px', height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '99px', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #6366f1, #06b6d4)', borderRadius: '99px', transition: 'width 0.3s' }} />
           </div>
         </>
@@ -96,7 +115,7 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
             <FileUp size={24} />
           </div>
           <p style={{ color: '#ffffff', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-            Drop a file or click to browse
+            Drop files or click to browse (Multiple Files Supported)
           </p>
           <p style={{ color: '#94a3b8', fontSize: '11.5px', margin: 0 }}>
             EVTX · PCAP · SQLite · CSV · JSON · MD5 · TXT · LOG

@@ -36,4 +36,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserResponse:
     # Convert ObjectId to string
     user["id"] = str(user["_id"])
     user["organization_id"] = str(user["organization_id"])
+    
+    # Fetch Organization Name
+    try:
+        from backend.app.repositories.organization_repository import OrganizationRepository
+        org = await OrganizationRepository.get_by_id(user["organization_id"])
+        if org:
+            user["organization_name"] = org.get("name", "ForenSight Security")
+    except Exception:
+        user["organization_name"] = "ForenSight Security"
+
     return UserResponse(**user)

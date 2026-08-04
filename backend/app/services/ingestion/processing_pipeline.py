@@ -98,6 +98,21 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
 
         logger.info(f"[PIPELINE] ⏱ Parse:    {loop.time()-_t1:.1f}s  {len(events)} events")
 
+        if not events:
+            from datetime import datetime
+            logger.warning(f"[PIPELINE] ⚠️ 0 events returned by parser for {filename}. Generating synthetic ingestion event.")
+            events = [{
+                "timestamp": datetime.utcnow(),
+                "event_type": "generic",
+                "source": file_type.lower(),
+                "severity": "info",
+                "subject": filename,
+                "action": "evidence_ingested",
+                "object": filename,
+                "details": {"file_size": len(file_content), "file_type": file_type},
+                "mitre_techniques": []
+            }]
+
         # ── 4. Enrich ─────────────────────────────────────────────────────────
         case_oid = ObjectId(str(evidence["case_id"]))
         org_oid  = ObjectId(org_id)
@@ -109,7 +124,13 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
                 "organization_id": org_oid,
             })
 
-        # ── 5. MongoDB bulk insert ────────────────────────────────────────────
+        # ── 5. Check if evidence was deleted during parsing ───────────────────
+        still_exists = await EvidenceRepository.get_by_id(evidence_id, org_id)
+        if not still_exists:
+            logger.warning(f"[PIPELINE] Evidence {evidence_id} was deleted during parsing — aborting DB write.")
+            return
+
+        # ── 5b. MongoDB bulk insert ───────────────────────────────────────────
         _t2 = loop.time()
         if events:
             count = await EventRepository.bulk_create(events)

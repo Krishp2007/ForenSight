@@ -204,13 +204,13 @@ class GraphCorrelationRules:
               -[r:DERIVED_CORRELATION {case_id: $case_id, organization_id: $org_id}]->
               (t:Entity)
         RETURN
-            r.rule         AS rule,
-            s.name         AS source,
-            t.name         AS target,
-            r.mitre        AS mitre,
-            r.technique    AS technique,
-            r.derived_at   AS derived_at,
-            r.source_event AS source_event
+            r.rule                    AS rule,
+            s.name                    AS source,
+            t.name                    AS target,
+            coalesce(r.mitre, null)    AS mitre,
+            coalesce(r.technique, null) AS technique,
+            r.derived_at              AS derived_at,
+            r.source_event            AS source_event
         ORDER BY r.derived_at DESC
         LIMIT 500
         """

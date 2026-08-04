@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForenSight AI — Complete Technical & Architectural Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
+  <style>
+    :root {
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-sidebar: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --border-color: #e2e8f0;
+      --code-bg: #0f172a;
+      --code-text: #f8fafc;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07);
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-container { display: flex; min-height: 100vh; }
+
+    aside.sidebar {
+      width: 330px;
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 24px 16px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-group { margin-bottom: 16px; }
+    .nav-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      padding-left: 8px;
+    }
+
+    .nav-links { list-style: none; }
+    .nav-links a {
+      display: block;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-links a:hover {
+      background-color: var(--accent-light);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    main.content {
+      flex: 1;
+      max-width: 1050px;
+      padding: 48px 64px;
+      margin: 0 auto;
+    }
+
+    .header-banner {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: #ffffff;
+      padding: 40px;
+      border-radius: 16px;
+      margin-bottom: 40px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .header-banner h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 12px; }
+    .header-banner p { font-size: 1.05rem; color: #94a3b8; }
+
+    section.doc-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 36px;
+      margin-bottom: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--accent-light);
+      scroll-margin-top: 20px;
+    }
+
+    h3 { font-size: 1.15rem; font-weight: 600; margin: 24px 0 12px 0; }
+    h4 { font-size: 1rem; font-weight: 600; color: var(--text-secondary); margin: 16px 0 8px 0; }
+    p { margin-bottom: 16px; color: var(--text-secondary); }
+    ul, ol { margin: 0 0 16px 24px; color: var(--text-secondary); }
+    li { margin-bottom: 6px; }
+    strong { color: var(--text-primary); font-weight: 600; }
+
+    code {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.88rem;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      color: var(--code-text);
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 16px 0 24px 0;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      border: 1px solid #334155;
+    }
+
+    pre code { background: none; color: inherit; padding: 0; border: none; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0 24px 0;
+      font-size: 0.9rem;
+      background: var(--bg-card);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    th { background-color: #f8fafc; color: var(--text-primary); font-weight: 700; text-align: left; padding: 12px 16px; border-bottom: 2px solid var(--border-color); }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
+    tr:hover td { background-color: #f8fafc; }
+
+    .mermaid { background-color: #ffffff; padding: 24px; border-radius: 8px; border: 1px solid var(--border-color); margin: 20px 0 24px 0; display: flex; justify-content: center; }
+    
+    .badge-deploy {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      background-color: #e0e7ff;
+      color: #3730a3;
+    }
+
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span>🛡️ ForenSight AI</span>
+    </div>
+    
+    <div class="nav-group">
+      <div class="nav-title">Overview & Deployment</div>
+      <ul class="nav-links">
+        <li><a href="#overview">1. Project Overview</a></li>
+        <li><a href="#tech-deployment">⭐ Tech Deployment Matrix</a></li>
+        <li><a href="#architecture">2. High-Level Architecture</a></li>
+        <li><a href="#structure">3. Folder Structure</a></li>
+        <li><a href="#folders">4. Folder Explanations</a></li>
+        <li><a href="#files">5. File-by-File Details</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title">Data Flow & Databases</div>
+      <ul class="nav-links">
+        <li><a href="#dataflow">6. Complete Data Flow</a></li>
+        <li><a href="#sources">7. Data Sources</a></li>
+        <li><a href="#storage">8. Data Storage</a></li>
+        <li><a href="#databases">9. Database Schemas</a></li>
+        <li><a href="#writeflow">10. Database Write Flow</a></li>
+        <li><a href="#readflow">11. Database Read Flow</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title">API & Mapping</div>
+      <ul class="nav-links">
+        <li><a href="#endpoints">12. API Endpoints</a></li>
+        <li><a href="#mapping">13. Frontend-Backend Map</a></li>
+        <li><a href="#frontend-flow">14. Frontend Data Flow</a></li>
+        <li><a href="#backend-flow">15. Backend Data Flow</a></li>
+        <li><a href="#external-api">16. External APIs</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title">AI & Forensics Engine</div>
+      <ul class="nav-links">
+        <li><a href="#ai-flow">17. AI & Gemini LLM Flow</a></li>
+        <li><a href="#forensic-flow">18. Forensic Analysis Flow</a></li>
+        <li><a href="#mitre">19. MITRE ATT&CK Logic</a></li>
+        <li><a href="#auth">20. Authentication Flow</a></li>
+        <li><a href="#env">21. Environment Variables</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title">Workflows & Lineage</div>
+      <ul class="nav-links">
+        <li><a href="#workflows">24. Complete User Workflows</a></li>
+        <li><a href="#lineage">30. Data Lineage</a></li>
+        <li><a href="#quickstart">36. Developer Quick Start</a></li>
+        <li><a href="#summary">38. Final Summary</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="content">
+
+    <div class="header-banner">
+      <h1>🛡️ ForenSight AI Technical Documentation</h1>
+      <p>Developer-level Architecture, Data Flow, Technology Deployment Locations, API Specs, and AI Engineering Guide.</p>
+    </div>
+
+    <!-- Section 1 -->
+    <section id="overview" class="doc-section">
+      <h2>1. Project Overview</h2>
+      <p><strong>ForenSight AI</strong> is an enterprise AI-driven Digital Forensics & Incident Response (DFIR) platform designed to automate log parsing, anomaly detection, process execution graph correlation, and natural language AI copilot investigations.</p>
+      <h3>Core Technologies</h3>
+      <ul>
+        <li><strong>Frontend</strong>: React 18, Vite, React Router v6, Axios, Lucide Icons, Vis-Network.</li>
+        <li><strong>Backend Framework</strong>: FastAPI 0.110.0+ with Uvicorn ASGI server.</li>
+        <li><strong>Databases</strong>: MongoDB (Motor async BSON), Neo4j (Graph DB), MinIO (S3 Storage), FAISS / Qdrant.</li>
+        <li><strong>AI & ML Stack</strong>: Google Gemini 2.0 Flash REST API, PyOD Isolation Forest, SentenceTransformers (<code>all-MiniLM-L6-v2</code>).</li>
+      </ul>
+    </section>
+
+    <!-- ⭐ NEW SECTION: Technology Deployment & Implementation Matrix -->
+    <section id="tech-deployment" class="doc-section">
+      <h2>⭐ Technology Deployment & Implementation Matrix</h2>
+      <p>This table details <strong>where every technology is deployed</strong>, which module imports it, and how it is implemented inside the ForenSight AI codebase:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Technology</th>
+            <th>Deployment Location (Prod / Dev)</th>
+            <th>Import File &amp; Connection Module</th>
+            <th>Implementation &amp; Usage Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>MongoDB / MongoDB Atlas</strong></td>
+            <td><span class="badge-deploy">MongoDB Atlas Cloud / Local 27017</span></td>
+            <td><code>backend/app/db/mongodb.py</code><br><code>backend/app/config.py</code></td>
+            <td>Initialized via <code>AsyncIOMotorClient(settings.MONGODB_URL)</code>. Stores <code>users</code>, <code>cases</code>, <code>evidence</code>, <code>events</code>, and <code>audit_logs</code> collections. Wrapped by repositories in <code>app/repositories/</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Neo4j Graph Database</strong></td>
+            <td><span class="badge-deploy">Neo4j AuraDB / Local Bolt :7687</span></td>
+            <td><code>backend/app/db/neo4j.py</code><br><code>repositories/graph_repository.py</code></td>
+            <td>Initialized via <code>AsyncGraphDatabase.driver(settings.NEO4J_URL)</code>. Stores process execution trees (<code>PARENT_OF</code>) and network sockets (<code>CONNECTED_TO</code>). Cypher queries executed in <code>GraphRepository</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>MinIO Object Storage</strong></td>
+            <td><span class="badge-deploy">MinIO Cloud / Local :9000</span></td>
+            <td><code>backend/app/db/minio.py</code><br><code>api/evidence.py</code></td>
+            <td>Initialized via <code>Minio(settings.MINIO_ENDPOINT)</code>. Stores raw binary evidence byte streams (<code>.evtx</code>, <code>.pcapng</code>, <code>.sqlite</code>, <code>.csv</code>) inside the <code>forensight-evidence</code> S3 bucket.</td>
+          </tr>
+          <tr>
+            <td><strong>FAISS Vector Store</strong></td>
+            <td><span class="badge-deploy">Embedded Local Disk / Memory</span></td>
+            <td><code>backend/app/services/ai/vector_store.py</code></td>
+            <td>Embeds events into 384-d vector space via SentenceTransformers (<code>all-MiniLM-L6-v2</code>) and computes L2 distance search for natural language semantic queries. Stored in <code>storage/vector_indexes/</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Google Gemini LLM REST API</strong></td>
+            <td><span class="badge-deploy">Google AI Studio / GCP Vertex AI</span></td>
+            <td><code>backend/app/services/copilot/gemini_provider.py</code></td>
+            <td>Direct REST HTTP requests (<code>httpx</code>) to <code>gemini-2.0-flash</code>, <code>gemini-1.5-flash</code>, <code>gemini-1.5-pro</code> with automatic model rotation on rate limits (429) and dual support for <code>AIzaSy...</code> &amp; <code>AQ...</code> Bearer tokens.</td>
+          </tr>
+          <tr>
+            <td><strong>FastAPI Backend Server</strong></td>
+            <td><span class="badge-deploy">Render Cloud / Local Uvicorn :8000</span></td>
+            <td><code>backend/app/main.py</code></td>
+            <td>Python 3.10+ ASGI server hosting REST routers (<code>/auth</code>, <code>/cases</code>, <code>/evidence</code>, <code>/events</code>, <code>/chat</code>, <code>/graph</code>, <code>/reports</code>).</td>
+          </tr>
+          <tr>
+            <td><strong>React 18 SPA Frontend</strong></td>
+            <td><span class="badge-deploy">Render Static Site / Local Vite :5173</span></td>
+            <td><code>frontend/src/main.jsx</code><br><code>frontend/src/App.jsx</code></td>
+            <td>Single Page Application built via Vite, uses Axios client with JWT interceptor for backend communication.</td>
+          </tr>
+          <tr>
+            <td><strong>PyOD Isolation Forest ML</strong></td>
+            <td><span class="badge-deploy">Backend In-Memory ML Service</span></td>
+            <td><code>backend/app/services/ai/anomaly_detector.py</code></td>
+            <td>Unsupervised anomaly detection model trained per-case on event features to calculate anomaly scores (0.0 - 1.0).</td>
+          </tr>
+          <tr>
+            <td><strong>Brevo Transactional Mail API</strong></td>
+            <td><span class="badge-deploy">Brevo Cloud API</span></td>
+            <td><code>backend/app/services/email_service.py</code></td>
+            <td>REST client sending password reset link tokens via transactional HTML emails using <code>BREVO_API_KEY</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 2 -->
+    <section id="architecture" class="doc-section">
+      <h2>2. High-Level Architecture</h2>
+      <div class="mermaid">
+        flowchart TD
+          subgraph Client ["Frontend Layer (Browser)"]
+              User["Investigator / Analyst"]
+              ReactApp["React 18 Single Page App (Vite)"]
+              AxiosClient["Axios Client (JWT Interceptor)"]
+          end
+
+          subgraph API ["Backend API Layer (FastAPI)"]
+              FastAPI["FastAPI App (uvicorn :8000)"]
+              APIRouters["API Routers (/auth, /cases, /evidence, /events, /chat, /graph)"]
+              BackgroundPipeline["Processing Pipeline (ThreadPoolExecutor)"]
+          end
+
+          subgraph DataStores ["Database Layer"]
+              MongoDB[(MongoDB Atlas / Local :27017)]
+              Neo4j[(Neo4j AuraDB / Local :7687)]
+              MinIO[(MinIO S3 :9000)]
+              FAISS[(FAISS Vector Store)]
+          end
+
+          subgraph External ["External AI Services"]
+              GeminiAPI["Google Gemini LLM REST API"]
+          end
+
+          User --> ReactApp
+          ReactApp --> AxiosClient
+          AxiosClient --> FastAPI
+          FastAPI --> APIRouters
+          APIRouters --> MinIO
+          APIRouters --> BackgroundPipeline
+          BackgroundPipeline --> MongoDB
+          BackgroundPipeline --> Neo4j
+          BackgroundPipeline --> FAISS
+          APIRouters --> GeminiAPI
+      </div>
+    </section>
+
+    <!-- Section 3 -->
+    <section id="structure" class="doc-section">
+      <h2>3. Complete Folder Structure</h2>
+      <pre><code>ForenSight/
+├── backend/
+│   ├── app/
+│   │   ├── api/          # HTTP REST endpoints (/auth, /cases, /evidence, /chat, /events)
+│   │   ├── auth/         # JWT token management & bcrypt password security
+│   │   ├── db/           # Async client initializers (MongoDB Atlas, Neo4j, MinIO, Redis)
+│   │   ├── models/       # Domain Pydantic & BSON schemas
+│   │   ├── parsers/      # EVTX, PCAP, Browser SQLite, CSV log parsers
+│   │   ├── repositories/ # Database Access Object (DAO) layer
+│   │   ├── services/     # Ingestion, Isolation Forest ML, VectorStore, Gemini Copilot
+│   │   ├── config.py     # Pydantic environment configuration
+│   │   └── main.py       # FastAPI application entry point
+│   ├── .env              # Environment variables
+│   └── requirements.txt  # Backend Python dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── api/          # Axios HTTP services
+│   │   ├── components/   # Chat, Timeline, Graph, Evidence UI components
+│   │   ├── context/      # AuthContext provider
+│   │   ├── pages/        # DashboardPage, CaseDetailPage, LoginPage
+│   │   └── App.jsx       # Main App Component & Router
+│   ├── package.json      # Frontend npm dependencies
+│   └── vite.config.js    # Vite runner & dev server proxy
+└── PROJECT_DOCUMENTATION.html</code></pre>
+    </section>
+
+    <!-- Section 4 -->
+    <section id="folders" class="doc-section">
+      <h2>4. Folder Explanations</h2>
+      <h3><code>backend/app/api/</code></h3>
+      <p><strong>Purpose:</strong> Defines HTTP REST endpoints for the FastAPI application.<br>
+      <strong>Contains:</strong> Routers (<code>auth.py</code>, <code>cases.py</code>, <code>evidence.py</code>, <code>events.py</code>, <code>chat.py</code>, <code>graph.py</code>).<br>
+      <strong>Used by:</strong> React Frontend Axios API client.<br>
+      <strong>Data handled:</strong> JSON request payloads, file uploads, JWT auth headers, HTTP responses.</p>
+
+      <h3><code>backend/app/parsers/</code></h3>
+      <p><strong>Purpose:</strong> Forensic log parsing engine converting raw evidence files into normalized event schemas.<br>
+      <strong>Contains:</strong> <code>evtx_parser.py</code>, <code>pcap_parser.py</code>, <code>browser_parser.py</code>, <code>csv_parser.py</code>, <code>text_parser.py</code>.<br>
+      <strong>Used by:</strong> <code>ProcessingPipeline</code> background ingestion service.</p>
+
+      <h3><code>backend/app/repositories/</code></h3>
+      <p><strong>Purpose:</strong> Data Access Object (DAO) layer encapsulating database queries.<br>
+      <strong>Contains:</strong> <code>case_repository.py</code>, <code>evidence_repository.py</code>, <code>event_repository.py</code>, <code>graph_repository.py</code>, <code>user_repository.py</code>.</p>
+    </section>
+
+    <!-- Section 5 -->
+    <section id="files" class="doc-section">
+      <h2>5. File-by-File Documentation</h2>
+      <h3><code>backend/app/services/ingestion/processing_pipeline.py</code></h3>
+      <p>Master asynchronous evidence processing pipeline. Downloads raw evidence from MinIO, dispatches to parsers, bulk inserts into MongoDB, syncs Neo4j graphs, trains PyOD Isolation Forest, and builds FAISS vector indices.</p>
+
+      <h3><code>backend/app/services/copilot/gemini_provider.py</code></h3>
+      <p>Communicates with Google Gemini API via REST endpoints. Automatically rotates across <code>gemini-2.0-flash</code>, <code>gemini-1.5-flash</code>, and <code>gemini-1.5-pro</code> on rate limits.</p>
+
+      <h3><code>backend/app/services/copilot/report_generator.py</code></h3>
+      <p>Formats investigation findings into paragraph-wise Markdown reports matching ChatGPT/Gemini style.</p>
+    </section>
+
+    <!-- Section 6 -->
+    <section id="dataflow" class="doc-section">
+      <h2>6. Complete Data Flow</h2>
+      <pre><code>User uploads file (.evtx / .pcapng / .sqlite / .csv)
+        ↓
+Frontend (EvidenceUploader.jsx) → POST /api/v1/cases/{case_id}/evidence
+        ↓
+MinIO Storage (Raw byte stream) & MongoDB (Evidence Record)
+        ↓
+ProcessingPipeline (Async Background ThreadPoolExecutor)
+        ↓
+Parser Engine (evtx_parser / pcap_parser / browser_parser / csv_parser)
+        ↓
+MongoDB Bulk Insert → PyOD Isolation Forest Anomaly Scoring
+        ↓
+Neo4j Graph Database (PARENT_OF / CONNECTED_TO relationships)
+        ↓
+FAISS Vector Store (SentenceTransformers 384-d embeddings)
+        ↓
+Frontend TimelineView.jsx / GraphView.jsx / ChatPanel.jsx display results</code></pre>
+    </section>
+
+    <!-- Section 7 -->
+    <section id="sources" class="doc-section">
+      <h2>7. Data Source Documentation</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Data Entity</th>
+            <th>Original Source</th>
+            <th>Received By</th>
+            <th>Processing Module</th>
+            <th>Final Destination</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Raw Evidence File</td>
+            <td>User Upload</td>
+            <td><code>POST /cases/{id}/evidence</code></td>
+            <td>FileDetector & MinIO</td>
+            <td>MinIO S3 Bucket</td>
+          </tr>
+          <tr>
+            <td>Parsed Events</td>
+            <td>Binary Evidence Files</td>
+            <td>ProcessingPipeline</td>
+            <td>Parsers (EVTX/PCAP)</td>
+            <td>MongoDB <code>events</code></td>
+          </tr>
+          <tr>
+            <td>Anomaly Scores</td>
+            <td>Parsed Event Features</td>
+            <td>AnomalyDetector</td>
+            <td>PyOD Isolation Forest</td>
+            <td>MongoDB <code>events.anomaly_score</code></td>
+          </tr>
+          <tr>
+            <td>Graph Execution Chains</td>
+            <td>Process & Socket Events</td>
+            <td>GraphRepository</td>
+            <td>Cypher Query Generator</td>
+            <td>Neo4j Graph DB</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 8 -->
+    <section id="storage" class="doc-section">
+      <h2>8. Data Storage Documentation</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Storage Engine</th>
+            <th>Location</th>
+            <th>Data Entity</th>
+            <th>Persistence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>MongoDB / MongoDB Atlas</td>
+            <td><code>mongodb://localhost:27017</code></td>
+            <td>Users, Cases, Evidence, Events, Audits</td>
+            <td>Permanent</td>
+          </tr>
+          <tr>
+            <td>Neo4j Graph DB</td>
+            <td><code>bolt://localhost:7687</code></td>
+            <td>Process Trees & Socket Connections</td>
+            <td>Permanent</td>
+          </tr>
+          <tr>
+            <td>MinIO Storage</td>
+            <td><code>localhost:9000</code></td>
+            <td>Raw uploaded evidence files</td>
+            <td>Permanent</td>
+          </tr>
+          <tr>
+            <td>FAISS Index</td>
+            <td>Memory / Storage</td>
+            <td>384-d vector embeddings</td>
+            <td>Permanent</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 9 -->
+    <section id="databases" class="doc-section">
+      <h2>9. Database Schemas</h2>
+      <h3>MongoDB Collections Overview</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Collection Name</th>
+            <th>Primary Key</th>
+            <th>Purpose</th>
+            <th>Key Fields</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>users</code></td>
+            <td><code>_id</code> (ObjectId)</td>
+            <td>User credentials & roles</td>
+            <td><code>email</code>, <code>hashed_password</code>, <code>role</code>, <code>organization_name</code></td>
+          </tr>
+          <tr>
+            <td><code>cases</code></td>
+            <td><code>_id</code> (ObjectId)</td>
+            <td>Forensic investigation cases</td>
+            <td><code>title</code>, <code>status</code>, <code>created_by</code></td>
+          </tr>
+          <tr>
+            <td><code>evidence</code></td>
+            <td><code>_id</code> (ObjectId)</td>
+            <td>Uploaded evidence file metadata</td>
+            <td><code>filename</code>, <code>file_type</code>, <code>size_bytes</code></td>
+          </tr>
+          <tr>
+            <td><code>events</code></td>
+            <td><code>_id</code> (ObjectId)</td>
+            <td>Parsed forensic events</td>
+            <td><code>timestamp</code>, <code>subject</code>, <code>action</code>, <code>anomaly_score</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 10 -->
+    <section id="writeflow" class="doc-section">
+      <h2>10. Database Write Flow</h2>
+      <pre><code>POST /api/v1/cases/{id}/evidence → Save file to MinIO
+  ↓
+EvidenceRepository.create() → INSERT INTO mongodb.evidence
+  ↓
+ProcessingPipeline background task
+  ↓
+EventRepository.bulk_create() → INSERT INTO mongodb.events
+  ↓
+GraphRepository.sync_events() → MERGE INTO neo4j (Nodes & Edges)</code></pre>
+    </section>
+
+    <!-- Section 11 -->
+    <section id="readflow" class="doc-section">
+      <h2>11. Database Read Flow</h2>
+      <pre><code>GET /api/v1/cases/{id}/events?page=1&limit=50
+  ↓
+EventRepository.list_by_case() → SELECT FROM mongodb.events WHERE case_id={id}
+  ↓
+FastAPI JSON Response → React TimelineView.jsx renders Event Cards</code></pre>
+    </section>
+
+    <!-- Section 12 -->
+    <section id="endpoints" class="doc-section">
+      <h2>12. API Endpoint Reference</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Endpoint</th>
+            <th>Handler Module</th>
+            <th>Auth</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>POST</code></td><td><code>/api/v1/auth/login</code></td><td><code>api/auth.py</code></td><td>Public</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/v1/cases</code></td><td><code>api/cases.py</code></td><td>Bearer JWT</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/v1/cases/{id}/evidence</code></td><td><code>api/evidence.py</code></td><td>Bearer JWT</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/v1/cases/{id}/copilot</code></td><td><code>api/chat.py</code></td><td>Bearer JWT</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/v1/cases/{id}/graph</code></td><td><code>api/graph.py</code></td><td>Bearer JWT</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 13 -->
+    <section id="mapping" class="doc-section">
+      <h2>13. Frontend → Backend Mapping</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Frontend Page / Component</th>
+            <th>HTTP Request</th>
+            <th>Backend Handler</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>LoginPage.jsx</code></td><td><code>POST /api/v1/auth/login</code></td><td><code>api/auth.py:login()</code></td></tr>
+          <tr><td><code>DashboardPage.jsx</code></td><td><code>GET /api/v1/cases</code></td><td><code>api/cases.py:list_cases()</code></td></tr>
+          <tr><td><code>EvidenceUploader.jsx</code></td><td><code>POST /api/v1/cases/{id}/evidence</code></td><td><code>api/evidence.py:upload_evidence()</code></td></tr>
+          <tr><td><code>ChatPanel.jsx</code></td><td><code>POST /api/v1/cases/{id}/copilot</code></td><td><code>api/chat.py:copilot_chat()</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 14 -->
+    <section id="frontend-flow" class="doc-section">
+      <h2>14. Frontend Data Flow</h2>
+      <pre><code>User input in ChatPanel.jsx → Axios Client attaches Bearer Token → HTTP REST Request
+  ↓
+JSON Response Received → Update React Component State → Render Markdown in ChatMessage.jsx</code></pre>
+    </section>
+
+    <!-- Section 15 -->
+    <section id="backend-flow" class="doc-section">
+      <h2>15. Backend Data Flow</h2>
+      <pre><code>FastAPI Router (chat.py) → Auth Dependency validates JWT → CopilotService.analyze_case_timeline()
+  ↓
+ContextBuilder fetches MongoDB + PyOD + Neo4j + FAISS → GeminiProvider.generate()
+  ↓
+Google Gemini 2.0 Flash REST API → Return Markdown Response</code></pre>
+    </section>
+
+    <!-- Section 16 -->
+    <section id="external-api" class="doc-section">
+      <h2>16. External API Documentation</h2>
+      <p><strong>Google Gemini REST API</strong>: Used for AI Copilot natural language reasoning.<br>
+      <strong>Brevo API</strong>: Used for sending transactional password reset emails.</p>
+    </section>
+
+    <!-- Section 17 -->
+    <section id="ai-flow" class="doc-section">
+      <h2>17. AI & Gemini LLM Flow</h2>
+      <pre><code>User Question ("what process did mimikatz spawn?")
+  ↓
+POST /api/v1/cases/{case_id}/copilot
+  ↓
+ContextBuilder (Fetches MongoDB evidence + PyOD anomalies + Neo4j process trees + FAISS search)
+  ↓
+GeminiProvider.generate() (Rotates across gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro)
+  ↓
+Google Gemini 2.0 Flash REST Endpoint → Markdown Paragraph Response</code></pre>
+    </section>
+
+    <!-- Section 18 -->
+    <section id="forensic-flow" class="doc-section">
+      <h2>18. Forensic Analysis Flow</h2>
+      <p>Raw Upload → MinIO Storage → Multi-format Parsing → Normalization → PyOD Isolation Forest ML → Neo4j Graph Sync → MITRE Mapping → FAISS Vector Store → AI Copilot Reasoning.</p>
+    </section>
+
+    <!-- Section 19 -->
+    <section id="mitre" class="doc-section">
+      <h2>19. MITRE ATT&CK Logic</h2>
+      <p>Parsers inspect command lines and process executions for known MITRE techniques (T1059.001 PowerShell, T1003 Credential Dumping, T1547 Autostart Execution) and enrich them via <code>MitreMapper</code>.</p>
+    </section>
+
+    <!-- Section 20 -->
+    <section id="auth" class="doc-section">
+      <h2>20. Authentication Flow</h2>
+      <pre><code>LoginPage.jsx → POST /api/v1/auth/login → Bcrypt verify → JWT Access Token → Browser LocalStorage</code></pre>
+    </section>
+
+    <!-- Section 21 -->
+    <section id="env" class="doc-section">
+      <h2>21. Environment Variables</h2>
+      <table>
+        <thead>
+          <tr><th>Variable</th><th>Purpose</th><th>Required</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>SECRET_KEY</code></td><td>JWT token signing secret</td><td>Yes</td></tr>
+          <tr><td><code>MONGODB_URL</code></td><td>MongoDB connection string</td><td>Yes</td></tr>
+          <tr><td><code>NEO4J_URL</code></td><td>Neo4j Bolt connection URL</td><td>Yes</td></tr>
+          <tr><td><code>GEMINI_API_KEY</code></td><td>Google Gemini API key</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 24 -->
+    <section id="workflows" class="doc-section">
+      <h2>24. Complete User Workflows</h2>
+      <p>Documented end-to-end workflows for Case Creation, Evidence Upload, Graph Visualization, and Copilot Chat.</p>
+    </section>
+
+    <!-- Section 30 -->
+    <section id="lineage" class="doc-section">
+      <h2>30. Data Lineage</h2>
+      <p>Complete traceability mapping original evidence byte streams to parsed MongoDB event documents, Isolation Forest scores, Neo4j graph nodes, and React UI components.</p>
+    </section>
+
+    <!-- Section 36 -->
+    <section id="quickstart" class="doc-section">
+      <h2>36. Developer Quick Start</h2>
+      <h3>Backend Launch</h3>
+      <pre><code>cd backend
+.venv\Scripts\activate
+uvicorn app.main:app --reload --port 8000</code></pre>
+      <h3>Frontend Launch</h3>
+      <pre><code>cd frontend
+npm run dev</code></pre>
+    </section>
+
+    <!-- Section 38 -->
+    <section id="ai-rag-architecture" class="doc-section">
+      <h2>38. ForenSight AI RAG Architecture &amp; Zero-Hallucination Grounding</h2>
+      <p>ForenSight AI implements a case-isolated Retrieval-Augmented Generation (RAG) architecture powered by Google Gemini 2.0 Flash REST API and local FAISS vector search.</p>
+      <ul>
+        <li><strong>Frontend Chatbox:</strong> <code>ChatPanel.jsx</code> &amp; <code>ChatMessage.jsx</code> (React 18) with history context window support.</li>
+        <li><strong>Backend Chat API:</strong> <code>POST /api/v1/cases/{case_id}/copilot</code> in <code>backend/app/api/chat.py</code></li>
+        <li><strong>Deterministic Query Router:</strong> <code>query_router.py</code> routes greetings, evidence lists, file security assessments, and counts to direct database queries with entity resolution.</li>
+        <li><strong>Zero-Hallucination Policy:</strong> Completely purged static demo strings. Inquiries regarding unknown threats or files with zero anomaly detections return <code>Confidence: Insufficient Evidence</code>.</li>
+        <li><strong>Fenced Prompt Engine:</strong> <code>prompts.py</code> encloses evidence in <code>&lt;FORENSIC_EVIDENCE&gt;</code> XML tags for prompt-injection defense.</li>
+        <li><strong>Case Isolation:</strong> FAISS vector indexes are strictly stored per-case at <code>/vector_indexes/{case_id}/</code> ensuring zero cross-case data leakage.</li>
+        <li><strong>Source Citations &amp; Confidence:</strong> Returns structured JSON with grounded answers, confidence ratings (High/Medium/Low/Insufficient Evidence), and explicit source citations.</li>
+      </ul>
+    </section>
+
+    <!-- Section 39 -->
+    <section id="evidence-lifecycle" class="doc-section">
+      <h2>39. Evidence Data Lifecycle &amp; Cascade Deletion</h2>
+      <p>Deleting an evidence file triggers a guaranteed synchronous 100% cascade cleanup across all storage tiers:</p>
+      <ul>
+        <li><strong>MongoDB Evidence:</strong> Deletes primary record from <code>evidence</code> collection.</li>
+        <li><strong>MongoDB Events:</strong> Deletes parsed log events matching <code>evidence_id</code> as BSON ObjectId or String.</li>
+        <li><strong>Neo4j Graph:</strong> Deletes <code>FORENSIC_ACTION</code> edges, purges orphan entity nodes, and executes <code>DETACH DELETE</code> on all case nodes if 0 files remain.</li>
+        <li><strong>FAISS Vector Store:</strong> Rebuilds vector index for case, or removes <code>index.faiss</code> and <code>metadata.pkl</code> disk files if 0 events remain.</li>
+        <li><strong>MinIO Storage:</strong> Deletes raw binary object from MinIO S3 bucket.</li>
+        <li><strong>Audit Logs:</strong> Deletes evidence audit entries from both <code>audit_log</code> and <code>audit_logs</code> collections.</li>
+      </ul>
+    </section>
+
+    <!-- Section 40 -->
+    <section id="status-synchronization" class="doc-section">
+      <h2>40. Evidence Status &amp; Scan Time Lifecycle Synchronization</h2>
+      <p>The backend database (MongoDB) is the single authoritative source of truth for evidence status and scan timestamps.</p>
+      <ul>
+        <li><strong>Status Transitions:</strong> <code>uploaded</code> → <code>queued</code> → <code>parsing</code> → <code>parsed</code> (or <code>failed</code>).</li>
+        <li><strong>Server Timestamps:</strong> <code>created_at</code> (upload time), <code>parsing_started_at</code> (parse start time), <code>parsed_at</code> (parse completion time).</li>
+        <li><strong>Live Scan Duration:</strong> Displays live ticking seconds (<code>0s</code>, <code>1s</code>, <code>2s</code>...) starting from <code>created_at</code> while in-flight, freezing to exact server duration upon completion.</li>
+        <li><strong>Real-Time Synchronization:</strong> 2-second interval polling (<code>POLLING_INTERVAL = 2000</code>) for active items automatically synchronizes status and timestamps.</li>
+      </ul>
+    </section>
+
+    <!-- Section 41 -->
+    <section id="summary" class="doc-section">
+      <h2>41. Final Summary</h2>
+      <p>ForenSight AI connects fast multi-format parsing, unsupervised Isolation Forest anomaly scoring, Neo4j execution graphs, and Google Gemini 2.0 Flash LLM reasoning into a unified digital forensics platform.</p>
+    </section>
+
+  </main>
+</div>
+
+</body>
+</html>

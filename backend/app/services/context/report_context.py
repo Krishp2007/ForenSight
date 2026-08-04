@@ -50,20 +50,12 @@ async def build_report_context(case_id: str, org_id: str) -> Dict[str, Any]:
         build_timeline_context(case, limit=500),
     )
 
-    # Aggregate counts
-    total_events = await db_client.db["events"].count_documents(
-        {"case_id": case["_id"], "organization_id": case["organization_id"]}
-    )
-    anomalies_count = await db_client.db["events"].count_documents(
-        {"case_id": case["_id"], "organization_id": case["organization_id"], "is_anomaly": True}
-    )
-    critical_high_count = await db_client.db["events"].count_documents(
-        {
-            "case_id": case["_id"],
-            "organization_id": case["organization_id"],
-            "severity": {"$in": ["critical", "high"]},
-        }
-    )
+    # Aggregate counts via EventRepository to match Dashboard stats exactly
+    from backend.app.repositories.event_repository import EventRepository
+    stats_data = await EventRepository.count_case_stats(case_id, org_id)
+    total_events = stats_data["total"]
+    anomalies_count = stats_data["anomalies"]
+    critical_high_count = stats_data["critical"]
 
     # Collect MITRE techniques from anomalies + correlations
     all_technique_ids: set = set()

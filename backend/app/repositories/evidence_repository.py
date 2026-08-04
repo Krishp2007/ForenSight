@@ -83,7 +83,9 @@ class EvidenceRepository:
                 update_fields["error_message"] = None
             elif error_message is not None:
                 update_fields["error_message"] = error_message
-            # Track timing
+            # Track timing & clear stale completion timestamps on re-process/upload
+            if status in ("uploaded", "queued", "parsing"):
+                update_fields["parsed_at"] = None
             if status == "parsing":
                 update_fields["parsing_started_at"] = datetime.utcnow()
             if status == "parsed":
