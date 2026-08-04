@@ -24,6 +24,7 @@ import concurrent.futures
 import logging
 import os
 import tempfile
+from typing import Optional, List, Dict, Any
 from bson import ObjectId
 
 from backend.app.repositories.evidence_repository import EvidenceRepository
