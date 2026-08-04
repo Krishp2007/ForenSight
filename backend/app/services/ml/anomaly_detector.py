@@ -107,7 +107,8 @@ class AnomalyDetector:
         else:
             norm_scores = np.zeros(len(raw_scores))
             
-        # 4. Bulk update MongoDB events
+        # 4. Bulk update MongoDB events using high-performance bulk write
+        from pymongo import UpdateOne
         anomalies_count = 0
         mongo_bulk_ops = []
         
@@ -121,7 +122,7 @@ class AnomalyDetector:
                 
             # Prepare update operation
             mongo_bulk_ops.append(
-                db_client.db["events"].update_one(
+                UpdateOne(
                     {"_id": event_id},
                     {"$set": {
                         "is_anomaly": is_anomaly,
@@ -131,7 +132,7 @@ class AnomalyDetector:
             )
             
         if mongo_bulk_ops:
-            await asyncio.gather(*mongo_bulk_ops)
+            await db_client.db["events"].bulk_write(mongo_bulk_ops, ordered=False)
             
         logger.info(f"MongoDB events updated. Flagged {anomalies_count} anomalies out of {total_events} events.")
         

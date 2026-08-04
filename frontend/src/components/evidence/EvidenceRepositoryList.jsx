@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { 
   FileText, Copy, Check, HardDrive, RefreshCw, 
-  Inbox, AlertTriangle 
+  Inbox, AlertTriangle, Trash2 
 } from 'lucide-react';
+import apiClient from '../../services/apiClient';
 
-const EvidenceRepositoryList = ({ evidenceList }) => {
+const EvidenceRepositoryList = ({ evidenceList, onDeleteSuccess }) => {
   const [copiedHash, setCopiedHash] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -19,6 +22,27 @@ const EvidenceRepositoryList = ({ evidenceList }) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handleDelete = async (evidenceId, filename) => {
+    const message = `Are you sure you want to permanently delete "${filename}"?\n\nThis will remove the file from storage and clear all associated events from the timeline, threat map, and similarity engines.`;
+    if (!window.confirm(message)) {
+      return;
+    }
+    
+    setDeletingId(evidenceId);
+    setDeleteError('');
+    try {
+      await apiClient.delete(`/evidence/${evidenceId}`);
+      if (onDeleteSuccess) {
+        await onDeleteSuccess();
+      }
+    } catch (err) {
+      console.error("Failed to delete evidence file", err);
+      setDeleteError(err.response?.data?.detail || 'Failed to delete evidence.');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const isParsingActive = evidenceList.some(
@@ -45,6 +69,13 @@ const EvidenceRepositoryList = ({ evidenceList }) => {
         </div>
       </div>
 
+      {deleteError && (
+        <div className="mx-5 mt-5 p-3 bg-red-950/20 border border-red-905/30 text-red-400 text-xs rounded-xl flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+          <span>{deleteError}</span>
+        </div>
+      )}
+
       {evidenceList.length === 0 ? (
         <div className="py-24 text-center">
           <Inbox className="w-10 h-10 text-gray-700 mx-auto mb-4" />
@@ -61,6 +92,7 @@ const EvidenceRepositoryList = ({ evidenceList }) => {
                 <th className="p-4">Size</th>
                 <th className="p-4">SHA-256 Checksum</th>
                 <th className="p-4">Lifecycle State</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/60">
@@ -109,6 +141,22 @@ const EvidenceRepositoryList = ({ evidenceList }) => {
                         />
                       )}
                     </div>
+                  </td>
+                  <td className="p-4 text-right">
+                    <button
+                      disabled={deletingId === e.id}
+                      onClick={() => handleDelete(e.id, e.filename)}
+                      className={`text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-all cursor-pointer inline-flex items-center justify-center ${
+                        deletingId === e.id ? 'text-red-400 animate-pulse' : ''
+                      }`}
+                      title="Delete Evidence File"
+                    >
+                      {deletingId === e.id ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
                   </td>
                 </tr>
               ))}

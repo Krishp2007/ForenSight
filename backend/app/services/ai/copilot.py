@@ -61,13 +61,13 @@ class CopilotService:
         if not case:
             return "Case not found or access denied."
             
-        # 2. Fetch Top Anomalies from MongoDB
+        # 2. Fetch Top Anomalies from MongoDB (cap at 10 to keep prompt lean)
         cursor = db_client.db["events"].find({
             "case_id": case["_id"],
             "organization_id": case["organization_id"],
             "is_anomaly": True
         }).sort("anomaly_score", -1)
-        anomalies = await cursor.to_list(length=30)
+        anomalies = await cursor.to_list(length=10)
         
         # 3. Retrieve semantic context if query provided
         semantic_context = []
@@ -91,7 +91,10 @@ class CopilotService:
         for idx, a in enumerate(anomalies[:10]):
             prompt_lines.append(f"- At {a.get('timestamp')}, Subject '{a.get('subject')}' did '{a.get('action')}' to '{a.get('object')}'. Severity: {a.get('severity')}. Anomaly Score: {a.get('anomaly_score', 0.0):.4f}.")
             
-        prompt_lines.append("\nTask: Based on these anomalies and matching logs, write a detailed forensic analysis report in Markdown. Highlight potential attack patterns (like execution, persistence, or data staging), specify which nodes are suspicious, and recommend immediate containment steps. Keep your tone professional, concise, and objective. If the question is a general conversation or math query (like 'how are you' or '2+2'), reply to it naturally while linking it to the investigation context if relevant.")
+        if question:
+            prompt_lines.append("\nTask: Answer the investigator's question directly, clearly, and concisely in 1-2 paragraphs using the anomalies and matching logs provided. Keep the response brief, professional, and targeted to the question. Do not write a long, full case summary report unless explicitly requested.")
+        else:
+            prompt_lines.append("\nTask: Based on these anomalies, write a concise, professional markdown forensic analysis summary. Highlight key indicators of compromise and recommend immediate containment steps. Rely on bullet points and keep it under 250 words total.")
         
         prompt = "\n".join(prompt_lines)
 

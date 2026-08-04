@@ -6,15 +6,17 @@ import TimelineEventItem from './TimelineEventItem';
 
 const CaseTimeline = ({ caseId }) => {
   const [events, setEvents] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Query Filters
+  // Query Filters & Pagination State
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [limit, setLimit] = useState(100);
-  const [onlyAnomalies, setOnlyAnomalies] = useState(false);
+  const [onlyAnomalies, setOnlyAnomalies] = useState(true); // Default to true to show important alerts first
+  const [page, setPage] = useState(1);
 
   // Accordion details toggle states
   const [expandedEventId, setExpandedEventId] = useState(null);
@@ -23,13 +25,15 @@ const CaseTimeline = ({ caseId }) => {
     setLoading(true);
     setError('');
     try {
-      const params = {};
+      const params = { page, limit };
       if (severityFilter !== 'all') params.severity = severityFilter;
       if (typeFilter !== 'all') params.event_type = typeFilter;
-      params.limit = limit;
+      if (onlyAnomalies) params.is_anomaly = true;
 
       const res = await apiClient.get(`/cases/${caseId}/events`, { params });
       setEvents(res.data);
+      const totalHeader = res.headers ? res.headers['x-total-count'] : null;
+      setTotalRecords(totalHeader ? parseInt(totalHeader, 10) : res.data.length);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to query triage event logs.');
     } finally {
@@ -39,7 +43,12 @@ const CaseTimeline = ({ caseId }) => {
 
   useEffect(() => {
     fetchEvents();
-  }, [caseId, severityFilter, typeFilter, limit]);
+  }, [caseId, severityFilter, typeFilter, limit, page, onlyAnomalies]);
+
+  // Reset page pagination back to 1 if filter criteria changes
+  useEffect(() => {
+    setPage(1);
+  }, [severityFilter, typeFilter, limit, onlyAnomalies]);
 
   const toggleExpandEvent = (id) => {
     setExpandedEventId((prev) => (prev === id ? null : id));
@@ -47,7 +56,6 @@ const CaseTimeline = ({ caseId }) => {
 
   // Local search filter criteria (Subject, Action, Object details)
   const filteredEvents = events.filter((e) => {
-    if (onlyAnomalies && !e.is_anomaly) return false;
     if (!searchTerm.trim()) return true;
 
     const term = searchTerm.toLowerCase();
@@ -75,7 +83,7 @@ const CaseTimeline = ({ caseId }) => {
       />
 
       {error && (
-        <div className="p-4 bg-red-950/20 border border-red-900/30 text-red-400 text-xs rounded-xl text-center">
+        <div className="p-4 bg-red-950/20 border border-red-905/35 text-red-400 text-xs rounded-xl text-center">
           {error}
         </div>
       )}
@@ -87,9 +95,14 @@ const CaseTimeline = ({ caseId }) => {
             <Clock className="w-4 h-4 text-accent" />
             Chronological Events Record
           </h3>
-          <span className="text-[10px] bg-gray-955 border border-gray-800 text-gray-500 px-2 py-0.5 rounded font-mono font-bold">
-            Parsed: {filteredEvents.length}
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[9px] bg-accent/15 border border-accent/20 text-accent px-2 py-0.5 rounded font-mono font-black">
+              TOTAL RECORDS: {totalRecords}
+            </span>
+            <span className="text-[9px] bg-gray-950 border border-gray-800 text-gray-400 px-2 py-0.5 rounded font-mono font-bold">
+              SHOWN: {filteredEvents.length}
+            </span>
+          </div>
         </div>
 
         {loading ? (
@@ -115,6 +128,32 @@ const CaseTimeline = ({ caseId }) => {
                 onToggleExpand={() => toggleExpandEvent(evt.id)}
               />
             ))}
+          </div>
+        )}
+
+        {/* Footer Pagination Controls */}
+        {!loading && events.length > 0 && (
+          <div className="p-4 border-t border-gray-800 bg-gray-900/50 flex items-center justify-between text-xs text-gray-400 font-mono">
+            <div>
+              Showing Page <span className="text-white font-bold">{page}</span> of{" "}
+              <span className="text-white font-bold">{Math.ceil(totalRecords / limit) || 1}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                className={`px-3 py-1 rounded border border-gray-808 bg-gray-950 text-[10px] uppercase font-bold tracking-wider hover:bg-gray-850 hover:text-white transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed`}
+              >
+                Previous
+              </button>
+              <button
+                disabled={page >= Math.ceil(totalRecords / limit)}
+                onClick={() => setPage(prev => prev + 1)}
+                className={`px-3 py-1 rounded border border-gray-808 bg-gray-950 text-[10px] uppercase font-bold tracking-wider hover:bg-gray-850 hover:text-white transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed`}
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

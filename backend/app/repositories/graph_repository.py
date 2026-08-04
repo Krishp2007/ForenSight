@@ -81,14 +81,20 @@ class GraphRepository:
         if not batch:
             return 0
             
+        # Chunk batch to avoid Neo4j database lock timeouts and transaction memory issues
+        BATCH_SIZE = 1000
+        synced_count = 0
         try:
             async with driver.session() as session:
-                await session.run(cypher_query, batch=batch)
-            logger.info(f"Successfully synced {len(batch)} event nodes/relationships to Neo4j.")
-            return len(batch)
+                for i in range(0, len(batch), BATCH_SIZE):
+                    chunk = batch[i:i + BATCH_SIZE]
+                    await session.run(cypher_query, batch=chunk)
+                    synced_count += len(chunk)
+            logger.info(f"Successfully synced {synced_count} event nodes/relationships to Neo4j.")
+            return synced_count
         except Exception as ex:
             logger.error(f"Failed bulk importing events into Neo4j: {ex}")
-            return 0
+            return synced_count
 
     @staticmethod
     async def get_case_graph(case_id: str, org_id: str) -> Dict[str, List[Any]]:
@@ -162,3 +168,32 @@ class GraphRepository:
             logger.info(f"Cleared Neo4j graph nodes for case {case_id}")
         except Exception as e:
             logger.error(f"Failed to clear case graph from Neo4j: {e}")
+
+    @staticmethod
+    async def delete_events_by_id(event_ids: List[str], case_id: str, org_id: str) -> bool:
+        """Delete forensic action relationships and orphan Entity nodes by event IDs."""
+        driver = neo4j_client.driver
+        if not driver or not event_ids:
+            return False
+            
+        cypher_query_rels = """
+        UNWIND $event_ids AS eid
+        MATCH (s:Entity {case_id: $case_id, organization_id: $org_id})-[r:FORENSIC_ACTION {event_id: eid}]->(o:Entity {case_id: $case_id, organization_id: $org_id})
+        DELETE r
+        """
+        
+        cypher_query_orphans = """
+        MATCH (e:Entity {case_id: $case_id, organization_id: $org_id})
+        WHERE NOT (e)-[:FORENSIC_ACTION]-()
+        DELETE e
+        """
+        
+        try:
+            async with driver.session() as session:
+                await session.run(cypher_query_rels, event_ids=event_ids, case_id=case_id, org_id=org_id)
+                await session.run(cypher_query_orphans, case_id=case_id, org_id=org_id)
+            logger.info(f"Successfully deleted {len(event_ids)} events from Neo4j graph.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete events in Neo4j: {e}")
+            return False

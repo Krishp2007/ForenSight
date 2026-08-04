@@ -35,6 +35,11 @@ async def _process_evidence_async(evidence_id: str, org_id: str):
         logger.error(f"Evidence {evidence_id} not found in org {org_id}. Aborting task.")
         return
         
+    # Idempotency check: prevent duplicate parsing in concurrent/test worker runs
+    if evidence.get("status") in (EvidenceStatus.PARSED.value, EvidenceStatus.PARSING.value):
+        logger.info(f"Evidence {evidence_id} already being parsed/parsed. Skipping duplicate execution.")
+        return
+        
     # Update status to parsing
     await EvidenceRepository.update_status(evidence_id, org_id, EvidenceStatus.PARSING.value)
     logger.info(f"Start parsing evidence {evidence_id} ({evidence['filename']})")

@@ -176,3 +176,59 @@ async def get_evidence_details(
     evidence["organization_id"] = str(evidence["organization_id"])
     evidence["created_by"] = str(evidence["created_by"])
     return evidence
+
+@router.delete("/evidence/{evidence_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_evidence(
+    evidence_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Delete evidence file payload and all parsed event records from databases."""
+    require_investigator(current_user.role)
+    
+    if not ObjectId.is_valid(evidence_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid evidence ID format"
+        )
+        
+    evidence = await EvidenceRepository.get_by_id(evidence_id, current_user.organization_id)
+    if not evidence:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evidence not found or access denied"
+        )
+        
+    case_id = str(evidence["case_id"])
+    
+    # 1. Fetch generated MongoDB event IDs to delete them from Neo4j in bulk
+    from backend.app.db.mongodb import db_client
+    cursor = db_client.db["events"].find({"evidence_id": ObjectId(evidence_id)}, {"_id": 1})
+    event_ids = [str(doc["_id"]) for doc in await cursor.to_list(length=None)]
+    
+    # 2. Delete relationships and node references inside Neo4j graph database
+    if event_ids:
+        from backend.app.repositories.graph_repository import GraphRepository
+        await GraphRepository.delete_events_by_id(event_ids, case_id, current_user.organization_id)
+        
+    # 3. Clean up events from MongoDB events collection
+    from backend.app.repositories.event_repository import EventRepository
+    await EventRepository.delete_by_evidence(evidence_id, current_user.organization_id)
+    
+    # 4. Remove binary object from MinIO key bucket
+    if evidence.get("minio_object_name"):
+        try:
+            minio_client.client.remove_object(settings.MINIO_BUCKET_NAME, evidence["minio_object_name"])
+            logger.info(f"Successfully deleted Object from MinIO bucket: {evidence['minio_object_name']}")
+        except Exception as me:
+            logger.warning(f"Could not remove MinIO object details: {me}")
+            
+    # 5. Delete metadata document from MongoDB evidence collection
+    await EvidenceRepository.delete(evidence_id, current_user.organization_id)
+    
+    # 6. Rebuild FAISS local case index to update similarity / search caches
+    from backend.app.services.ai.vector_store import VectorStore
+    # Run lazy rebuild
+    await VectorStore.index_case_events(case_id, current_user.organization_id)
+    
+    logger.info(f"Evidence {evidence_id} successfully deleted from case {case_id}")
+    return

@@ -79,3 +79,18 @@ class EvidenceRepository:
             return result
         except Exception:
             return None
+
+    @staticmethod
+    async def delete(evidence_id: str, org_id: str) -> bool:
+        """Scope specific deletion of evidence by organization ID."""
+        try:
+            if not ObjectId.is_valid(evidence_id) or not ObjectId.is_valid(org_id):
+                return False
+            result = await db_client.db["evidence"].delete_one({
+                "_id": ObjectId(evidence_id),
+                "organization_id": ObjectId(org_id)
+            })
+            return result.deleted_count > 0
+        except Exception as e:
+            logger.error(f"Error in EvidenceRepository.delete: {e}")
+            return False

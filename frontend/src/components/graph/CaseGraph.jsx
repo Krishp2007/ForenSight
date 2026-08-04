@@ -46,8 +46,41 @@ const CaseGraph = ({ caseId }) => {
         };
       });
 
+      // Aggregate duplicate node edges to prevent overlapping blinks and speed up canvas rendering
+      const edgeMap = {};
+      rawEdges.forEach((edge) => {
+        const key = `${edge.source}->${edge.target}`;
+        if (!edgeMap[key]) {
+          edgeMap[key] = {
+            ...edge,
+            actions: [edge.action],
+            count: 1
+          };
+        } else {
+          edgeMap[key].count += 1;
+          if (!edgeMap[key].actions.includes(edge.action)) {
+            edgeMap[key].actions.push(edge.action);
+          }
+          if (edge.is_anomaly) {
+            edgeMap[key].is_anomaly = true;
+            edgeMap[key].anomaly_score = Math.max(edgeMap[key].anomaly_score || 0, edge.anomaly_score || 0);
+          }
+        }
+      });
+
+      // Construct finalized custom displaying label representing all events
+      const aggregatedEdges = Object.values(edgeMap).map((link) => {
+        const repLabel = link.actions.slice(0, 2).join(', ');
+        const suffix = link.actions.length > 2 ? '...' : '';
+        const countText = link.count > 1 ? ` (x${link.count})` : '';
+        return {
+          ...link,
+          action: `${repLabel}${suffix}${countText}`
+        };
+      });
+
       setNodes(initializedNodes);
-      setEdges(rawEdges);
+      setEdges(aggregatedEdges);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to retrieve case Neo4j threat graph.');
     } finally {

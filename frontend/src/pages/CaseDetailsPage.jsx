@@ -160,6 +160,7 @@ const CaseDetailsPage = () => {
             <div className="lg:col-span-2">
               <EvidenceRepositoryList
                 evidenceList={evidenceList}
+                onDeleteSuccess={fetchCaseDetails}
               />
             </div>
           </div>

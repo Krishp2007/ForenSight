@@ -33,9 +33,16 @@ async def connect_to_neo4j():
         driver = neo4j_client.driver
         await driver.verify_connectivity()
         logger.info("Successfully connected to Neo4j!")
+        
+        # Initialize speed-up indexes to optimize large file ingestions (O(1) lookups)
+        async with driver.session() as session:
+            logger.info("Creating Neo4j performance indexes...")
+            await session.run("CREATE INDEX entity_name_idx IF NOT EXISTS FOR (e:Entity) ON (e.name)")
+            await session.run("CREATE INDEX entity_case_org_idx IF NOT EXISTS FOR (e:Entity) ON (e.case_id, e.organization_id)")
+            await session.run("CREATE INDEX forensic_action_event_id_idx IF NOT EXISTS FOR ()-[r:FORENSIC_ACTION]-() ON (r.event_id)")
+            logger.info("Neo4j performance indexes initialized successfully.")
     except Exception as e:
-        logger.error(f"Failed to connect to Neo4j: {e}")
-        raise e
+        logger.error(f"Failed to connect to Neo4j or create performance indexes: {e}")
 
 async def close_neo4j_connection():
     logger.info("Closing Neo4j connections...")

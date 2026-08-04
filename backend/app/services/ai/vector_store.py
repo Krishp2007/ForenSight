@@ -58,9 +58,28 @@ class VectorStore:
         """Load all events for a case, generate embeddings, and build the FAISS index."""
         logger.info(f"Building vector search index for case_id={case_id}")
         
-        # 1. Fetch events from MongoDB
-        from backend.app.repositories.event_repository import EventRepository
-        events = await EventRepository.list_by_case(case_id, org_id, limit=10000)
+        # 1. Fetch relevant events from MongoDB (capping at 2000 to keep SentenceTransformer fast, prioritizing critical/high/medium/low severity)
+        from bson import ObjectId
+        query_non_info = {
+            "case_id": ObjectId(case_id),
+            "organization_id": ObjectId(org_id),
+            "severity": {"$ne": "info"}
+        }
+        cursor = db_client.db["events"].find(query_non_info).sort("timestamp", 1).limit(2000)
+        events = await cursor.to_list(length=2000)
+        
+        # If we have less than 1000 non-info events, load info events too up to total 2000 limit
+        if len(events) < 1000:
+            remaining_limit = 2000 - len(events)
+            query_info = {
+                "case_id": ObjectId(case_id),
+                "organization_id": ObjectId(org_id),
+                "severity": "info"
+            }
+            cursor_info = db_client.db["events"].find(query_info).sort("timestamp", 1).limit(remaining_limit)
+            info_events = await cursor_info.to_list(length=remaining_limit)
+            events.extend(info_events)
+            
         if not events:
             logger.warning(f"No events found to index for case {case_id}.")
             return False

@@ -21,9 +21,11 @@ class EventRepository:
         org_id: str,
         severity: Optional[str] = None,
         event_type: Optional[str] = None,
-        limit: int = 2000
+        limit: int = 100,
+        skip: int = 0,
+        is_anomaly: Optional[bool] = None
     ) -> List[Dict[str, Any]]:
-        """Retrieve events in a case matching criteria, scoped by organization ID."""
+        """Retrieve events in a case matching criteria with skip/limit pagination, scoped by organization ID."""
         try:
             if not ObjectId.is_valid(case_id) or not ObjectId.is_valid(org_id):
                 return []
@@ -37,8 +39,10 @@ class EventRepository:
                 query["severity"] = severity
             if event_type:
                 query["event_type"] = event_type
+            if is_anomaly is not None:
+                query["is_anomaly"] = is_anomaly
                 
-            cursor = db_client.db["events"].find(query).sort("timestamp", 1).limit(limit)
+            cursor = db_client.db["events"].find(query).sort("timestamp", 1).skip(skip).limit(limit)
             return await cursor.to_list(length=limit)
         except Exception:
             return []
@@ -55,3 +59,17 @@ class EventRepository:
             })
         except Exception:
             return None
+
+    @staticmethod
+    async def delete_by_evidence(evidence_id: str, org_id: str) -> int:
+        """Delete all events associated with a specific evidence ID in MongoDB."""
+        try:
+            if not ObjectId.is_valid(evidence_id) or not ObjectId.is_valid(org_id):
+                return 0
+            result = await db_client.db["events"].delete_many({
+                "evidence_id": ObjectId(evidence_id),
+                "organization_id": ObjectId(org_id)
+            })
+            return result.deleted_count
+        except Exception:
+            return 0
