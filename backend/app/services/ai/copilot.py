@@ -113,7 +113,18 @@ def _build_prompt(ctx: dict) -> str:
         for t in enriched_techniques:
             lines.append(f"  {t['id']} [{t['tactic']}]: {t['name']}")
 
-    if question:
+    q_lower = (question or "").strip().lower()
+    is_greeting = q_lower in ["hi", "hii", "hello", "hey", "greetings", "good morning", "good afternoon", "good evening"]
+
+    if is_greeting:
+        lines.append(
+            f"\nInvestigator Question: \"{question}\"\n"
+            f"SPECIAL GREETING INSTRUCTION: Respond warmly and professionally as follows:\n"
+            f"\"Hello! I am ForenSight, your forensic investigator assistant on the ForenSight AI platform. I have loaded the case logs for {case.get('title')} and am ready to assist you.\"\n"
+            f"Then provide a quick 1-2 sentence high-level overview of the loaded dataset (routine logon events, evidence files, or anomaly clusters), "
+            f"and invite the investigator to ask specific questions or analyze timelines."
+        )
+    elif question:
         lines.append(
             f"\nInvestigator Question: \"{question}\"\n"
             "INSTRUCTION: Respond directly to the investigator's question above. "

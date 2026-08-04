@@ -28,6 +28,19 @@ def build_forensic_report(
     lines: List[str] = []
     q_lower = (question or "").lower()
 
+    # If user asked a casual greeting like "hii" or "hello"
+    if q_lower.strip() in ["hi", "hii", "hello", "hey", "greetings"]:
+        ev_count = len(evidence_list or [])
+        anom_count = len(anomalies)
+        case_name = case.get('title', 'active case')
+        return (
+            f"Hello! I am ForenSight, your forensic investigator assistant on the ForenSight AI platform. "
+            f"I have loaded the case logs for **{case_name}** and am ready to assist you.\n\n"
+            f"At a quick glance, the dataset currently loaded contains **{ev_count} evidence file(s)** "
+            f"and **{anom_count} anomaly event(s)** flagged by our Isolation Forest model. "
+            f"Please let me know what specific questions, indicators, or timelines you would like to analyze!"
+        )
+
     # If user asked a specific question, check for targeted response mode
     is_evidence_query = any(k in q_lower for k in ["evidenc", "file", "upload", "attachment"])
     is_anomaly_query = any(k in q_lower for k in ["anomal", "outlier", "suspicious", "flagged"])
