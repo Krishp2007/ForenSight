@@ -12,6 +12,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from backend.app.repositories.case_repository import CaseRepository
+from backend.app.repositories.evidence_repository import EvidenceRepository
 from backend.app.services.ai.vector_store import VectorStore
 from backend.app.services.context.anomaly_context import build_anomaly_context
 from backend.app.services.context.graph_context import build_graph_context
@@ -33,11 +34,11 @@ async def build_copilot_context(
     Routing:
       - similarity intent  → FAISS vector search results
       - timeline intent    → chronological session grouping
-      - factual / summarise → anomalies + graph correlations (default)
+      - factual / summarise → anomalies + graph correlations + evidence list
 
     Returns a dict with keys:
       case, intent, anomalies, correlations, enriched_techniques,
-      semantic_context, timeline_ctx, question
+      semantic_context, timeline_ctx, evidence_list, question
     """
     case = await CaseRepository.get_by_id(case_id, org_id)
     if not case:
@@ -46,11 +47,12 @@ async def build_copilot_context(
     intent: Intent = classify_intent(question or "")
     logger.info(f"[ContextBuilder] intent='{intent}' for case {case_id}")
 
-    # Always fetch anomalies and graph correlations
+    # Fetch anomalies, graph correlations, and evidence list
     import asyncio
-    anomalies, correlations = await asyncio.gather(
+    anomalies, correlations, evidence_list = await asyncio.gather(
         build_anomaly_context(case, limit=30),
         build_graph_context(case_id, org_id),
+        EvidenceRepository.list_by_case(case_id, org_id),
     )
 
     # Intent-specific retrieval
@@ -91,4 +93,5 @@ async def build_copilot_context(
         "enriched_techniques": enriched_techniques,
         "semantic_context": semantic_context,
         "timeline_ctx": timeline_ctx,
+        "evidence_list": evidence_list,
     }

@@ -34,22 +34,33 @@ def _build_prompt(ctx: dict) -> str:
     intent = ctx.get("intent", "summarise")
 
     lines = [
-        "You are ForenSight, a digital forensics assistant.",
-        "You answer questions about the active investigation case only.",
-        "Every claim you make must cite at least one event, entity, or technique ID "
-        "from the supplied context. If the context does not contain enough information "
-        "to answer, say so explicitly.",
-        "Format timestamps in UTC ISO-8601.",
-        "When suggesting next steps, suggest concrete graph queries or parsers to run.",
+        "You are ForenSight, an expert AI digital forensics assistant.",
+        "Your task is to answer the investigator's question using the provided context.",
+        "",
+        "CRITICAL OUTPUT FORMAT RULES:",
+        "1. Output ONLY your final clean, professional Markdown response.",
+        "2. Do NOT repeat, echo, or quote prompt rules, constraints, tasks, roles, or internal reasoning steps.",
+        "3. Keep the answer direct, concise, and focused strictly on what was asked.",
+        "4. Format timestamps in UTC ISO-8601.",
         "",
         f"Case Title: {case.get('title')}",
         f"Case Description: {case.get('description', 'N/A')}",
         f"Case Status: {case.get('status', 'open')}",
-        f"Intent classified as: {intent}",
     ]
 
     if question:
         lines.append(f"\nInvestigator question: \"{question}\"")
+
+    # Uploaded evidence list
+    evidence_list = ctx.get("evidence_list", [])
+    if evidence_list:
+        lines.append("\n--- Uploaded Evidence Files ---")
+        for i, ev in enumerate(evidence_list, 1):
+            filename = ev.get("filename") or ev.get("original_filename") or "Unknown"
+            file_type = ev.get("file_type") or ev.get("parser_type") or "raw"
+            status = ev.get("status", "unknown")
+            size_kb = (ev.get("file_size_bytes") or 0) / 1024
+            lines.append(f"{i}. {filename} (Type: {file_type}, Status: {status}, Size: {size_kb:.1f} KB)")
 
     # Semantic search results (similarity / factual with question)
     if semantic_context:
@@ -102,11 +113,18 @@ def _build_prompt(ctx: dict) -> str:
         for t in enriched_techniques:
             lines.append(f"  {t['id']} [{t['tactic']}]: {t['name']}")
 
-    lines.append(
-        "\nWrite a professional forensic analysis report in Markdown. "
-        "Highlight attack patterns, suspicious entities, and recommend "
-        "concrete containment steps. Cite evidence IDs or entity names inline."
-    )
+    if question:
+        lines.append(
+            f"\nInvestigator Question: \"{question}\"\n"
+            "INSTRUCTION: Respond directly to the investigator's question above. "
+            "Output ONLY your final answer in clean, professional Markdown. "
+            "Do NOT include system constraints, roles, planning steps, or prompt text in your output."
+        )
+    else:
+        lines.append(
+            "\nWrite a concise forensic analysis report in Markdown. "
+            "Highlight key attack patterns, suspicious entities, and recommend concrete containment steps."
+        )
 
     return "\n".join(lines)
 
@@ -154,7 +172,8 @@ class CopilotService:
             return await GeminiProvider(api_key=api_key).generate(prompt)
         except Exception as e:
             logger.warning(f"Gemini failed ({e}), falling back to local.")
-            return _local_fallback(ctx)
+            fallback_res = _local_fallback(ctx)
+            return f"⚠️ **Gemini API Call Failed:** `{e}`\n\n---\n{fallback_res}"
 
 
 def _local_fallback(ctx: dict) -> str:
@@ -165,5 +184,6 @@ def _local_fallback(ctx: dict) -> str:
         correlations=ctx["correlations"],
         enriched_techniques=ctx["enriched_techniques"],
         semantic_context=ctx["semantic_context"],
+        evidence_list=ctx.get("evidence_list"),
         question=ctx.get("question"),
     )
