@@ -101,6 +101,14 @@ class CopilotService:
         # Check LLM provider choice from config setting
         llm_provider = os.getenv("LLM_PROVIDER", settings.LLM_PROVIDER).lower()
         
+        # Auto-promote to 'gemini' if a valid, non-placeholder API key is configured
+        api_key = os.getenv("GEMINI_API_KEY", settings.GEMINI_API_KEY)
+        has_real_gemini_key = api_key and api_key not in ("change_me_in_production", "your_gemini_api_key_here", "")
+        
+        if llm_provider == "local" and has_real_gemini_key:
+            logger.info("Real Gemini API key detected! Auto-promoting LLM provider from 'local' to 'gemini'.")
+            llm_provider = "gemini"
+            
         if llm_provider == "local":
             logger.info("LLM provider explicitly set to 'local'. Using local heuristic analysis.")
             return cls.get_fallback_summary(case, anomalies, semantic_context, question)
@@ -126,24 +134,44 @@ class CopilotService:
                 
         # Default/Gemini Path
         api_key = os.getenv("GEMINI_API_KEY", settings.GEMINI_API_KEY)
-        if not api_key or api_key == "change_me_in_production":
-            logger.info("Gemini API key not configured. Falling back to local analysis.")
+        if not api_key or api_key in ("change_me_in_production", "your_gemini_api_key_here", ""):
+            logger.info("Gemini API key not configured or set to placeholder. Falling back to local analysis.")
             return cls.get_fallback_summary(case, anomalies, semantic_context, question)
             
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
             
-            loop = asyncio.get_running_loop()
-            response = await loop.run_in_executor(
-                None, 
-                lambda: model.generate_content(prompt)
-            )
+            # Try multiple model candidates to mitigate API key version differences and free tier caps
+            model_candidates = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-pro-latest"]
             
-            if response and response.text:
-                return response.text
+            last_error = None
+            response_text = None
+            
+            for model_name in model_candidates:
+                try:
+                    logger.info(f"Attempting Gemini generation using model: {model_name}")
+                    model = genai.GenerativeModel(model_name)
+                    
+                    loop = asyncio.get_running_loop()
+                    response = await loop.run_in_executor(
+                        None, 
+                        lambda: model.generate_content(prompt)
+                    )
+                    
+                    if response and response.text:
+                        logger.info(f"Gemini API invocation succeeded using model: {model_name}")
+                        response_text = response.text
+                        break
+                    else:
+                        raise ValueError(f"Empty response returned from model alias: {model_name}")
+                except Exception as model_err:
+                    logger.warning(f"Model alias {model_name} failed: {model_err}")
+                    last_error = model_err
+                    
+            if response_text:
+                return response_text
             else:
-                raise ValueError("Empty response returned from Google Gemini.")
+                raise last_error if last_error else ValueError("All Gemini model candidates failed.")
                 
         except Exception as e:
             logger.error(f"Gemini API invocation failed: {e}. Using high-quality local fallback analysis.")

@@ -291,6 +291,7 @@ const CaseGraph = ({ caseId }) => {
         <GraphEntityInspector
           selectedNode={selectedNode}
           getNodeColor={getNodeColor}
+          edges={edges}
         />
       </div>
     </div>

@@ -114,8 +114,40 @@ class ReportCompiler:
             if isinstance(a.get("timestamp"), datetime):
                 a["timestamp"] = a["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
                 
-        # 5. Graph entities
-        graph = await GraphRepository.get_case_graph(case_id, org_id)
+        # 5. Graph entities (Filter and limit to crucial connections to avoid massive PDF printouts)
+        raw_graph = await GraphRepository.get_case_graph(case_id, org_id)
+        raw_edges = raw_graph.get("edges", [])
+        
+        # Filter for anomalous or critical/high severity connections
+        filtered_edges = [
+            e for e in raw_edges 
+            if e.get("is_anomaly") or e.get("severity") in ("critical", "high")
+        ]
+        
+        # Sort so that anomalies and critical connections appear at the top
+        def get_sort_key(edge):
+            is_anom = 1 if edge.get("is_anomaly") else 0
+            sev = 2 if edge.get("severity") == "critical" else (1 if edge.get("severity") == "high" else 0)
+            return (is_anom, sev)
+            
+        filtered_edges.sort(key=get_sort_key, reverse=True)
+        filtered_edges = filtered_edges[:45]  # Cap at 45 crucial threat links
+        
+        # Keep nodes associated with the active edges
+        active_nodes = set()
+        for edge in filtered_edges:
+            active_nodes.add(edge["source"])
+            active_nodes.add(edge["target"])
+            
+        filtered_nodes = [
+            n for n in raw_graph.get("nodes", []) 
+            if n["id"] in active_nodes
+        ]
+        
+        graph = {
+            "nodes": filtered_nodes,
+            "edges": filtered_edges
+        }
         
         # 6. Copilot analysis report
         copilot_markdown = await CopilotService.analyze_case_timeline(case_id, org_id)

@@ -5,13 +5,23 @@ import ChatInput from './ChatInput';
 import { Bot, RefreshCw, Trash2 } from 'lucide-react';
 
 const CaseCopilot = ({ caseId }) => {
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome',
-      sender: 'copilot',
-      text: 'Greetings Analyst. I am the ForenSight AI Copilot. I have mapped the telemetry of active cases and can explain indicators of compromise (IoC), process logs, and outline recommendations. How may I assist?'
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`copilot_chat_${caseId}`);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Failed to parse saved chat history:", e);
     }
-  ]);
+    return [
+      {
+        id: 'welcome',
+        sender: 'copilot',
+        text: 'Greetings Analyst. I am the ForenSight AI Copilot. I have mapped the telemetry of active cases and can explain indicators of compromise (IoC), process logs, and outline recommendations. How may I assist?'
+      }
+    ];
+  });
   const [inputVal, setInputVal] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorWord, setErrorWord] = useState('');
@@ -21,6 +31,36 @@ const CaseCopilot = ({ caseId }) => {
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Sync messages from localStorage when caseId changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`copilot_chat_${caseId}`);
+      if (saved) {
+        setMessages(JSON.parse(saved));
+      } else {
+        setMessages([
+          {
+            id: 'welcome',
+            sender: 'copilot',
+            text: 'Greetings Analyst. I am the ForenSight AI Copilot. I have mapped the telemetry of active cases and can explain indicators of compromise (IoC), process logs, and outline recommendations. How may I assist?'
+          }
+        ]);
+      }
+    } catch (e) {
+      console.error("Failed to load chat history:", e);
+    }
+    setErrorWord('');
+  }, [caseId]);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(`copilot_chat_${caseId}`, JSON.stringify(messages));
+    } catch (e) {
+      console.error("Failed to save chat history:", e);
+    }
+  }, [messages, caseId]);
 
   useEffect(() => {
     scrollToBottom();

@@ -76,14 +76,14 @@ const GraphCanvas = ({
                     markerEnd="url(#arrow)"
                     className="transition-colors hover:stroke-accent duration-100"
                   />
-                  {/* Edge name center labels */}
+                  {/* Edge name center labels (Always visible and color-coded to visualize correlation) */}
                   <text
                     x={(nodeSrc.x + nodeTgt.x) / 2}
                     y={(nodeSrc.y + nodeTgt.y) / 2 - 4}
-                    fill="#475569"
-                    fontSize="9"
+                    fill={edge.is_anomaly ? "#f43f5e" : "#94a3b8"}
+                    fontSize="7.5"
                     textAnchor="middle"
-                    className="font-mono bg-gray-950/80 px-1 hidden group-hover/edge:block pointer-events-none"
+                    className="font-bold pointer-events-none select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
                   >
                     {edge.action}
                   </text>

@@ -1,0 +1,15 @@
+# Go to the root directory and activate virtual env
+cd D:\KRISH\PROJECTS\ForenSight
+.\backend\.venv\Scripts\activate
+
+# Start Uvicorn pointing to backend package
+uvicorn backend.app.main:app --port 8000 --reload
+
+
+
+# Go to the root directory and activate virtual env
+cd D:\KRISH\PROJECTS\ForenSight
+.\backend\.venv\Scripts\activate
+
+# Start the Celery worker threads matching the backend package config
+celery -A backend.app.worker.celery_app worker --loglevel=info -P threads
