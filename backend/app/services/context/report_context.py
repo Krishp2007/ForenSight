@@ -70,7 +70,7 @@ async def build_report_context(case_id: str, org_id: str) -> Dict[str, Any]:
     # Format anomaly timestamps for display
     for a in anomalies:
         ts = a.get("timestamp")
-        if ts and hasattr(ts, "strftime"):
+        if isinstance(ts, datetime):
             a["timestamp"] = ts.strftime("%Y-%m-%d %H:%M:%S")
 
     return {

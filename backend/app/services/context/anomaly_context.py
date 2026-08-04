@@ -29,10 +29,22 @@ async def build_anomaly_context(
     List of event dicts with string-serialized IDs.
     """
     col = db_client.db["events"]
+    cid_obj = ObjectId(str(case["_id"])) if ObjectId.is_valid(str(case["_id"])) else case["_id"]
+    oid_obj = ObjectId(str(case["organization_id"])) if ObjectId.is_valid(str(case["organization_id"])) else case["organization_id"]
+
+    base_match = {
+        "$or": [
+            {"case_id": cid_obj},
+            {"case_id": str(case["_id"])},
+        ],
+        "$and": [
+            {"$or": [{"organization_id": oid_obj}, {"organization_id": str(case["organization_id"])}]}
+        ]
+    }
+
     cursor = col.find(
         {
-            "case_id": case["_id"],
-            "organization_id": case["organization_id"],
+            **base_match,
             "is_anomaly": True,
         }
     ).sort("anomaly_score", -1).limit(limit)
@@ -41,12 +53,7 @@ async def build_anomaly_context(
 
     # Fallback: if no events explicitly flagged as is_anomaly, fetch high-severity/key events
     if not events:
-        fallback_cursor = col.find(
-            {
-                "case_id": case["_id"],
-                "organization_id": case["organization_id"],
-            }
-        ).sort([("severity", -1), ("timestamp", -1)]).limit(limit)
+        fallback_cursor = col.find(base_match).sort([("severity", -1), ("timestamp", -1)]).limit(limit)
         events = await fallback_cursor.to_list(length=limit)
 
     for e in events:

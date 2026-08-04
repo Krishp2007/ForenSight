@@ -252,6 +252,13 @@ const EvidenceList = ({ items, caseId, onItemUpdated, onItemDeleted }) => {
                     // Parsing / Queued / Uploaded → live ticking counter
                     if (['parsing', 'queued', 'uploaded'].includes(e.status)) {
                       const secs = Math.max(0, Math.floor((now - startMs) / 1000))
+                      if (secs > 120) {
+                        return (
+                          <span style={{ fontSize: '11px', fontWeight: '600', color: '#fca5a5' }} title="Scan took longer than 2 minutes. Click Re-process or Delete.">
+                            Stuck ({Math.floor(secs / 60)}m)
+                          </span>
+                        )
+                      }
                       return (
                         <span style={{ fontSize: '12px', fontWeight: '600', color: '#fbbf24' }}>
                           {secs}s
