@@ -5,6 +5,7 @@ Implements LLMProvider using Google Gemini 1.5 Flash.
 Architecture reference: Section 6 — "LLM (fallback): Gemini 1.5 Flash via API"
 """
 
+import os
 import asyncio
 import logging
 from typing import Optional
@@ -16,19 +17,19 @@ from backend.app.config import settings
 logger = logging.getLogger(__name__)
 
 
-_WORKING_MODEL: Optional[str] = None
-_WORKING_VER: Optional[str] = None
+_WORKING_MODEL: str = os.getenv("GEMINI_MODEL", getattr(settings, "GEMINI_MODEL", "gemini-2.0-flash"))
+_WORKING_VER: str = "v1beta"
 
 
 class GeminiProvider(LLMProvider):
-    """Google Gemini provider with memory caching & fast-path REST execution (<1s latency)."""
+    """Google Gemini provider optimized for 1-request per prompt execution."""
 
     def __init__(self, api_key: Optional[str] = None):
         self._api_key = api_key or settings.GEMINI_API_KEY
 
     @property
     def name(self) -> str:
-        return _WORKING_MODEL or "gemini-1.5-flash"
+        return _WORKING_MODEL
 
     async def generate(self, prompt: str) -> str:
         global _WORKING_MODEL, _WORKING_VER
@@ -37,54 +38,53 @@ class GeminiProvider(LLMProvider):
             raise ValueError("GEMINI_API_KEY is not configured.")
 
         import httpx
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "maxOutputTokens": 600,
+                "temperature": 0.2,
+            }
+        }
 
-        # FAST-PATH: Use previously verified working model & version immediately
-        if _WORKING_MODEL and _WORKING_VER:
-            url = f"https://generativelanguage.googleapis.com/{_WORKING_VER}/models/{_WORKING_MODEL}:generateContent?key={self._api_key}"
+        # DIRECT FAST-PATH: Send HTTP request to configured model
+        url = f"https://generativelanguage.googleapis.com/{_WORKING_VER}/models/{_WORKING_MODEL}:generateContent?key={self._api_key}"
+        async with httpx.AsyncClient(timeout=25.0) as client:
             try:
-                async with httpx.AsyncClient(timeout=15.0) as client:
+                res = await client.post(url, json=payload)
+                if res.status_code == 200:
+                    data = res.json()
+                    text = data["candidates"][0]["content"]["parts"][0]["text"]
+                    if text:
+                        return text
+                elif res.status_code == 429:
+                    logger.warning("Gemini API 429 Rate Limit hit.")
+                    raise ValueError("⏳ Gemini API Rate Limit reached (15 requests/min). Please wait ~30 seconds before sending your next prompt.")
+                elif res.status_code == 404:
+                    logger.warning(f"Model {_WORKING_MODEL} returned 404, attempting fallback...")
+                    _WORKING_MODEL = "gemini-1.5-flash"
+                else:
+                    msg = res.json().get("error", {}).get("message", res.text[:100])
+                    raise ValueError(f"Google Gemini API error ({res.status_code}): {msg}")
+            except httpx.HTTPError as err:
+                raise ValueError(f"Network error connecting to Gemini API: {err}")
+
+        # FALLBACK PATH (only if main model returned 404)
+        fallback_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            for m in fallback_models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={self._api_key}"
+                try:
                     res = await client.post(url, json=payload)
                     if res.status_code == 200:
                         data = res.json()
                         text = data["candidates"][0]["content"]["parts"][0]["text"]
                         if text:
+                            _WORKING_MODEL = m
+                            _WORKING_VER = "v1beta"
                             return text
-            except Exception as e:
-                logger.warning(f"Fast-path model {_WORKING_MODEL} failed ({e}), clearing cache...")
-                _WORKING_MODEL = None
-                _WORKING_VER = None
+                    elif res.status_code == 429:
+                        raise ValueError("⏳ Gemini API Rate Limit reached (15 requests/min). Please wait ~30 seconds before sending your next prompt.")
+                except Exception:
+                    pass
 
-        # DISCOVERY & RECOVERY PATH (runs once or on cache miss)
-        models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro", "gemini-2.0-flash-exp"]
-        errors = []
-        is_rate_limited = False
-
-        async with httpx.AsyncClient(timeout=12.0) as client:
-            for ver in ["v1beta", "v1"]:
-                for m in models_to_try:
-                    url = f"https://generativelanguage.googleapis.com/{ver}/models/{m}:generateContent?key={self._api_key}"
-                    try:
-                        res = await client.post(url, json=payload)
-                        if res.status_code == 200:
-                            data = res.json()
-                            text = data["candidates"][0]["content"]["parts"][0]["text"]
-                            if text:
-                                _WORKING_MODEL = m
-                                _WORKING_VER = ver
-                                logger.info(f"Successfully cached working model: {ver}/{m}")
-                                return text
-                        elif res.status_code == 429:
-                            is_rate_limited = True
-                            msg = res.json().get("error", {}).get("message", "Quota / Rate Limit Exceeded")
-                            errors.append(f"Rate Limit (429): {msg}")
-                        else:
-                            msg = res.json().get("error", {}).get("message", res.text[:80])
-                            errors.append(f"{ver}/{m}: {res.status_code} ({msg})")
-                    except Exception as err:
-                        errors.append(f"{ver}/{m}: {err}")
-
-        if is_rate_limited:
-            raise ValueError("⏳ Gemini Free Tier Rate Limit reached (15 requests/min). Please wait ~45 seconds before asking your next question.")
-
-        raise ValueError(f"Google Gemini API error: {'; '.join(errors[:2])}")
+        raise ValueError("Google Gemini API is temporarily unavailable.")
