@@ -2,7 +2,7 @@ import hashlib
 import io
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status, Depends, UploadFile, File
 from fastapi.responses import HTMLResponse, StreamingResponse
 from backend.app.schemas.evidence import EvidenceResponse, EvidenceStatus
