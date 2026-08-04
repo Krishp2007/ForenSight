@@ -3,7 +3,7 @@ import api from './api'
 // GET /cases/
 export const listCases = async (statusFilter = null) => {
   const params = statusFilter ? { status_filter: statusFilter } : {}
-  const res = await api.get('/cases/', { params })
+  const res = await api.get('/cases', { params })
   return res.data
 }
 

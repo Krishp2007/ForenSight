@@ -49,6 +49,7 @@ async def create_case(
     )
     return created_case
 
+@router.get("", response_model=List[CaseResponse])
 @router.get("/", response_model=List[CaseResponse])
 async def list_cases(
     status_filter: Optional[CaseStatus] = None,
