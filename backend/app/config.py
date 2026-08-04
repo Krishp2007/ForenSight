@@ -42,9 +42,10 @@ class Settings:
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USER: str = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
-    EMAILS_FROM_EMAIL: str = os.getenv("EMAILS_FROM_EMAIL", "noreply@forensight.app")
-    EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "ForenSight Security")
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://forensight-1l1k.onrender.com")
+    EMAILS_FROM_EMAIL: str = os.getenv("EMAILS_FROM_EMAIL", "noreply@forensight.app").strip()
+    EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "ForenSight Security").strip()
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://forensight-1l1k.onrender.com").strip().rstrip("/")
+
 
 
 
