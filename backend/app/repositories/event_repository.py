@@ -8,7 +8,7 @@ class EventRepository:
         """Insert events in chunks of 5000 to avoid MongoDB write timeout on large files."""
         if not events:
             return 0
-        CHUNK = 5000
+        CHUNK = 500
         total = 0
         try:
             for i in range(0, len(events), CHUNK):

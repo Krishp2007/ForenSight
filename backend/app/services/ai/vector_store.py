@@ -20,9 +20,11 @@ _model = None
 def get_embedding_model():
     global _model
     if _model is None:
+        import torch
+        torch.set_num_threads(1)
+        torch.set_grad_enabled(False)
         from sentence_transformers import SentenceTransformer
-        logger.info("Loading SentenceTransformer model 'all-MiniLM-L6-v2'...")
-        # Force model cache path inside the workspace to keep it self-contained
+        logger.info("Loading SentenceTransformer model 'all-MiniLM-L6-v2' (1 CPU thread, grad off)...")
         cache_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".cache")
         _model = SentenceTransformer("all-MiniLM-L6-v2", cache_folder=cache_folder)
     return _model
@@ -57,9 +59,9 @@ class VectorStore:
         """Load all events for a case, generate embeddings, and build the FAISS index."""
         logger.info(f"Building vector search index for case_id={case_id}")
         
-        # 1. Fetch events from MongoDB — cap at 3000 to keep embedding fast
+        # 1. Fetch events from MongoDB — cap at 500 to keep memory footprint under 50MB
         from backend.app.repositories.event_repository import EventRepository
-        events = await EventRepository.list_by_case(case_id, org_id, limit=3000)
+        events = await EventRepository.list_by_case(case_id, org_id, limit=500)
         paths = cls.get_index_paths(case_id)
         if not events:
             logger.warning(f"No events found to index for case {case_id}. Deleting stale vector index files from disk.")
@@ -76,13 +78,12 @@ class VectorStore:
         event_ids = [str(e["_id"]) for e in events]
 
         # 3. Compute Embeddings in executor so the event loop stays unblocked.
-        #    batch_size=64 keeps memory low and allows the model to pipeline work.
         model = get_embedding_model()
         import asyncio
         loop = asyncio.get_running_loop()
         embeddings = await loop.run_in_executor(
             None,
-            lambda: model.encode(sentences, show_progress_bar=False, batch_size=64)
+            lambda: model.encode(sentences, show_progress_bar=False, batch_size=32)
         )
         
         # 4. Build FAISS index
@@ -96,6 +97,11 @@ class VectorStore:
         faiss.write_index(index, paths["index"])
         with open(paths["meta"], "wb") as f:
             pickle.dump({"event_ids": event_ids, "sentences": sentences}, f)
+            
+        # Clean up transient arrays & trigger garbage collection
+        del embeddings, sentences, event_ids
+        import gc
+        gc.collect()
             
         logger.info(f"Successfully built FAISS index with {index.ntotal} vectors for case {case_id}.")
         return True

@@ -37,8 +37,9 @@ _scapy_cache = os.path.join(tempfile.gettempdir(), "scapy_cache_forensight")
 os.makedirs(_scapy_cache, exist_ok=True)
 os.environ.setdefault("SCAPY_CACHE_DIR", _scapy_cache)
 
-# Shared multi-core thread pool executor for CPU-bound forensic parsing
-_parse_executor = concurrent.futures.ThreadPoolExecutor(max_workers=min(32, (os.cpu_count() or 4) + 4))
+# Shared thread pool executor capped at 2 workers for low-memory 512MB RAM instances
+_parse_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+from backend.app.utils.memory_profiler import log_memory
 
 
 async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional[bytes] = None) -> None:

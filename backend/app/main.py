@@ -86,6 +86,9 @@ async def lifespan(app: FastAPI):
 
     logger.info("FastAPI Application Startup Complete!")
 
+    from backend.app.utils.memory_profiler import log_memory
+    log_memory("application_startup_idle")
+
     # ── Recovery: re-queue any evidence stuck in queued/parsing from a previous crash
     asyncio.create_task(_recover_stuck_evidence())
 

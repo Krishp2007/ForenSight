@@ -3,12 +3,20 @@
 # Set Python module search path
 export PYTHONPATH=/app
 
+# ── 512MB RAM Optimization Environment Rules ──
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export PYTHONMALLOC=malloc
+
 echo "🚀 Launching ForenSight AI FastAPI Backend Supervisor on 127.0.0.1:8000..."
 
-# Start Uvicorn in an auto-restart loop so background server stays alive
+# Start Uvicorn with single worker and low-memory options
 (
     while true; do
-        python3 -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --log-level info
+        python3 -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --workers 1 --log-level info
         EXIT_CODE=$?
         echo "⚠️ Uvicorn process exited with status $EXIT_CODE. Restarting in 2 seconds..."
         sleep 2
@@ -41,4 +49,3 @@ fi
 
 echo "🌐 Starting Nginx Frontend Web Server..."
 exec nginx -g "daemon off;"
-
