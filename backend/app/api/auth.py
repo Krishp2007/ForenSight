@@ -1,9 +1,12 @@
+import secrets
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate, Token, UserRole
+from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate, Token, UserRole, ForgotPasswordRequest, ResetPasswordRequest
 from backend.app.repositories.user_repository import UserRepository
 from backend.app.repositories.organization_repository import OrganizationRepository
+from backend.app.repositories.password_reset_repository import PasswordResetRepository
+from backend.app.services.email_service import EmailService
 from backend.app.auth.password import hash_password, verify_password
 from backend.app.auth.jwt_handler import create_access_token
 from backend.app.auth.dependencies import get_current_user
@@ -80,6 +83,79 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = create_access_token(data=token_data)
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+async def forgot_password(payload: ForgotPasswordRequest):
+    """Generate a password reset token and dispatch a reset link email."""
+    from loguru import logger
+    logger.info(f"Received forgot password request for: {payload.email}")
+    
+    user = await UserRepository.get_by_email(payload.email)
+    if not user:
+        logger.warning(f"Forgot password failed: '{payload.email}' is NOT registered in MongoDB users collection! Please create an account at /register first.")
+        return {"message": "If an account with that email address exists, a password reset link has been sent."}
+
+    if not user.get("is_active", True):
+        logger.warning(f"Forgot password failed: Account '{payload.email}' is inactive.")
+        return {"message": "If an account with that email address exists, a password reset link has been sent."}
+
+    reset_token = secrets.token_urlsafe(32)
+    user_id_str = str(user["_id"])
+    
+    # Save token record in MongoDB (expires in 15 minutes)
+    await PasswordResetRepository.create_reset_token(
+        user_id=user_id_str,
+        token=reset_token,
+        expires_in_minutes=15
+    )
+    
+    logger.info(f"User '{payload.email}' found in DB. Dispatching password reset email...")
+    
+    # Send password reset email via EmailService
+    sent = await EmailService.send_password_reset_email(
+        to_email=user["email"],
+        username=user.get("username", "User"),
+        reset_token=reset_token
+    )
+
+    if sent:
+        logger.info(f"Password reset email successfully sent to {user['email']}")
+    else:
+        logger.error(f"Failed to send password reset email to {user['email']}")
+
+    return {"message": "If an account with that email address exists, a password reset link has been sent."}
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(payload: ResetPasswordRequest):
+    """Validate reset token and permanently update account password in database."""
+    record = await PasswordResetRepository.get_valid_token_record(payload.token)
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token. Please request a new reset link."
+        )
+
+    user_id = record["user_id"]
+    new_hashed_password = hash_password(payload.new_password)
+    now = datetime.utcnow()
+
+    # Permanently update password in MongoDB users collection
+    updated = await UserRepository.update(user_id, {
+        "hashed_password": new_hashed_password,
+        "updated_at": now
+    })
+
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update password. Please try again later."
+        )
+
+    # Invalidate and delete reset token record (one-time use)
+    await PasswordResetRepository.delete_token_record(payload.token)
+
+    return {"message": "Your password has been successfully updated. You can now log in with your new password."}
+
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: UserResponse = Depends(get_current_user)):
     """Retrieve logged-in user profile details."""
@@ -123,3 +199,4 @@ async def update_me(
     updated["id"] = str(updated["_id"])
     updated["organization_id"] = str(updated["organization_id"])
     return UserResponse(**updated)
+

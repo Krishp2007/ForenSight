@@ -6,11 +6,13 @@ import Topbar from './components/layout/Topbar'
 
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import OrganizationSetupPage from './pages/OrganizationSetupPage'
 import DashboardPage from './pages/DashboardPage'
 import CaseDetailPage from './pages/CaseDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import UsersPage from './pages/UsersPage'
+
 
 // Inlined AppShell without Sidebar
 const AppShell = () => (
@@ -44,9 +46,11 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/login"    element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/setup"    element={<OrganizationSetupPage />} />
+      <Route path="/login"          element={<LoginPage />} />
+      <Route path="/register"       element={<RegisterPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/setup"          element={<OrganizationSetupPage />} />
+
 
       <Route element={<Protected><AppShell /></Protected>}>
         <Route path="/dashboard"          element={<DashboardPage />} />

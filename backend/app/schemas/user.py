@@ -53,3 +53,11 @@ class TokenData(BaseModel):
     user_id: Optional[str] = None
     organization_id: Optional[str] = None
     role: Optional[str] = None
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr = Field(..., description="The registered email address to send password reset link")
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., description="Password reset token received via email")
+    new_password: str = Field(..., min_length=8, description="New account password")
+

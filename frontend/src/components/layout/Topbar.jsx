@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, Link, NavLink, useLocation } from 'react-router-dom'
-import { LogOut, LayoutDashboard, Users, Menu, X, User, Sun, Moon } from 'lucide-react'
+import { LogOut, LayoutDashboard, Users, Menu, X, User } from 'lucide-react'
 import useAuth from '../../hooks/useAuth'
 import { useRole } from '../../store/authStore'
 
@@ -10,14 +10,6 @@ const Topbar = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [theme, setTheme] = useState(() => localStorage.getItem('forensight_theme') || 'dark')
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('forensight_theme', theme)
-  }, [theme])
-
-  const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))
 
   const handleLogout = () => {
     logout()
@@ -93,25 +85,8 @@ const Topbar = () => {
           </nav>
         </div>
 
-        {/* Right Corner: Desktop User Actions & Theme Toggle */}
+        {/* Right Corner: Desktop User Actions */}
         <div className="desktop-only" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Theme Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              padding: '7.5px 14px', borderRadius: '10px',
-              background: theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(99, 102, 241, 0.12)',
-              border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(99, 102, 241, 0.3)',
-              color: theme === 'dark' ? '#fbbf24' : '#4f46e5',
-              cursor: 'pointer', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: '600',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-          </button>
 
           {user && (
             <Link
@@ -202,20 +177,7 @@ const Topbar = () => {
             borderBottom: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
           }}
         >
-          <button
-            onClick={toggleTheme}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '12px',
-              padding: '12px 16px', borderRadius: '12px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
-              color: 'var(--forensic-text-main, #ffffff)', fontWeight: '600',
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            {theme === 'dark' ? <Sun size={18} color="#fbbf24" /> : <Moon size={18} color="#6366f1" />}
-            <span>Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode</span>
-          </button>
+
 
           <Link
             to="/dashboard"

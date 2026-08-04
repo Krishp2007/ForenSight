@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { login } from '../services/authService'
+import { login, forgotPassword } from '../services/authService'
 import useAuth from '../hooks/useAuth'
 import { Spinner } from '../components/ui'
-import { Shield, FileCheck, Lock, HardDrive, KeyRound, Eye, EyeOff, Search } from 'lucide-react'
-
-
+import { Shield, FileCheck, Lock, HardDrive, KeyRound, Eye, EyeOff, Search, Mail, CheckCircle2, X } from 'lucide-react'
 
 const features = [
   { icon: Shield, text: 'Cryptographic anti-tampering evidence chain' },
@@ -20,6 +18,14 @@ export default function LoginPage() {
   const [showPw, setShowPw]     = useState(false)
   const [error, setError]       = useState(null)
   const [loading, setLoading]   = useState(false)
+  
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false)
+  const [forgotEmail, setForgotEmail]         = useState('')
+  const [forgotLoading, setForgotLoading]     = useState(false)
+  const [forgotMessage, setForgotMessage]     = useState(null)
+  const [forgotError, setForgotError]         = useState(null)
+
   const { setToken }            = useAuth()
   const navigate                = useNavigate()
 
@@ -35,6 +41,21 @@ export default function LoginPage() {
       setError(err.response?.data?.detail || 'Incorrect email or password.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault()
+    setForgotError(null)
+    setForgotMessage(null)
+    setForgotLoading(true)
+    try {
+      const res = await forgotPassword(forgotEmail)
+      setForgotMessage(res.message || 'If an account with that email exists, a password reset link has been sent.')
+    } catch (err) {
+      setForgotError(err.response?.data?.detail || 'Failed to send password reset request. Please try again.')
+    } finally {
+      setForgotLoading(false)
     }
   }
 
@@ -86,16 +107,6 @@ export default function LoginPage() {
                 style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
               />
             </div>
-
-
-
-
-
-
-
-
-
-
 
             <div style={{
               display: 'inline-block',
@@ -194,12 +205,29 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label style={{
-                display: 'block', color: '#94a3b8',
-                fontSize: '11px', fontWeight: '700',
-                letterSpacing: '1px', textTransform: 'uppercase',
-                marginBottom: '7px',
-              }}>Password</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
+                <label style={{
+                  color: '#94a3b8',
+                  fontSize: '11px', fontWeight: '700',
+                  letterSpacing: '1px', textTransform: 'uppercase',
+                }}>Password</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotEmail(email)
+                    setForgotMessage(null)
+                    setForgotError(null)
+                    setShowForgotModal(true)
+                  }}
+                  style={{
+                    background: 'none', border: 'none',
+                    color: '#60a5fa', fontSize: '12px', fontWeight: '600',
+                    cursor: 'pointer', padding: 0,
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPw ? 'text' : 'password'}
@@ -286,6 +314,133 @@ export default function LoginPage() {
         </div>
 
       </div>
+
+      {/* ── FORGOT PASSWORD MODAL ── */}
+      {showForgotModal && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(3, 7, 18, 0.8)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
+        }}>
+          <div style={{
+            width: '100%', maxWidth: '440px',
+            background: '#0f172a',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '16px', padding: '32px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+            position: 'relative',
+            animation: 'dashboardFadeIn 0.3s ease-out',
+          }}>
+            <button
+              onClick={() => setShowForgotModal(false)}
+              style={{
+                position: 'absolute', top: '20px', right: '20px',
+                background: 'none', border: 'none', color: '#64748b',
+                cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center',
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '10px',
+                background: 'rgba(59, 130, 246, 0.15)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#60a5fa',
+              }}>
+                <Mail size={20} />
+              </div>
+              <div>
+                <h3 style={{ color: '#f8fafc', margin: 0, fontSize: '18px', fontWeight: '700' }}>
+                  Reset Password
+                </h3>
+                <p style={{ color: '#94a3b8', margin: 0, fontSize: '12px' }}>
+                  Send a password recovery link to your email
+                </p>
+              </div>
+            </div>
+
+            {forgotMessage ? (
+              <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                <div style={{ color: '#4ade80', display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                  <CheckCircle2 size={44} />
+                </div>
+                <p style={{ color: '#e2e8f0', fontSize: '14px', lineHeight: '1.6', margin: '0 0 20px 0' }}>
+                  {forgotMessage}
+                </p>
+                <button
+                  onClick={() => setShowForgotModal(false)}
+                  style={{
+                    width: '100%', padding: '11px',
+                    background: '#3b82f6', border: 'none', borderRadius: '8px',
+                    color: '#fff', fontWeight: '600', cursor: 'pointer', fontSize: '14px',
+                  }}
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{
+                    display: 'block', color: '#94a3b8',
+                    fontSize: '11px', fontWeight: '700',
+                    letterSpacing: '1px', textTransform: 'uppercase',
+                    marginBottom: '6px',
+                  }}>Registered Email</label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    required
+                    placeholder="investigator@agency.gov"
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      padding: '11px 14px',
+                      background: '#1e293b',
+                      border: '1px solid #334155',
+                      borderRadius: '8px',
+                      color: '#f8fafc', fontSize: '14px', outline: 'none',
+                    }}
+                  />
+                </div>
+
+                {forgotError && (
+                  <div style={{
+                    background: 'rgba(220, 38, 38, 0.12)',
+                    border: '1px solid rgba(220, 38, 38, 0.4)',
+                    borderRadius: '8px', padding: '10px 12px',
+                    color: '#fca5a5', fontSize: '13px',
+                  }}>
+                    {forgotError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  style={{
+                    width: '100%', padding: '12px',
+                    background: forgotLoading ? '#2563eb' : '#3b82f6',
+                    border: 'none', borderRadius: '8px',
+                    color: '#ffffff', fontSize: '14px', fontWeight: '600',
+                    cursor: forgotLoading ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  }}
+                >
+                  {forgotLoading ? <Spinner size="sm" /> : <Mail size={16} />}
+                  {forgotLoading ? 'Sending Link…' : 'Send Reset Link'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
