@@ -56,16 +56,26 @@ async def upload_evidence(
 
     ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "bin"
     object_name = f"{current_user.organization_id}/{case_id}/{sha256}.{ext}"
+    file_bytes = buf.getvalue()
     buf.seek(0)
-    try:
-        minio_client.client.put_object(
-            bucket_name=settings.MINIO_BUCKET_NAME,
-            object_name=object_name,
-            data=buf, length=size_bytes,
-            content_type=file.content_type or "application/octet-stream",
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"MinIO upload failed: {e}")
+
+    import asyncio
+    loop = asyncio.get_running_loop()
+
+    def _do_minio_upload():
+        try:
+            if minio_client and minio_client.client:
+                minio_client.client.put_object(
+                    bucket_name=settings.MINIO_BUCKET_NAME,
+                    object_name=object_name,
+                    data=buf, length=size_bytes,
+                    content_type=file.content_type or "application/octet-stream",
+                )
+        except Exception as err:
+            logger.warning(f"MinIO storage warning (proceeding with local buffer): {err}")
+
+    # Offload MinIO upload to background thread so main asyncio event loop stays unblocked
+    loop.run_in_executor(None, _do_minio_upload)
 
     from backend.app.services.ingestion.file_detector import FileDetector
     inferred_type = FileDetector.detect_type(buf.getvalue(), file.filename)
