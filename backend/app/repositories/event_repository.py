@@ -50,19 +50,21 @@ class EventRepository:
                     ]
                 })
 
-            total = await db_client.db["events"].count_documents(base_match)
-            
             anomaly_query = {
                 **base_match,
                 "$or": [{"is_anomaly": True}, {"anomaly_score": {"$gt": 0.5}}]
             }
-            anomalies = await db_client.db["events"].count_documents(anomaly_query)
-
             critical_query = {
                 **base_match,
                 "severity": {"$in": ["critical", "high", "Critical", "High", "CRITICAL", "HIGH"]}
             }
-            critical = await db_client.db["events"].count_documents(critical_query)
+
+            import asyncio
+            total, anomalies, critical = await asyncio.gather(
+                db_client.db["events"].count_documents(base_match),
+                db_client.db["events"].count_documents(anomaly_query),
+                db_client.db["events"].count_documents(critical_query),
+            )
 
             return {"total": total, "anomalies": anomalies, "critical": critical}
         except Exception:
