@@ -94,7 +94,11 @@ const ChatPanel = ({ caseId }) => {
     setInput('')
     setMessages(m => [...m, { role: 'user', content: q }])
     setLoading(true)
+<<<<<<< HEAD
     setCooldown(1) // 1-second safety cooldown between questions
+=======
+    setCooldown(4) // 4-second safety cooldown between questions
+>>>>>>> 58261d1cef3b9e67659c851a986a40a740be14b7
     try {
       if (mode === 'search') {
         const results = await searchEvents(caseId, q, 5)
@@ -123,7 +127,11 @@ const ChatPanel = ({ caseId }) => {
 
   return (
     <div style={{
+<<<<<<< HEAD
       display: 'flex', flexDirection: 'column', height: '620px', maxHeight: 'calc(100vh - 140px)',
+=======
+      display: 'flex', flexDirection: 'column', minHeight: '560px',
+>>>>>>> 58261d1cef3b9e67659c851a986a40a740be14b7
       background: '#0f172a', borderRadius: '14px',
       border: '1px solid rgba(255, 255, 255, 0.1)', overflow: 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -173,7 +181,11 @@ const ChatPanel = ({ caseId }) => {
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Scrollable Messages Container (Inside the Box) */}
+=======
+      {/* Messages Area */}
+>>>>>>> 58261d1cef3b9e67659c851a986a40a740be14b7
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         {messages.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '36px' }}>
@@ -210,8 +222,13 @@ const ChatPanel = ({ caseId }) => {
         <div ref={bottomRef} />
       </div>
 
+<<<<<<< HEAD
       {/* Fixed Bottom Suggestions Pills Bar */}
       <div style={{ flexShrink: 0, padding: '8px 16px 4px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+=======
+      {/* Bottom Suggestions Pills Bar */}
+      <div style={{ padding: '8px 16px 4px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+>>>>>>> 58261d1cef3b9e67659c851a986a40a740be14b7
         {SUGGESTIONS.map(s => (
           <button
             key={s}
@@ -231,9 +248,14 @@ const ChatPanel = ({ caseId }) => {
         ))}
       </div>
 
+<<<<<<< HEAD
       {/* Fixed Bottom Input Row */}
       <div style={{
         flexShrink: 0,
+=======
+      {/* Input Row */}
+      <div style={{
+>>>>>>> 58261d1cef3b9e67659c851a986a40a740be14b7
         borderTop: '1px solid rgba(255, 255, 255, 0.08)', padding: '12px 16px',
         display: 'flex', alignItems: 'center', gap: '10px', background: '#1e293b',
       }}>
