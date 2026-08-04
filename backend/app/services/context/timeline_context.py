@@ -41,9 +41,12 @@ async def build_timeline_context(
     }
     """
     col = db_client.db["events"]
+    cid_obj = ObjectId(str(case["_id"])) if ObjectId.is_valid(str(case["_id"])) else case["_id"]
     query: Dict[str, Any] = {
-        "case_id": case["_id"],
-        "organization_id": case["organization_id"],
+        "$or": [
+            {"case_id": cid_obj},
+            {"case_id": str(case["_id"])},
+        ]
     }
     if severity:
         query["severity"] = severity
@@ -51,14 +54,23 @@ async def build_timeline_context(
     cursor = col.find(query).sort("timestamp", 1).limit(limit)
     events = await cursor.to_list(length=limit)
 
+    def _to_dt(val):
+        if isinstance(val, datetime):
+            return val
+        if isinstance(val, str):
+            try: return datetime.fromisoformat(val.replace("Z", "+00:00"))
+            except Exception: pass
+        return None
+
     for e in events:
         e["id"] = str(e["_id"])
         e["case_id"] = str(e["case_id"])
         e["organization_id"] = str(e["organization_id"])
         e["evidence_id"] = str(e.get("evidence_id", ""))
-        ts = e.get("timestamp")
-        if ts and hasattr(ts, "isoformat"):
-            e["timestamp_str"] = ts.isoformat()
+        ts_dt = _to_dt(e.get("timestamp"))
+        if ts_dt:
+            e["timestamp"] = ts_dt
+            e["timestamp_str"] = ts_dt.isoformat()
 
     # Group into sessions by time gap
     sessions: List[Dict[str, Any]] = []
@@ -72,7 +84,7 @@ async def build_timeline_context(
         for ev in events[1:]:
             ts = ev.get("timestamp")
             prev_ts = session["end"]
-            if ts and prev_ts and (ts - prev_ts) > timedelta(minutes=SESSION_GAP_MINUTES):
+            if isinstance(ts, datetime) and isinstance(prev_ts, datetime) and (ts - prev_ts) > timedelta(minutes=SESSION_GAP_MINUTES):
                 sessions.append(session)
                 session = {"start": ts, "end": ts, "count": 1, "events": [ev]}
             else:
@@ -86,7 +98,7 @@ async def build_timeline_context(
     if events:
         first = events[0].get("timestamp")
         last = events[-1].get("timestamp")
-        if first and last and hasattr(first, "__sub__"):
+        if isinstance(first, datetime) and isinstance(last, datetime):
             try:
                 span_hours = round((last - first).total_seconds() / 3600, 2)
             except Exception:

@@ -10,13 +10,15 @@ from backend.app.services.context.report_context import build_report_context
 
 logger = logging.getLogger(__name__)
 
-# Try importing WeasyPrint, flag if missing or failing on Windows
-weasyprint_available = True
-try:
-    from weasyprint import HTML
-except Exception as e:
-    logger.warning(f"WeasyPrint library import failed or is missing system dependencies: {e}. PDF generation will fall back to HTML previews.")
-    weasyprint_available = False
+# Lazy-check WeasyPrint to avoid loading Pango/Cairo C-libraries on startup
+def is_weasyprint_available() -> bool:
+    try:
+        from weasyprint import HTML
+        return True
+    except Exception:
+        return False
+
+weasyprint_available = is_weasyprint_available()
 
 def markdown_to_html(md_text: str) -> str:
     """Helper to convert markdown strings to HTML elements without external dependencies."""
@@ -202,8 +204,9 @@ class ReportCompiler:
         # Compile PDF binary in a separate thread pool executor
         import asyncio
         loop = asyncio.get_running_loop()
-        pdf_bytes = await loop.run_in_executor(
-            None,
-            lambda: HTML(string=html_content).write_pdf()
-        )
+        def _build_pdf():
+            from weasyprint import HTML
+            return HTML(string=html_content).write_pdf()
+
+        pdf_bytes = await loop.run_in_executor(None, _build_pdf)
         return pdf_bytes

@@ -11,15 +11,16 @@ export VECLIB_MAXIMUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export PYTHONMALLOC=malloc
 
-# Dynamically configure Nginx port if Render passed a custom $PORT
+# Dynamically configure Nginx port if Render passed a custom $PORT other than 80/10000
 TARGET_PORT="${PORT:-10000}"
 echo "🔧 Configuring Nginx port binding (PORT: $TARGET_PORT)..."
 if [ -f /etc/nginx/conf.d/default.conf ]; then
-    sed -i "s/listen 10000;/listen $TARGET_PORT;/g" /etc/nginx/conf.d/default.conf
-    sed -i "s/listen 80;/listen 80;\n    listen $TARGET_PORT;/g" /etc/nginx/conf.d/default.conf
+    if [ "$TARGET_PORT" != "10000" ] && [ "$TARGET_PORT" != "80" ]; then
+        sed -i "s/listen 10000;/listen $TARGET_PORT;/g" /etc/nginx/conf.d/default.conf
+    fi
 fi
 
-echo "🌐 Starting Nginx Web Server immediately so Render port scanner detects open port..."
+echo "🌐 Starting Nginx Web Server..."
 nginx
 
 echo "🚀 Launching ForenSight AI FastAPI Backend Supervisor on 127.0.0.1:8000..."
