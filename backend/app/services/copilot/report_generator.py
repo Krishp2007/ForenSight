@@ -82,20 +82,32 @@ def build_forensic_report(
     case_name = case.get('title', 'Investigation Case')
 
     # ----------------------------------------------------------------------
-    # CATEGORY 1: Greetings & Greetings Follow-ups
+    # CATEGORY 1: Greetings & Conversational Introductions
     # ----------------------------------------------------------------------
-    greetings = {"hi", "hii", "hy", "hye", "hello", "helo", "hey", "hei", "yo", "sup", "greetings", "whats up", "what's up"}
-    if not q_lower or q_lower in greetings:
+    greetings_words = ["hi", "hii", "hy", "hye", "hello", "helo", "hey", "hei", "yo", "sup", "greetings", "whats up", "what's up", "good morning", "good afternoon", "good evening"]
+    is_greeting_start = any(q_lower.startswith(w) for w in greetings_words)
+    has_name_intro = "my name is" in q_lower or "i am " in q_lower or "i'm " in q_lower or "this is " in q_lower
+
+    if not q_lower or q_lower in greetings_words or is_greeting_start or has_name_intro:
+        # Extract investigator's name if provided
+        user_name = ""
+        name_match = re.search(r"(?:my name is|i am|i'm|this is)\s+([A-Za-z\s]+)", question or "", re.IGNORECASE)
+        if name_match:
+            extracted = name_match.group(1).strip().split()[0].title()
+            if extracted.lower() not in ["a", "an", "the", "investigator", "analyst"]:
+                user_name = extracted
+
+        greeting_prefix = f"Hello {user_name}!" if user_name else "Hello!"
         ev_count = len(evidence_list or [])
         anom_count = len(anomalies)
         risk = _compute_risk_level(anomalies, correlations, enriched_techniques)
         return (
-            f"Hello! I am **ForenSight AI Copilot**, your digital forensics assistant.\n\n"
+            f"{greeting_prefix} I am **ForenSight AI Copilot**, your digital forensics investigator assistant.\n\n"
             f"### 🛡️ Case Status: **{case_name}**\n"
             f"- **Threat Assessment**: `{risk['level']}` (Risk Score: `{risk['score']}/100`)\n"
             f"- **Evidence Dataset**: `{ev_count}` uploaded file(s)\n"
             f"- **ML Detections**: `{anom_count}` anomaly event(s)\n\n"
-            f"What would you like to investigate? You can ask about file names, specific process names, IP sockets, or containment actions."
+            f"It's great to work with you! What would you like to investigate today? You can ask about file names, suspicious process execution trees, IP sockets, or incident containment playbooks."
         )
 
     # ----------------------------------------------------------------------

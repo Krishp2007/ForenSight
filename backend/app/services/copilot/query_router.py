@@ -19,8 +19,10 @@ def classify_intent(question: str) -> str:
 
     q = question.strip().lower()
 
-    # 1. Greetings ("hi", "hello", "hey", "sup", "what's up")
-    if q in {"hi", "hii", "hy", "hye", "hello", "helo", "hey", "yo", "sup", "greetings", "whats up", "what's up", "wsp"}:
+    # 1. Greetings ("hi", "hello", "hey", "sup", "hye my name is Shlesh")
+    if q in {"hi", "hii", "hy", "hye", "hello", "helo", "hey", "yo", "sup", "greetings", "whats up", "what's up", "wsp"} or \
+       any(q.startswith(w) for w in ["hi ", "hii ", "hello ", "hey ", "hye "]) or \
+       "my name is" in q or "i am " in q or "i'm " in q:
         return "greeting"
 
     # 2. Upload / System Instructions ("how to upload new evidence file?", "how to upload?")
@@ -74,10 +76,18 @@ async def handle_structured_query(case_id: str, org_id: str, question: str, inte
 
     # 1. Greetings
     if intent == "greeting":
+        user_name = ""
+        name_match = re.search(r"(?:my name is|i am|i'm|this is)\s+([A-Za-z\s]+)", question or "", re.IGNORECASE)
+        if name_match:
+            extracted = name_match.group(1).strip().split()[0].title()
+            if extracted.lower() not in ["a", "an", "the", "investigator", "analyst"]:
+                user_name = extracted
+
+        greeting_prefix = f"Hello {user_name}!" if user_name else "Hello!"
         return {
             "analysis": (
-                f"Hello! I am **ForenSight AI Copilot**, your digital forensics investigator assistant.\n\n"
-                f"I am ready to assist with **{case_name}**. What would you like to investigate?"
+                f"{greeting_prefix} I am **ForenSight AI Copilot**, your digital forensics investigator assistant.\n\n"
+                f"I am ready to assist with **{case_name}**. What would you like to investigate today?"
             ),
             "confidence": "High",
             "sources": []

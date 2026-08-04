@@ -77,16 +77,28 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
                 connect_to_minio()
 
             def _download():
-                resp = minio_client.client.get_object(
-                    bucket_name=settings.MINIO_BUCKET_NAME,
-                    object_name=evidence["minio_object_name"],
-                )
-                data = resp.read()
-                resp.close()
-                resp.release_conn()
-                return data
+                try:
+                    resp = minio_client.client.get_object(
+                        bucket_name=settings.MINIO_BUCKET_NAME,
+                        object_name=evidence["minio_object_name"],
+                    )
+                    data = resp.read()
+                    resp.close()
+                    resp.release_conn()
+                    return data
+                except Exception as err:
+                    logger.warning(f"[PIPELINE] S3 download error for {filename}: {err}")
+                    return None
 
             file_content = await loop.run_in_executor(None, _download)
+            if not file_content:
+                logger.error(f"[PIPELINE] File content unavailable for {filename}. Marking FAILED.")
+                await EvidenceRepository.update_status(
+                    evidence_id, org_id,
+                    status=EvidenceStatus.FAILED.value,
+                    error_message="Storage object unavailable. Please click Re-process or re-upload the file.",
+                )
+                return
             logger.info(f"[PIPELINE] ⏱ Download: {loop.time()-_t0:.1f}s  {len(file_content):,} bytes")
 
         # ── 3. Parse (CPU-bound / blocking I/O → parallel thread executor) ───
