@@ -44,7 +44,8 @@ class Settings:
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
     EMAILS_FROM_EMAIL: str = os.getenv("EMAILS_FROM_EMAIL", "noreply@forensight.app")
     EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "ForenSight Security")
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://forensight-1l1k.onrender.com")
+
 
 
 settings = Settings()
