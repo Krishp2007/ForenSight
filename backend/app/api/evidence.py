@@ -54,7 +54,13 @@ async def upload_evidence(
     if existing:
         raise HTTPException(status_code=409, detail="File with this SHA-256 already uploaded")
 
-    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "bin"
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "bin"
+    if ext == "evtx":
+        raise HTTPException(
+            status_code=400,
+            detail="EVTX files are disabled. Please upload PCAP, SQLite, CSV, JSON, or TXT/LOG evidence files."
+        )
+
     object_name = f"{current_user.organization_id}/{case_id}/{sha256}.{ext}"
     file_bytes = buf.getvalue()
     buf.seek(0)
@@ -135,8 +141,17 @@ async def reprocess_evidence(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found or access denied")
     evidence = await EvidenceRepository.get_by_id(evidence_id, current_user.organization_id)
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Evidence not found")
+    active_statuses = {"parsing", "queued", "uploaded", "processing", "analyzing", "building_graph", "correlating"}
+    if evidence.get("status") in active_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Evidence is currently being processed. Please wait for the active scan to finish."
+        )
+
+    from backend.app.repositories.event_repository import EventRepository
+    from backend.app.repositories.graph_repository import GraphRepository
+    await EventRepository.delete_by_evidence_id(evidence_id, current_user.organization_id, filename=evidence.get("filename"))
+    await GraphRepository.delete_evidence_subgraph(case_id, evidence_id)
 
     await EvidenceRepository.update_status(evidence_id, current_user.organization_id,
                                            EvidenceStatus.UPLOADED.value)
@@ -357,60 +372,29 @@ async def get_evidence_graph(
     case_id: str, evidence_id: str,
     current_user: UserResponse = Depends(get_current_user),
 ):
-    """Graph (nodes + edges) produced specifically by one evidence file."""
+    """
+    Graph (nodes + edges) produced specifically by one evidence file.
+    Delegates to GraphRepository.get_case_graph with evidence_id filter
+    so it uses the current Neo4j schema (Event / BrowserVisit / Domain etc.)
+    rather than the legacy Entity/FORENSIC_ACTION schema.
+    """
     if not ObjectId.is_valid(case_id) or not ObjectId.is_valid(evidence_id):
         raise HTTPException(status_code=400, detail="Invalid ID format")
     case = await CaseRepository.get_by_id(case_id, current_user.organization_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found or access denied")
 
-    from backend.app.db.neo4j import neo4j_client
-    if not neo4j_client.driver:
-        return {"nodes": [], "edges": []}
-
-    cypher = """
-    MATCH (s:Entity {case_id:$cid, organization_id:$oid})
-          -[r:FORENSIC_ACTION]->
-          (o:Entity {case_id:$cid, organization_id:$oid})
-    WHERE r.evidence_id = $eid OR toString(r.evidence_id) = $eid
-    RETURN s.name AS sn, s.type AS st, o.name AS tn, o.type AS tt,
-           r.action AS action, r.severity AS severity,
-           r.is_anomaly AS is_anomaly
-    LIMIT 1000
-    """
-    nodes_dict, edges = {}, []
     try:
-        async with neo4j_client.driver.session() as sess:
-            result = await sess.run(cypher, cid=case_id, oid=current_user.organization_id, eid=evidence_id)
-            records = await result.data()
-
-        # If Neo4j graph is empty for this file, auto-sync events on-the-fly from MongoDB
-        if not records:
-            from backend.app.db.mongodb import db_client as mongo
-            from backend.app.repositories.graph_repository import GraphRepository
-            ev_docs = await mongo.db["events"].find({
-                "evidence_id": ObjectId(evidence_id),
-                "organization_id": ObjectId(current_user.organization_id)
-            }).to_list(1000)
-            if ev_docs:
-                await GraphRepository.bulk_import_events(ev_docs)
-                async with neo4j_client.driver.session() as sess:
-                    result = await sess.run(cypher, cid=case_id, oid=current_user.organization_id, eid=evidence_id)
-                    records = await result.data()
-
-        for rec in records:
-            for name, ntype in [(rec["sn"], rec["st"]), (rec["tn"], rec["tt"])]:
-                if name not in nodes_dict:
-                    nodes_dict[name] = {"id": name, "label": name, "type": ntype}
-            edges.append({
-                "source": rec["sn"], "target": rec["tn"],
-                "action": rec["action"], "severity": rec["severity"],
-                "is_anomaly": rec.get("is_anomaly", False)
-            })
+        from backend.app.repositories.graph_repository import GraphRepository
+        return await GraphRepository.get_case_graph(
+            case_id=case_id,
+            org_id=current_user.organization_id,
+            evidence_id=evidence_id,
+            limit=1000,
+        )
     except Exception as e:
-        logger.error(f"Per-evidence graph: {e}")
-
-    return {"nodes": list(nodes_dict.values()), "edges": edges}
+        logger.error(f"[evidence graph] get_case_graph failed: {e}")
+        raise HTTPException(status_code=503, detail=f"Neo4j error: {e}")
 
 
 # ── Per-evidence report ─────────────────────────────────────────────────────────
@@ -519,3 +503,5 @@ async def get_evidence_details(
     evidence["organization_id"] = str(evidence["organization_id"])
     evidence["created_by"] = str(evidence["created_by"])
     return evidence
+
+

@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from bson import ObjectId
 import logging
 
-from backend.app.schemas.event import EventResponse, EventSeverity, EventType
+from backend.app.schemas.event import EventResponse, EventSeverity
 from backend.app.repositories.event_repository import EventRepository
 from backend.app.repositories.case_repository import CaseRepository
 from backend.app.auth.dependencies import get_current_user
@@ -16,7 +16,7 @@ router = APIRouter(tags=["events"])
 async def list_case_events(
     case_id: str,
     severity: Optional[EventSeverity] = None,
-    event_type: Optional[EventType] = None,
+    event_type: Optional[str] = None,
     limit: int = 100,
     current_user: UserResponse = Depends(get_current_user)
 ):
@@ -38,7 +38,7 @@ async def list_case_events(
         
     # 3. Query events list using Repository
     sev_val = severity.value if severity else None
-    type_val = event_type.value if event_type else None
+    type_val = event_type if event_type else None
     
     # Restrict maximum limit to safeguard database performance
     query_limit = min(limit, 2000)
@@ -54,12 +54,25 @@ async def list_case_events(
     # 4. Map MongoDB documents to EventResponse Pydantic structures
     responses = []
     for event in events:
-        event["id"] = str(event["_id"])
-        event["case_id"] = str(event["case_id"])
-        event["evidence_id"] = str(event["evidence_id"])
-        event["organization_id"] = str(event["organization_id"])
-        responses.append(EventResponse(**event))
-        
+        try:
+            event["id"] = str(event["_id"])
+            event["case_id"] = str(event.get("case_id", case_id))
+            event["evidence_id"] = str(event.get("evidence_id", ""))
+            event["organization_id"] = str(event.get("organization_id", current_user.organization_id))
+            # Normalise source — parsers may store as "source_type" instead of "source"
+            if not event.get("source"):
+                event["source"] = str(event.get("source_type") or event.get("event_type") or "generic")
+            if not event.get("subject"):
+                event["subject"] = str(event.get("source", "System"))
+            if not event.get("action"):
+                event["action"] = str(event.get("event_type", "activity"))
+            if not event.get("object"):
+                event["object"] = "event"
+            # Use model_validate — unknown MongoDB fields are ignored via extra='ignore'
+            responses.append(EventResponse.model_validate(event))
+        except Exception as exc:
+            logger.debug(f"[events] Skipping event {event.get('_id')}: {exc}")
+            continue
     return responses
 
 

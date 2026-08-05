@@ -7,7 +7,7 @@ Architecture Section 5.5.1 — clustering of filesystem events into sessions.
 """
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from bson import ObjectId
 from backend.app.db.mongodb import db_client

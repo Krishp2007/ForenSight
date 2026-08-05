@@ -13,6 +13,7 @@ Ensemble strategy:
 """
 
 import logging
+import time
 import numpy as np
 from typing import List, Dict, Any
 
@@ -45,27 +46,33 @@ def ensemble_predict(X: np.ndarray) -> Dict[str, Any]:
     model_results: Dict[str, AnomalyResult] = {}
 
     for i, model in enumerate(MODELS):
+        _t_model = time.perf_counter()
         try:
             result = model.fit_predict(X)
             all_flags[i] = [1 if f else 0 for f in result.flags]
             all_scores[i] = result.scores
             model_results[model.name] = result
-            logger.debug(
-                f"[{model.name}] flagged {sum(result.flags)}/{n} events as anomalies"
+            model_time = time.perf_counter() - _t_model
+            logger.info(
+                f"[PROFILE] ML {model.name:<20} {model_time:.3f}s  "
+                f"(flagged {sum(result.flags)}/{n})"
             )
         except Exception as e:
-            logger.warning(f"Model {model.name} failed: {e}. Skipping.")
+            model_time = time.perf_counter() - _t_model
+            logger.warning(f"[PROFILE] ML {model.name:<20} {model_time:.3f}s  FAILED: {e}")
 
     # Majority vote (≥2 of 3 models)
+    _t_ensemble = time.perf_counter()
     vote_sum = all_flags.sum(axis=0)
     final_flags = (vote_sum >= 2).tolist()
 
     # Mean score
     final_scores = all_scores.mean(axis=0).tolist()
+    ensemble_time = time.perf_counter() - _t_ensemble
 
     logger.info(
-        f"Ensemble: {sum(final_flags)}/{n} events flagged "
-        f"({[m.name for m in MODELS]})"
+        f"[PROFILE] ML ensemble aggregation     {ensemble_time:.3f}s  "
+        f"({sum(final_flags)}/{n} events flagged — models: {[m.name for m in MODELS]})"
     )
 
     return {

@@ -59,3 +59,31 @@ export const statusColor = (status) => {
 // Human-readable label
 export const humanize = (str) =>
   str ? str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—'
+
+// Parse date string into UTC milliseconds safely (preventing local timezone offset shift)
+export const parseUtcMs = (dateVal) => {
+  if (!dateVal) return null
+  if (typeof dateVal === 'number') return dateVal
+  let str = String(dateVal).trim()
+  if (!str) return null
+  if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+    str += 'Z'
+  }
+  const ms = new Date(str).getTime()
+  return isNaN(ms) ? null : ms
+}
+
+// Duration formatter (0s, 47s, 1m 5s, 1h 1m 5s)
+export const formatDuration = (totalSeconds) => {
+  if (totalSeconds == null || isNaN(totalSeconds) || totalSeconds < 0) return '0s'
+  const secs = Math.floor(totalSeconds)
+  if (secs < 60) return `${secs}s`
+  const mins = Math.floor(secs / 60)
+  const remSecs = secs % 60
+  if (mins < 60) return `${mins}m ${remSecs}s`
+  const hours = Math.floor(mins / 60)
+  const remMins = mins % 60
+  return `${hours}h ${remMins}m ${remSecs}s`
+}
+
+

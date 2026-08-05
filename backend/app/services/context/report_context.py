@@ -36,19 +36,30 @@ async def build_report_context(case_id: str, org_id: str) -> Dict[str, Any]:
     if not case:
         raise ValueError(f"Case {case_id} not found for org {org_id}")
 
-    # Parallel fetch where possible
+    # Parallel fetch where possible with exception safety
     import asyncio
-    (
-        anomalies,
-        correlations,
-        graph,
-        timeline_ctx,
-    ) = await asyncio.gather(
+    results = await asyncio.gather(
         build_anomaly_context(case, limit=100),
         build_graph_context(case_id, org_id),
         GraphRepository.get_case_graph(case_id, org_id),
         build_timeline_context(case, limit=500),
+        return_exceptions=True,
     )
+    anomalies = results[0] if not isinstance(results[0], Exception) else []
+    if isinstance(results[0], Exception):
+        logger.error(f"build_anomaly_context error: {results[0]}")
+
+    correlations = results[1] if not isinstance(results[1], Exception) else []
+    if isinstance(results[1], Exception):
+        logger.error(f"build_graph_context error: {results[1]}")
+
+    graph = results[2] if not isinstance(results[2], Exception) else {"nodes": [], "edges": []}
+    if isinstance(results[2], Exception):
+        logger.error(f"get_case_graph error: {results[2]}")
+
+    timeline_ctx = results[3] if not isinstance(results[3], Exception) else {"events": [], "sessions": [], "total": 0, "span_hours": 0}
+    if isinstance(results[3], Exception):
+        logger.error(f"build_timeline_context error: {results[3]}")
 
     # Aggregate counts via EventRepository to match Dashboard stats exactly
     from backend.app.repositories.event_repository import EventRepository

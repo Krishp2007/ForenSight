@@ -12,11 +12,15 @@ class EvidenceType(str, Enum):
     TEXT           = "text"
 
 class EvidenceStatus(str, Enum):
-    UPLOADED = "uploaded"
-    QUEUED = "queued"
-    PARSING = "parsing"
-    PARSED = "parsed"
-    FAILED = "failed"
+    UPLOADED       = "uploaded"
+    QUEUED         = "queued"
+    PARSING        = "parsing"
+    PROCESSING     = "processing"
+    ANALYZING      = "analyzing"
+    BUILDING_GRAPH = "building_graph"
+    CORRELATING    = "correlating"
+    PARSED         = "parsed"
+    FAILED         = "failed"
 
 class EvidenceBase(BaseModel):
     filename: str = Field(..., description="Original name of the uploaded forensic file")
@@ -42,6 +46,9 @@ class EvidenceResponse(EvidenceBase):
     error_message: Optional[str] = None
     parsing_started_at: Optional[datetime] = None
     parsed_at: Optional[datetime] = None
+    processing_started_at: Optional[datetime] = None
+    processing_finished_at: Optional[datetime] = None
+    scan_duration_ms: Optional[int] = None
     created_by: str = Field(..., description="The User ID who uploaded the file")
     created_at: datetime
     updated_at: datetime

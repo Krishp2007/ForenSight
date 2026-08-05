@@ -32,7 +32,7 @@ async def _recover_stuck_evidence():
         from backend.app.services.ingestion.processing_pipeline import _run_full_pipeline
 
         stuck = await db_client.db["evidence"].find(
-            {"status": {"$in": ["uploaded", "queued", "parsing"]}}
+            {"status": {"$in": ["uploaded", "queued", "parsing", "processing", "analyzing", "building_graph", "correlating"]}}
         ).to_list(50)
 
         if not stuck:

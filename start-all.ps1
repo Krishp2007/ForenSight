@@ -1,7 +1,7 @@
 # ForenSight - Start Everything
 # Run: powershell -ExecutionPolicy Bypass -File start-all.ps1
 
-$root     = "d:\ForenSight\ForenSight"
+$root     = $PSScriptRoot
 $backend  = "$root\backend"
 $frontend = "$root\frontend"
 

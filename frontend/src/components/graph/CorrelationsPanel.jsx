@@ -43,9 +43,13 @@ const CorrelationsPanel = ({ caseId, evidenceCount }) => {
     finally { setRunning(false) }
   }
 
-  const correlations = data?.correlations || []
+  const correlations = data?.correlations || data?.findings || []
   const groups = correlations.reduce((acc, c) => {
-    const r = c.rule || 'UNKNOWN'; acc[r] = acc[r] || []; acc[r].push(c); return acc
+    // findings from get_all_case_correlations use 'type' field, not 'rule'
+    const r = c.rule || c.type || 'UNKNOWN'
+    acc[r] = acc[r] || []
+    acc[r].push(c)
+    return acc
   }, {})
 
   if (evidenceCount === 0) {
@@ -53,7 +57,7 @@ const CorrelationsPanel = ({ caseId, evidenceCount }) => {
       <EmptyState
         icon={Link2}
         title="No Evidence Files Uploaded"
-        description="Upload an evidence file (.evtx, .pcapng, .sqlite, .csv) to detect process correlations and network relationships."
+        description="Upload an evidence file (.pcapng, .sqlite, .csv) to detect process correlations and network relationships."
       />
     )
   }
@@ -61,7 +65,7 @@ const CorrelationsPanel = ({ caseId, evidenceCount }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <p style={{ color: '#9aa8c0', fontSize: '13px', margin: 0 }}>{correlations.length} derived relationships from 3 Cypher rules</p>
+        <p style={{ color: '#9aa8c0', fontSize: '13px', margin: 0 }}>{correlations.length} derived relationships</p>
         <button onClick={handleRun} disabled={running || evidenceCount === 0} style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '6px 12px', background: '#4a7fe8', border: 'none',
@@ -98,10 +102,10 @@ const CorrelationsPanel = ({ caseId, evidenceCount }) => {
                     <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', background: rs.bg, color: rs.color }}>
                       {humanize(rule.replace(/_/g, ' '))}
                     </span>
-                    <span style={{ color: '#6b7fa3', fontSize: '12px' }}>{items.length} relationships</span>
-                    {items[0]?.mitre && (
+                    <span style={{ color: '#6b7fa3', fontSize: '12px' }}>{items.length} findings</span>
+                    {(items[0]?.mitre || items[0]?.score) && (
                       <span style={{ fontSize: '11px', fontFamily: 'monospace', background: 'rgba(167,139,250,0.15)', color: '#c4b5fd', padding: '2px 7px', borderRadius: '4px' }}>
-                        {items[0].mitre}
+                        {items[0]?.mitre || `Score ${items[0]?.score}`}
                       </span>
                     )}
                   </div>
@@ -110,21 +114,53 @@ const CorrelationsPanel = ({ caseId, evidenceCount }) => {
 
                 {isOpen && (
                   <div>
-                    {items.slice(0, 50).map((c, i) => (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '8px 16px', fontSize: '12px',
-                        borderTop: '1px solid #2d3748',
-                        background: i % 2 === 0 ? '#1e2a3d' : '#253347',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#2a3347'}
-                      onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#1e2a3d' : '#253347'}>
-                        <span style={{ color: '#60a5fa', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{c.source}</span>
-                        <span style={{ color: '#3d4f6a', flexShrink: 0 }}>→</span>
-                        <span style={{ color: '#6ee7b7', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{c.target}</span>
-                        {c.technique && <span style={{ marginLeft: 'auto', color: '#6b7fa3', fontSize: '11px', flexShrink: 0 }}>{c.technique}</span>}
-                      </div>
-                    ))}
+                    {items.slice(0, 50).map((c, i) => {
+                      // Handle both old (rule/source/target) and new (type/explanation/chain) schemas
+                      const displaySource = c.source || (c.chain ? c.chain[0] : null) || c.explanation?.substring(0, 60) || '—'
+                      const displayTarget = c.target || (c.chain ? c.chain.slice(-1)[0] : null) || ''
+                      const displayDetail = c.technique || c.severity || ''
+                      return (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'flex-start', gap: '8px',
+                          padding: '8px 16px', fontSize: '12px',
+                          borderTop: '1px solid #2d3748',
+                          background: i % 2 === 0 ? '#1e2a3d' : '#253347',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#2a3347'}
+                        onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#1e2a3d' : '#253347'}>
+                          {c.chain && c.chain.length > 0 ? (
+                            // Process chain: show full chain
+                            <span style={{ color: '#cbd5e1', flex: 1 }}>
+                              {c.chain.map((p, pi) => (
+                                <span key={pi}>
+                                  <span style={{ color: pi === 0 ? '#60a5fa' : pi === c.chain.length - 1 ? '#6ee7b7' : '#94a3b8', fontWeight: '500' }}>{p}</span>
+                                  {pi < c.chain.length - 1 && <span style={{ color: '#3d4f6a', margin: '0 4px' }}>→</span>}
+                                </span>
+                              ))}
+                            </span>
+                          ) : (
+                            // Attack path / cross evidence: show source → target or explanation
+                            <>
+                              <span style={{ color: '#60a5fa', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{displaySource}</span>
+                              {displayTarget && (
+                                <>
+                                  <span style={{ color: '#3d4f6a', flexShrink: 0 }}>→</span>
+                                  <span style={{ color: '#6ee7b7', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{displayTarget}</span>
+                                </>
+                              )}
+                            </>
+                          )}
+                          {c.score && (
+                            <span style={{ marginLeft: 'auto', fontSize: '11px', color: c.score >= 80 ? '#fca5a5' : c.score >= 60 ? '#fdba74' : '#9aa8c0', flexShrink: 0, fontWeight: 600 }}>
+                              Score: {c.score}
+                            </span>
+                          )}
+                          {!c.score && displayDetail && (
+                            <span style={{ marginLeft: 'auto', color: '#6b7fa3', fontSize: '11px', flexShrink: 0 }}>{displayDetail}</span>
+                          )}
+                        </div>
+                      )
+                    })}
                     {items.length > 50 && (
                       <p style={{ padding: '8px 16px', color: '#6b7fa3', fontSize: '11px', margin: 0, borderTop: '1px solid #2d3748', background: '#1e2a3d' }}>
                         …and {items.length - 50} more

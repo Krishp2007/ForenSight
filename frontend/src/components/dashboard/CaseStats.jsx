@@ -1,15 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../services/api'
 import { listEvidence } from '../../services/evidenceService'
-import { AlertTriangle, Activity, FileText, Layers } from 'lucide-react'
-
-// Inlined from deleted eventService
-const listEvents = (caseId, opts = {}) => {
-  const params = { limit: opts.limit || 2000 }
-  if (opts.severity)   params.severity   = opts.severity
-  if (opts.event_type) params.event_type = opts.event_type
-  return api.get(`/cases/${caseId}/events`, { params }).then(r => r.data)
-}
+import { AlertTriangle, Activity, FileText, Layers, GitBranch } from 'lucide-react'
 
 const Stat = ({ icon: Icon, label, value, iconBg, loading }) => (
   <div style={{
@@ -80,17 +72,23 @@ const CaseStats = ({ caseId, evidenceList, initialEvidenceCount }) => {
 
         if (fileCount === 0) {
           if (isMounted) {
-            setStats({ total: 0, anomalies: 0, critical: 0, files: 0 })
+            setStats({ total: 0, anomalies: 0, critical: 0, correlations: 0, files: 0 })
           }
           return
         }
 
         const resStats = await api.get(`/cases/${caseId}/stats`).then(r => r.data)
         if (isMounted) {
-          setStats({ total: resStats.total, anomalies: resStats.anomalies, critical: resStats.critical, files: fileCount })
+          setStats({
+            total: resStats.total,
+            anomalies: resStats.anomalies,
+            critical: resStats.critical,
+            correlations: resStats.graph_correlations || 0,
+            files: fileCount
+          })
         }
       } catch (e) {
-        if (isMounted) setStats({ total: 0, anomalies: 0, critical: 0, files: effectiveCount || 0 })
+        if (isMounted) setStats({ total: 0, anomalies: 0, critical: 0, correlations: 0, files: effectiveCount || 0 })
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -102,13 +100,14 @@ const CaseStats = ({ caseId, evidenceList, initialEvidenceCount }) => {
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
       gap: '14px',
     }}>
-      <Stat icon={Activity}      label="Total Events"   value={stats?.total}     iconBg="#60a5fa" loading={loading} />
-      <Stat icon={AlertTriangle} label="Anomalies"      value={stats?.anomalies} iconBg="#fbbf24" loading={loading} />
-      <Stat icon={Layers}        label="Critical Events" value={stats?.critical}  iconBg="#f87171" loading={loading} />
-      <Stat icon={FileText}      label="Evidence Files" value={stats?.files ?? initialEvidenceCount} iconBg="#34d399" loading={loading && initialEvidenceCount === undefined} />
+      <Stat icon={Activity}      label="Total Events"       value={stats?.total}        iconBg="#60a5fa" loading={loading} />
+      <Stat icon={AlertTriangle} label="ML Anomalies"      value={stats?.anomalies}    iconBg="#fbbf24" loading={loading} />
+      <Stat icon={Layers}        label="Critical Events"    value={stats?.critical}     iconBg="#f87171" loading={loading} />
+      <Stat icon={GitBranch}     label="Graph Correlations" value={stats?.correlations}  iconBg="#a78bfa" loading={loading} />
+      <Stat icon={FileText}      label="Evidence Files"     value={stats?.files ?? initialEvidenceCount} iconBg="#34d399" loading={loading && initialEvidenceCount === undefined} />
     </div>
   )
 }

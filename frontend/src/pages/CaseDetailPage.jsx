@@ -18,8 +18,9 @@ import AuditTrail from '../components/timeline/AuditTrail'
 import { Spinner } from '../components/ui'
 import {
   Pencil, X,
-  LayoutDashboard, FileCheck, Clock, Share2,
-  MessageSquare, FileText, ShieldCheck, Briefcase, ArrowRight, Link
+  LayoutDashboard, FileCheck, FileText, ShieldCheck,
+  Briefcase, ArrowRight, Link,
+  Clock, Share2, MessageSquare
 } from 'lucide-react'
 
 // Dark cyber status badge
@@ -40,7 +41,7 @@ const CaseStatusBadge = ({ status }) => {
   )
 }
 
-// Top head tab bar configuration — Dashboard, Correlations, Report, and Audit Log
+// Top head tab bar configuration
 const TAB_CONFIG = [
   { id: 'dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
   { id: 'correlations', label: 'Correlations', icon: Link },
@@ -302,11 +303,8 @@ const CaseDetailPage = () => {
                 <div
                   onClick={() => goTab('evidence')}
                   style={{
-                    cursor: 'pointer',
-                    padding: '16px',
-                    borderRadius: '14px',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    cursor: 'pointer', padding: '16px', borderRadius: '14px',
+                    background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(255, 255, 255, 0.06)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     transition: 'all 0.2s ease',
                   }}
@@ -323,11 +321,8 @@ const CaseDetailPage = () => {
                 <div
                   onClick={() => goTab('timeline')}
                   style={{
-                    cursor: 'pointer',
-                    padding: '16px',
-                    borderRadius: '14px',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    cursor: 'pointer', padding: '16px', borderRadius: '14px',
+                    background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(255, 255, 255, 0.06)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     transition: 'all 0.2s ease',
                   }}
@@ -344,11 +339,8 @@ const CaseDetailPage = () => {
                 <div
                   onClick={() => goTab('graph')}
                   style={{
-                    cursor: 'pointer',
-                    padding: '16px',
-                    borderRadius: '14px',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    cursor: 'pointer', padding: '16px', borderRadius: '14px',
+                    background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(255, 255, 255, 0.06)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     transition: 'all 0.2s ease',
                   }}
@@ -365,11 +357,8 @@ const CaseDetailPage = () => {
                 <div
                   onClick={() => goTab('chat')}
                   style={{
-                    cursor: 'pointer',
-                    padding: '16px',
-                    borderRadius: '14px',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    cursor: 'pointer', padding: '16px', borderRadius: '14px',
+                    background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(255, 255, 255, 0.06)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     transition: 'all 0.2s ease',
                   }}
@@ -385,19 +374,20 @@ const CaseDetailPage = () => {
               </div>
             </div>
 
+
             {/* Evidence Summary */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <h3 style={{ color: '#ffffff', fontSize: '15px', fontWeight: '700', margin: 0 }}>Evidence Summary</h3>
-              <EvidenceList items={evidence} caseId={caseId} onItemUpdated={handleEvidenceUpdated} onItemDeleted={handleEvidenceDeleted} />
+              <EvidenceList items={evidence} caseId={caseId} isDashboard={true} onItemUpdated={handleEvidenceUpdated} onItemDeleted={handleEvidenceDeleted} />
             </div>
           </div>
         )}
 
-        {/* OTHER TABS */}
+        {/* OTHER TABS - accessible via dashboard cards even though not in top nav */}
         {activeTab === 'evidence' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <EvidenceUpload caseId={caseId} onUploaded={handleEvidenceUploaded} />
-            <EvidenceList items={evidence} caseId={caseId} onItemUpdated={handleEvidenceUpdated} onItemDeleted={handleEvidenceDeleted} />
+            <EvidenceList items={evidence} caseId={caseId} isDashboard={false} onItemUpdated={handleEvidenceUpdated} onItemDeleted={handleEvidenceDeleted} />
           </div>
         )}
         {activeTab === 'timeline'     && <EventTimeline caseId={caseId} />}

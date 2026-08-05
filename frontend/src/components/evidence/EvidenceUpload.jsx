@@ -4,7 +4,7 @@ import { uploadEvidence } from '../../services/evidenceService'
 import { Spinner } from '../ui'
 import useRole from '../../hooks/useRole'
 
-const ACCEPTED = '.evtx,.pcap,.pcapng,.cap,.db,.sqlite,.sqlite3,.csv,.json,.md5,.sha1,.sha256,.sha512,.hash,.txt,.log'
+const ACCEPTED = '.pcap,.pcapng,.cap,.db,.sqlite,.sqlite3,.csv,.json,.md5,.sha1,.sha256,.sha512,.hash,.txt,.log'
 
 const EvidenceUpload = ({ caseId, onUploaded }) => {
   const { canUpload } = useRole()
@@ -13,50 +13,42 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState(null)
+  const [currentFileName, setCurrentFileName] = useState('')
   const inputRef = useRef(null)
 
-  const [currentFileIndex, setCurrentFileIndex] = useState(0)
-  const [totalFilesCount, setTotalFilesCount]   = useState(0)
-  const [currentFileName, setCurrentFileName]   = useState('')
-
-  // Viewers see nothing — upload is investigator/admin only
   if (!canUpload) return null
 
   const handleFiles = async (fileList) => {
     if (!fileList || fileList.length === 0) return
-    const files = Array.from(fileList)
+    // Only process the first file — multi-file is not supported
+    const file = fileList[0]
     setUploading(true)
     setError(null)
-    setTotalFilesCount(files.length)
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      setCurrentFileIndex(i + 1)
-      setCurrentFileName(file.name)
-      setProgress(0)
-      try {
-        const evidence = await uploadEvidence(caseId, file, (e) => {
-          if (e.total) {
-            setProgress(Math.round((e.loaded / e.total) * 100))
-          }
-        })
-        if (onUploaded) onUploaded(evidence)
-      } catch (e) {
-        setError(`Failed uploading "${file.name}": ${e.response?.data?.detail || 'Upload failed'}`)
-      }
-    }
-
-    setUploading(false)
+    setCurrentFileName(file.name)
     setProgress(0)
-    setTotalFilesCount(0)
-    if (inputRef.current) inputRef.current.value = ''
+    try {
+      const evidence = await uploadEvidence(caseId, file, (e) => {
+        if (e.total) setProgress(Math.round((e.loaded / e.total) * 100))
+      })
+      if (onUploaded) onUploaded(evidence)
+    } catch (e) {
+      setError(`Failed uploading "${file.name}": ${e.response?.data?.detail || 'Upload failed'}`)
+    } finally {
+      setUploading(false)
+      setProgress(0)
+      if (inputRef.current) inputRef.current.value = ''
+    }
   }
 
   return (
     <div
       onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
-      onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
+      onDrop={(e) => {
+        e.preventDefault()
+        setDragging(false)
+        handleFiles(e.dataTransfer.files)
+      }}
       onClick={() => !uploading && inputRef.current?.click()}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -69,13 +61,13 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
         flexDirection: 'column',
         alignItems: 'center',
         gap: '14px',
-        background: dragging || hovered 
-          ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(15, 23, 42, 0.6))' 
+        background: dragging || hovered
+          ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(15, 23, 42, 0.6))'
           : 'rgba(30, 41, 59, 0.55)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        boxShadow: hovered 
-          ? '0 12px 28px -6px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.15)' 
+        boxShadow: hovered
+          ? '0 12px 28px -6px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.15)'
           : '0 4px 14px rgba(0, 0, 0, 0.25)',
         transform: hovered && !uploading ? 'translateY(-2px)' : 'translateY(0)',
         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -84,7 +76,6 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
       <input
         ref={inputRef}
         type="file"
-        multiple
         accept={ACCEPTED}
         style={{ display: 'none' }}
         onChange={(e) => handleFiles(e.target.files)}
@@ -93,7 +84,7 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
         <>
           <Spinner size="lg" />
           <p style={{ color: '#ffffff', fontSize: '13.5px', margin: 0, fontWeight: '600' }}>
-            Uploading file {currentFileIndex} of {totalFilesCount}: <span style={{ color: '#60a5fa' }}>{currentFileName}</span> ({progress}%)
+            Uploading <span style={{ color: '#60a5fa' }}>{currentFileName}</span> ({progress}%)
           </p>
           <div style={{ width: '260px', height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '99px', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #6366f1, #06b6d4)', borderRadius: '99px', transition: 'width 0.3s' }} />
@@ -115,10 +106,10 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
             <FileUp size={24} />
           </div>
           <p style={{ color: '#ffffff', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-            Drop files or click to browse (Multiple Files Supported)
+            Drop a file or click to browse
           </p>
           <p style={{ color: '#94a3b8', fontSize: '11.5px', margin: 0 }}>
-            EVTX · PCAP · SQLite · CSV · JSON · MD5 · TXT · LOG
+            PCAP · SQLite · CSV · JSON · MD5 · TXT · LOG
           </p>
         </>
       )}

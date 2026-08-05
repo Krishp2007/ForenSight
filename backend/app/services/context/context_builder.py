@@ -18,7 +18,7 @@ from backend.app.services.context.anomaly_context import build_anomaly_context
 from backend.app.services.context.graph_context import build_graph_context
 from backend.app.services.context.timeline_context import build_timeline_context
 from backend.app.knowledge.mitre_mapper import MitreMapper
-from backend.app.services.copilot.question_router import classify_intent, Intent
+from backend.app.services.copilot.query_router import classify_intent
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ async def build_copilot_context(
     if not case:
         return {}
 
-    intent: Intent = classify_intent(question or "")
+    intent: str = classify_intent(question or "")
     logger.info(f"[ContextBuilder] intent='{intent}' for case {case_id}")
 
     # Fetch anomalies, graph correlations, and evidence list

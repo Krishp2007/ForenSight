@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForenSight AI — Complete Project Documentation Manual</title>
+  <style>
+    :root {
+      --bg-dark: #030712;
+      --card-bg: rgba(30, 41, 59, 0.75);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-purple: #818cf8;
+      --accent-blue: #60a5fa;
+      --accent-green: #34d399;
+      --accent-amber: #fbbf24;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      margin: 0;
+      padding: 40px 20px;
+      line-height: 1.6;
+    }
+
+    @media print {
+      body { background-color: #ffffff; color: #0f172a; padding: 0; }
+      .card, table { background: #ffffff !important; border: 1px solid #cbd5e1 !important; }
+      h1, h2, h3 { color: #0f172a !important; -webkit-text-fill-color: initial !important; }
+      .tree-box { background: #f8fafc !important; color: #0284c7 !important; border: 1px solid #cbd5e1 !important; }
+      .print-btn { display: none !important; }
+    }
+
+    .container { max-width: 1150px; margin: 0 auto; }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    h1 {
+      font-size: 2.3rem;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0 0 10px 0;
+    }
+
+    .print-btn {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin-top: 15px;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    }
+
+    .tree-box {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      font-family: monospace;
+      font-size: 0.92rem;
+      color: #38bdf8;
+      margin-bottom: 35px;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    section { margin-bottom: 45px; }
+
+    h2 {
+      font-size: 1.5rem;
+      color: var(--accent-blue);
+      border-left: 4px solid var(--accent-purple);
+      padding-left: 12px;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .card h3 { margin: 0 0 8px 0; font-size: 1.05rem; color: #ffffff; }
+    .card p { color: var(--text-muted); font-size: 0.92rem; margin: 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.92rem;
+    }
+
+    th { background: rgba(15, 23, 42, 0.9); color: var(--accent-purple); }
+    td.code { font-family: monospace; color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>ForenSight AI — Master Technical Platform Manual</h1>
+      <p style="color: var(--text-muted); margin: 0;">Complete End-to-End Architecture, File Directory, API Reference & AI Logic</p>
+      <button class="print-btn" onclick="window.print()">🖨️ Save as PDF / Print Manual</button>
+    </header>
+
+    .tree-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.95rem;
+      color: #38bdf8;
+      margin-bottom: 35px;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    section {
+      margin-bottom: 45px;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      color: var(--accent-blue);
+      border-left: 4px solid var(--accent-purple);
+      padding-left: 12px;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .card h3 {
+      margin: 0 0 8px 0;
+      font-size: 1.05rem;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .file-path {
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent-purple);
+      font-size: 0.88rem;
+    }
+
+    .card p {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      margin: 0;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-core { background: rgba(96, 165, 250, 0.2); color: #93c5fd; }
+    .badge-api { background: rgba(52, 211, 153, 0.2); color: #6ee7b7; }
+    .badge-parser { background: rgba(251, 191, 36, 0.2); color: #fde047; }
+    .badge-ai { background: rgba(167, 139, 250, 0.2); color: #c084fc; }
+    .badge-ui { background: rgba(244, 114, 182, 0.2); color: #f472b6; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    td.code {
+      font-family: monospace;
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>ForenSight AI — Full System Architecture & File-by-File Guide</h1>
+      <p class="subtitle">Event-Driven Digital Forensics & AI Copilot Analysis Platform</p>
+    </header>
+
+    <div class="tree-box">
+ForenSight/
+├── backend/                  # FastAPI Backend API, AI Reasoning, Parsers & Graph Engine
+├── frontend/                 # React (Vite) Cyberpunk Forensic Investigator Interface
+├── docs/                     # Full Platform & Architecture Documentation
+├── Dockerfile                # Multi-stage container setup
+└── docker-compose.yml        # Service Orchestration (FastAPI, MongoDB, Neo4j, Redis, MinIO)
+    </div>
+
+    <!-- 1. BACKEND CORE & API -->
+    <section>
+      <h2>1. Backend Application Core & API Routes</h2>
+      <div class="grid">
+        <div class="card">
+          <h3><span class="badge badge-core">Core</span> backend/app/main.py</h3>
+          <p>Application entry point. Initializes MongoDB, Neo4j, Redis, MinIO lifecycle handlers, configures GZip/CORS middleware, runs startup evidence crash recovery, and mounts API routers.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-core">Core</span> backend/app/config.py</h3>
+          <p>Central Settings using Pydantic BaseSettings for loading environment configuration (`GROQ_API_KEY`, `MONGODB_URI`, `NEO4J_URI`, `MINIO_*`, `JWT_SECRET`).</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-api">API</span> backend/app/api/evidence.py</h3>
+          <p>Handles SHA-256 evidence hashing, MinIO S3 uploading, background processing pipeline triggering, re-processing, and cascading deletion (S3, Mongo, Neo4j, FAISS).</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-api">API</span> backend/app/api/chat.py</h3>
+          <p>AI Copilot endpoints. Supports both non-streaming POST queries and real-time Server-Sent Events (SSE) token streaming (`GET /copilot/stream`).</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-api">API</span> backend/app/api/graph.py</h3>
+          <p>Knowledge Graph API. Serves nodes & relationships formatted for Cytoscape.js canvas rendering, shortest path lookups, and neighborhood expansion.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-api">API</span> backend/app/api/events.py</h3>
+          <p>Forensic timeline API. Queries MongoDB events by case with severity & event_type filtering and safe model mapping fallbacks.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-api">API</span> backend/app/api/correlations.py</h3>
+          <p>Graph Correlation Engine route. Returns detected attack chains, LOLBin executions, registry persistence modifications, and threat severity scores.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-api">API</span> backend/app/api/cases.py</h3>
+          <p>Case management endpoint (create case, list by organization, status update, case overview metrics).</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-api">API</span> backend/app/api/auth.py</h3>
+          <p>User authentication & authorization (login, user registration, JWT token generation, password resets).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. PARSERS -->
+    <section>
+      <h2>2. Evidence Ingestion & Parsers</h2>
+      <div class="grid">
+        <div class="card">
+          <h3><span class="badge badge-parser">Parser</span> parsers/__init__.py</h3>
+          <p>Factory loader `get_parser(file_type)` returning the appropriate parser instance (with lazy Scapy loading for `.pcap`).</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-parser">Parser</span> parsers/pcap_parser.py</h3>
+          <p>Parses binary `.pcap`/`.pcapng` network packet captures using Scapy into network IP socket & DNS event records.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-parser">Parser</span> parsers/browser_parser.py</h3>
+          <p>Ingests Chrome/Edge SQLite databases (`History`, `Downloads`, `Logins`) and extracts domain visits and credentials.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-parser">Parser</span> parsers/csv_parser.py</h3>
+          <p>Smart DictReader CSV parser with automatic column alias detection (`timestamp`, `subject`, `action`, `object`, `IP`, `PID`).</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-parser">Parser</span> parsers/json_parser.py</h3>
+          <p>Ingests structured JSON event arrays and normalizes schema fields for database writing.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-parser">Parser</span> parsers/extractor.py</h3>
+          <p>`EntityRelationshipExtractor` that extracts Neo4j nodes (`Process`, `Domain`, `IP`, `File`) and edges (`SPAWNED`, `CONNECTED_TO`) from parsed events.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. AI & COPILOT -->
+    <section>
+      <h2>3. AI Copilot, RAG Pipeline & Analytics</h2>
+      <div class="grid">
+        <div class="card">
+          <h3><span class="badge badge-ai">AI</span> services/ai/copilot.py</h3>
+          <p>Main Copilot orchestrator. Manages RAG context building, Groq API invocations, token streaming, and fallback execution.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-ai">AI</span> services/copilot/groq_provider.py</h3>
+          <p>Production Groq LLM client (`llama-3.3-70b-versatile`). Implements exponential retry backoff, timeout handling, and refusal detection.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-ai">AI</span> services/copilot/query_router.py</h3>
+          <p>Classifier & fast-path executor for 12 query types (file sizes, case counts, graph attack chains, greetings, etc.).</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-ai">AI</span> services/copilot/report_generator.py</h3>
+          <p>Local deterministic fallback engine. Builds structured Markdown DFIR reports when external LLMs are unavailable.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-ai">AI</span> services/ai/vector_store.py</h3>
+          <p>FAISS vector store engine. Deduplicates event sentences, encodes via `all-MiniLM-L6-v2`, and executes cosine similarity searches.</p>
+        </div>
+        <div class="card">
+          <h3><span class="badge badge-ai">AI</span> services/graph/graph_correlation.py</h3>
+          <p>Cypher correlation rules (detects LOLBin binaries, autostart registry modifications, C2 domain lookups, and process execution chains).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. FRONTEND -->
+    <section>
+      <h2>4. Frontend Interface (React & Vite)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Component / Page</th>
+            <th>File Location</th>
+            <th>Primary UI Function & Logic</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Case Workspace Page</strong></td>
+            <td class="code">src/pages/CaseDetailPage.jsx</td>
+            <td>Main case control room. Features top navigation tab bar (Dashboard, Correlations, Report, Audit Log) and 4 interactive quick-action cards (Manage Evidence, View Timeline, Knowledge Graph, Ask AI Assistant).</td>
+          </tr>
+          <tr>
+            <td><strong>Global Dashboard</strong></td>
+            <td class="code">src/pages/DashboardPage.jsx</td>
+            <td>Organization workspace dashboard displaying active cases, high-risk metrics, and case creation wizard.</td>
+          </tr>
+          <tr>
+            <td><strong>Knowledge Graph Canvas</strong></td>
+            <td class="code">src/components/graph/GraphView.jsx</td>
+            <td>Cytoscape.js interactive graph canvas supporting hierarchical process trees, force-directed views, and neighbor highlighting.</td>
+          </tr>
+          <tr>
+            <td><strong>Node Details Inspector</strong></td>
+            <td class="code">src/components/graph/NodeDetailsPanel.jsx</td>
+            <td>Side panel inspecting selected node properties featuring a 2-state <strong>"Focus Neighborhood" / "Cancel Focus Neighborhood"</strong> toggle button.</td>
+          </tr>
+          <tr>
+            <td><strong>AI Copilot Chat Box</strong></td>
+            <td class="code">src/components/chat/ChatPanel.jsx</td>
+            <td>Interactive AI investigator chat interface supporting SSE token streaming, Markdown response formatting, and clickable evidence citations.</td>
+          </tr>
+          <tr>
+            <td><strong>Forensic Timeline</strong></td>
+            <td class="code">src/components/timeline/EventTimeline.jsx</td>
+            <td>Chronological event timeline list with severity filters and API error recovery banner with Retry button.</td>
+          </tr>
+          <tr>
+            <td><strong>Evidence Upload Zone</strong></td>
+            <td class="code">src/components/evidence/EvidenceUpload.jsx</td>
+            <td>Drag-and-drop evidence file upload area configured for single-file ingestion with real-time upload progress.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</body>
+</html>

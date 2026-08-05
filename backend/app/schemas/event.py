@@ -34,14 +34,14 @@ class EventSeverity(str, Enum):
 
 class EventBase(BaseModel):
     timestamp: datetime = Field(..., description="Chronological time the activity occurred")
-    event_type: EventType = Field(..., description="Normalized action category (e.g. process_creation)")
-    source: EventSource = Field(..., description="Parser category of raw evidence")
-    severity: EventSeverity = Field(default=EventSeverity.INFO, description="Calculated finding severity")
+    event_type: str = Field(..., description="Normalized action category (e.g. process_creation)")
+    source: str = Field(default="generic", description="Parser category of raw evidence")
+    severity: str = Field(default="info", description="Calculated finding severity")
     
     # Semantic Subject-Action-Object triple for graph building
-    subject: str = Field(..., description="The actor initiating action (e.g. 'cmd.exe', 'SYSTEM', 'UserA')")
-    action: str = Field(..., description="Specific action executed (e.g. 'spawned', 'connected_to', 'deleted')")
-    object: str = Field(..., description="The target entity of the action (e.g. 'powershell.exe', '192.168.1.5', 'registry_key')")
+    subject: str = Field(default="System", description="The actor initiating action (e.g. 'cmd.exe', 'SYSTEM', 'UserA')")
+    action: str = Field(default="activity", description="Specific action executed (e.g. 'spawned', 'connected_to', 'deleted')")
+    object: str = Field(default="event", description="The target entity of the action (e.g. 'powershell.exe', '192.168.1.5', 'registry_key')")
     
     # Custom attributes from the raw parser
     details: Dict[str, Any] = Field(default_factory=dict, description="Raw key-value details from parser (e.g. PID, CommandLine, SourcePort)")
@@ -50,6 +50,7 @@ class EventBase(BaseModel):
     mitre_techniques: List[str] = Field(default_factory=list, description="Mapped MITRE ATT&CK technique IDs (e.g. ['T1059.001'])")
     is_anomaly: bool = Field(default=False, description="Flagged as outlier by local ML engines")
     anomaly_score: float = Field(default=0.0, description="Outlying probability score between 0.0 and 1.0")
+    processed_at: Optional[datetime] = Field(default=None, description="Timestamp when evidence processing completed")
 
 class EventCreate(EventBase):
     case_id: str = Field(..., description="Parent case ID")
@@ -73,6 +74,7 @@ class EventResponse(EventBase):
 
     class Config:
         from_attributes = True
+        extra = 'ignore'  # ignore unknown MongoDB fields like _id, processed_at etc.
         json_schema_extra = {
             "example": {
                 "id": "60c72b2f9b1d8b2a5c8b4571",

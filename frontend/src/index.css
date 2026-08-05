@@ -165,3 +165,102 @@ body {
   scrollbar-width: thin;
 }
 
+/* Graph controls styling */
+.graph-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+.graph-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #60a5fa;
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+}
+.graph-btn:active {
+  transform: translateY(0);
+}
+
+.graph-btn-anomaly {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.graph-btn-anomaly-active {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #f87171;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+}
+
+.graph-btn-anomaly-inactive {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+.graph-btn-anomaly-inactive:hover {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+.graph-select {
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.graph-select:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+}
+/* ── Graph dropdown menu hover state ───────────────────────────────────────── */
+.view-menu-item {
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+.view-menu-item:hover {
+  background-color: rgba(99, 102, 241, 0.25) !important;
+  color: #ffffff !important;
+}
+
+.view-menu-item-active {
+  background-color: rgba(99, 102, 241, 0.35) !important;
+  color: #ffffff !important;
+}
+
+/* Pulsing effect for anomalous nodes in Cytoscape */
+@keyframes anomalyGlow {
+  0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 22px rgba(239, 68, 68, 0.85); }
+  100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+}
+
+.pulsing-anomaly {
+  animation: anomalyGlow 2s infinite ease-in-out;
+}
+
+

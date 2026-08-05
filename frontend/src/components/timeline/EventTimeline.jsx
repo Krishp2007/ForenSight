@@ -58,18 +58,24 @@ const EventTimeline = ({ caseId }) => {
   const [severity, setSeverity] = useState('')
   const [eventType, setEventType] = useState('')
   const [limit, setLimit] = useState(100)
+  const [error, setError] = useState(null)
 
   const load = async () => {
     setLoading(true)
+    setError(null)
     try {
       const data = await listEvents(caseId, {
         severity: severity || undefined,
         event_type: eventType || undefined,
         limit,
       })
-      setEvents(data)
-    } catch (e) { console.error(e) }
-    finally { setLoading(false) }
+      setEvents(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('[EventTimeline] Fetch error:', e)
+      setError(e.response?.data?.detail || e.message || 'Failed to load forensic events timeline.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [caseId, severity, eventType, limit])
@@ -95,6 +101,13 @@ const EventTimeline = ({ caseId }) => {
         </select>
         <span style={{ color: '#6b7fa3', fontSize: '12px', marginLeft: 'auto' }}>{events.length} events</span>
       </div>
+
+      {error && (
+        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>⚠ {error}</span>
+          <button onClick={load} style={{ background: '#253347', border: '1px solid #3d4f6a', color: '#fff', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit' }}>Retry</button>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}><Spinner size="lg" /></div>

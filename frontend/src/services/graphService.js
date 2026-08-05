@@ -1,8 +1,14 @@
 import api from './api'
 
-// GET /cases/:id/graph  (all files)
+// GET /cases/:id/graph  (all files — legacy raw graph)
 export const getCaseGraph = async (caseId) => {
   const res = await api.get(`/cases/${caseId}/graph`)
+  return res.data
+}
+
+// GET /cases/:id/graph/summary  (investigator-centric aggregated graph)
+export const getCaseGraphSummary = async (caseId, params = {}) => {
+  const res = await api.get(`/cases/${caseId}/graph/summary`, { params })
   return res.data
 }
 

@@ -117,7 +117,7 @@ def build_forensic_report(
         return (
             f"### 📥 How to Upload New Evidence to **{case_name}**:\n\n"
             f"1. Click on the **`Evidence`** tab in the top navigation bar of this case page.\n"
-            f"2. Drag & drop your file (`.evtx`, `.pcap`, `.pcapng`, `.sqlite`, `.csv`, `.json`, `.txt`) into the dropzone.\n"
+            f"2. Drag & drop your file (`.pcap`, `.pcapng`, `.sqlite`, `.csv`, `.json`, `.txt`) into the dropzone.\n"
             f"3. The ingestion worker will parse logs into MongoDB, build Neo4j graph execution trees, and generate FAISS vector embeddings."
         )
 

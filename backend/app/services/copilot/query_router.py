@@ -10,6 +10,9 @@ from typing import Dict, Any, Optional, List
 from backend.app.repositories.event_repository import EventRepository
 from backend.app.repositories.case_repository import CaseRepository
 from backend.app.repositories.evidence_repository import EvidenceRepository
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def classify_intent(question: str) -> str:
@@ -19,51 +22,72 @@ def classify_intent(question: str) -> str:
 
     q = question.strip().lower()
 
-    # 1. Greetings ("hi", "hello", "hey", "sup", "hye my name is Shlesh")
+    # 1. Greetings
     if q in {"hi", "hii", "hy", "hye", "hello", "helo", "hey", "yo", "sup", "greetings", "whats up", "what's up", "wsp"} or \
        any(q.startswith(w) for w in ["hi ", "hii ", "hello ", "hey ", "hye "]) or \
        "my name is" in q or "i am " in q or "i'm " in q:
         return "greeting"
 
-    # 2. Upload / System Instructions ("how to upload new evidence file?", "how to upload?")
+    # 2. Upload / System Instructions
     if any(phrase in q for phrase in ["how to upload", "upload new evidence", "upload evidence file", "where to upload", "add evidence"]):
         return "upload_instructions"
 
-    # 3. Total Cases Count ("what are the number of cases?", "how many cases?")
+    # 3. GRAPH_STATS — Neo4j graph statistics (must be before cases_count to avoid misrouting)
+    _graph_node_patterns = [
+        r"\bneo4j\b", r"\bgraph\b.*\b(node|nodes|relationship|relationships|count|stats|statistics)\b",
+        r"\b(node|nodes)\b.*\b(graph|neo4j|count|many|total)\b",
+        r"\bhow many nodes\b", r"\bnode count\b", r"\bnodes? in (the )?graph\b",
+        r"\brelationship count\b", r"\bhow many relationships\b",
+        r"\b(show|list|get)\s+(graph\s+)?stats\b", r"\bgraph statistics\b",
+        r"\b(event|process|browservisit|domain|ipaddress|user|host)\s+nodes?\b",
+        r"\bnodes? (belong|associated|linked) (to|with) this case\b",
+        r"\bhow many .*(node|nodes|relationship|relationships).*(case|graph|neo4j)\b",
+    ]
+    if any(re.search(p, q) for p in _graph_node_patterns):
+        return "graph_stats"
+
+    # 4. Total Cases Count
     if ("case" in q or "cases" in q) and any(k in q for k in ["how many", "count", "number of", "total"]):
         return "cases_count"
 
-    # 4. File Name Query ("what's the name of that file?", "file name", "name of file")
+    # 5. File Name Query
     if any(phrase in q for phrase in ["name of that file", "name of the file", "what's the name", "whats the name", "file name", "filename", "name of evidence"]):
         return "file_name"
 
-    # 5. Evidence Importance & Priority ("which evidence is more important?", "most critical evidence")
+    # 5b. File Size / Maximum Size Query
+    if any(phrase in q for phrase in ["maximum size", "max size", "largest file", "biggest file", "file size", "size of file", "which file is of maximum", "which file is maximum", "which file is largest"]):
+        return "file_size"
+
+    # 6. Evidence Importance & Priority
     if any(phrase in q for phrase in ["more important", "most important", "critical evidence", "which evidence is important", "primary evidence"]):
         return "evidence_importance"
 
-    # 6. Evidence file count ("how many files uploaded?", "how many evidence files")
+    # 7. Evidence file count
     if re.search(r"\b(how many|count of|total number of)\b", q) and any(
         w in q for w in ["file", "files", "evidence", "upload", "uploaded"]
     ):
         return "evidence_count"
 
-    # 7. Evidence File List Query ("which evidence file uploaded?", "list files")
+    # 8. Evidence File List Query
     if any(phrase in q for phrase in ["which evidence file", "what evidence file", "uploaded evidence", "evidence uploaded", "list evidence", "show evidence", "files uploaded", "file uploaded"]):
         return "evidence_list"
 
-    # 8. File Security Assessment ("is this file harmful?", "is it malware?")
+    # 9. File Security Assessment
     if any(phrase in q for phrase in ["harmful", "malicious", "malware", "virus", "dangerous", "infected", "threat", "is this file"]):
         return "file_security"
 
-    # 9. Direct database count inquiries
+    # 10. Graph Investigation Queries (attack path etc — different from graph_stats)
+    if any(phrase in q for phrase in ["attack path", "process tree", "spawn", "spawned", "who executed", "connected to", "correlation", "cross evidence"]):
+        return "graph_query"
+
+    # 11. Direct database count inquiries
     if re.search(r"\b(how many|count of|total number of)\b", q):
         return "structured_count"
 
-    # 10. Case status inquiries
+    # 12. Case status inquiries
     if re.search(r"\b(case status|status of case|who created)\b", q):
         return "case_status"
 
-    # Default to semantic RAG pipeline
     return "semantic_rag"
 
 
@@ -93,14 +117,39 @@ async def handle_structured_query(case_id: str, org_id: str, question: str, inte
             "sources": []
         }
 
-    # 2. Upload Instructions ("how to upload new evidence file?")
+    # 2. Graph Investigation Query
+    if intent == "graph_query":
+        from backend.app.services.graph.graph_correlation import GraphCorrelationEngine
+        corr_res = await GraphCorrelationEngine.get_all_case_correlations(case_id)
+        findings = corr_res.get("findings", [])
+        if not findings:
+            return {
+                "analysis": f"No suspicious graph attack chains or cross-evidence correlations have been detected for **{case_name}**.",
+                "confidence": "High",
+                "sources": [{"type": "neo4j_graph", "source_file": "Neo4j Graph Database"}]
+            }
+
+        lines = [f"### 🕸️ Graph Investigation Findings for **{case_name}**:\n"]
+        for f in findings[:5]:
+            score = f.get("score", 0)
+            sev = f.get("severity", "medium").upper()
+            reasons = " | ".join(f.get("reasons", []))
+            lines.append(f"- **[{sev} Risk Score: {score}/100]** {f.get('explanation', reasons)}")
+
+        return {
+            "analysis": "\n".join(lines),
+            "confidence": "High",
+            "sources": [{"type": "neo4j_graph", "source_file": "Neo4j Graph Correlation Engine"}]
+        }
+
+    # 3. Upload Instructions ("how to upload new evidence file?")
     if intent == "upload_instructions":
         return {
             "analysis": (
                 f"### 📥 How to Upload New Evidence to **{case_name}**:\n\n"
                 f"1. Click on the **`Evidence`** tab in the top head navigation bar of this case.\n"
                 f"2. Drag & drop your forensic evidence file into the upload dropzone (or click to browse).\n"
-                f"   - **Supported File Formats**: Windows Event Logs (`.evtx`), Network Captures (`.pcap`, `.pcapng`), Browser DBs (`.sqlite`), Log Files (`.csv`, `.json`, `.txt`).\n"
+                f"   - **Supported File Formats**: Network Captures (`.pcap`, `.pcapng`), Browser DBs (`.sqlite`), Log Files (`.csv`, `.json`, `.txt`).\n"
                 f"3. The ingestion pipeline will automatically stream the binary to MinIO S3, parse events into MongoDB, build Neo4j process lineage trees, and update the FAISS vector index."
             ),
             "confidence": "High",
@@ -132,6 +181,50 @@ async def handle_structured_query(case_id: str, org_id: str, question: str, inte
             "analysis": f"The evidence file(s) uploaded for **{case_name}** is: {names_str}.",
             "confidence": "High",
             "sources": [{"type": "evidence_file", "source_file": ev_items[0].get("filename", "evidence")}]
+        }
+
+    # 4b. File Size / Maximum Size Query ("which file is of maximum size?")
+    if intent == "file_size":
+        ev_items = await EvidenceRepository.list_by_case(case_id, org_id)
+        if not ev_items:
+            return {
+                "analysis": f"No evidence files have been uploaded to **{case_name}** yet.",
+                "confidence": "High",
+                "sources": []
+            }
+        
+        # Sort evidence items by size in descending order
+        def get_size(ev):
+            return ev.get("size_bytes") or ev.get("file_size_bytes") or 0
+        
+        sorted_ev = sorted(ev_items, key=get_size, reverse=True)
+        max_ev = sorted_ev[0]
+        max_name = max_ev.get("filename") or max_ev.get("original_filename") or "Unknown file"
+        max_bytes = get_size(max_ev)
+        
+        def fmt_size(b):
+            if b < 1024:
+                return f"{b} Bytes"
+            elif b < 1024 * 1024:
+                return f"{b / 1024:.1f} KB"
+            else:
+                return f"{b / (1024 * 1024):.2f} MB"
+        
+        max_size_str = fmt_size(max_bytes)
+
+        lines = [f"The file of maximum size in **{case_name}** is 📄 **`{max_name}`** with a size of **{max_size_str}**.\n"]
+        if len(sorted_ev) > 1:
+            lines.append("### 📊 All Uploaded Evidence Files by Size:")
+            for ev in sorted_ev:
+                fn = ev.get("filename") or ev.get("original_filename") or "Unknown file"
+                sz = fmt_size(get_size(ev))
+                ft = ev.get("file_type") or "raw"
+                lines.append(f"- 📄 **`{fn}`** (`{ft}`): **{sz}**")
+
+        return {
+            "analysis": "\n".join(lines),
+            "confidence": "High",
+            "sources": [{"type": "evidence_file", "source_file": max_name}]
         }
 
     # 5. Evidence Importance Query ("which evidence is more important?")

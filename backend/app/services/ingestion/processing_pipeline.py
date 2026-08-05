@@ -21,12 +21,14 @@ Post-parsed background steps (do NOT block the timer):
 
 import asyncio
 import concurrent.futures
-import logging
+import time
 import os
 import tempfile
+import logging
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 from bson import ObjectId
-
+from backend.app.db.mongodb import db_client
 from backend.app.repositories.evidence_repository import EvidenceRepository
 from backend.app.schemas.evidence import EvidenceStatus
 
@@ -59,19 +61,24 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
         logger.error(f"[PIPELINE] Evidence {evidence_id} not found — aborting.")
         return
 
+    case_id_str = str(evidence["case_id"])
     filename = evidence.get("filename", evidence_id)
     file_type = evidence.get("file_type", "json")
     logger.info(f"[PIPELINE] ▶ Starting: {filename} ({file_type})")
     await EvidenceRepository.update_status(evidence_id, org_id, EvidenceStatus.PARSING.value)
 
     loop = asyncio.get_running_loop()
-    _t0 = loop.time()
+    _t0 = time.perf_counter()
+    _t_file_prep_start = _t0  # track file-prep phase start
+    file_prep_time = 0.0
+    mongo_time = 0.0
 
     try:
         # ── 2. Obtain file content (use in-memory bytes if available, else download from S3)
+        _t_dl = time.perf_counter()
         if file_bytes:
             file_content = file_bytes
-            logger.info(f"[PIPELINE] ⏱ In-memory buffer used (0.0s S3 latency): {len(file_content):,} bytes")
+            logger.info(f"[PROFILE] File read (in-memory)        0.000s  {len(file_content):,} bytes")
         else:
             if minio_client.client is None:
                 connect_to_minio()
@@ -91,6 +98,7 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
                     return None
 
             file_content = await loop.run_in_executor(None, _download)
+            dl_time = time.perf_counter() - _t_dl
             if not file_content:
                 logger.error(f"[PIPELINE] File content unavailable for {filename}. Marking FAILED.")
                 await EvidenceRepository.update_status(
@@ -99,22 +107,31 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
                     error_message="Storage object unavailable. Please click Re-process or re-upload the file.",
                 )
                 return
-            logger.info(f"[PIPELINE] ⏱ Download: {loop.time()-_t0:.1f}s  {len(file_content):,} bytes")
+            logger.info(f"[PROFILE] File download (S3)           {dl_time:.3f}s  {len(file_content):,} bytes")
 
         # ── 3. Parse (CPU-bound / blocking I/O → parallel thread executor) ───
         parser = get_parser(file_type)
-        _t1 = loop.time()
+        file_prep_time = time.perf_counter() - _t_file_prep_start  # everything before parse
+        _t_parse = time.perf_counter()
         events = await loop.run_in_executor(
             _parse_executor,
             lambda: parser.parse(file_content, filename=filename),
         )
+        parse_seconds = round(time.perf_counter() - _t_parse, 3)
 
+        num_events = len(events)
+        total_entities = sum(len(e.get("entities", [])) for e in events)
+        total_relationships = sum(len(e.get("relationships", [])) for e in events)
 
-        logger.info(f"[PIPELINE] ⏱ Parse:    {loop.time()-_t1:.1f}s  {len(events)} events")
+        logger.info(
+            f"[PROFILE] Parse ({file_type})               {parse_seconds:.3f}s  "
+            f"{num_events} events | {total_entities} entities | {total_relationships} rels"
+        )
 
         if not events:
-            from datetime import datetime
-            logger.warning(f"[PIPELINE] ⚠️ 0 events returned by parser for {filename}. Generating synthetic ingestion event.")
+            if file_type.lower() in ("evtx", "pcap", "sqlite", "csv"):
+                raise ValueError(f"0 events returned by parser for {filename}. Parsing failed.")
+
             events = [{
                 "timestamp": datetime.utcnow(),
                 "event_type": "generic",
@@ -128,15 +145,13 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
             }]
 
         # ── 4. Enrich ─────────────────────────────────────────────────────────
-        case_oid = ObjectId(str(evidence["case_id"]))
+        _t_enrich = time.perf_counter()
         org_oid  = ObjectId(org_id)
         ev_oid   = ObjectId(evidence_id)
         for ev in events:
-            ev.update({
-                "case_id":         case_oid,
-                "evidence_id":     ev_oid,
-                "organization_id": org_oid,
-            })
+            ev.update({"case_id": case_id_str, "evidence_id": ev_oid, "organization_id": org_oid,})
+        enrich_time = time.perf_counter() - _t_enrich
+        logger.info(f"[PROFILE] Event normalization          {enrich_time:.3f}s  ({num_events} events)")
 
         # ── 5. Check if evidence was deleted during parsing ───────────────────
         still_exists = await EvidenceRepository.get_by_id(evidence_id, org_id)
@@ -144,47 +159,119 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
             logger.warning(f"[PIPELINE] Evidence {evidence_id} was deleted during parsing — aborting DB write.")
             return
 
+        # ── 5a. Purge old derived data for evidence_id before re-processing ─────
+        _t_purge = time.perf_counter()
+        deleted_count = await EventRepository.delete_by_evidence_id(evidence_id, org_id, filename=filename)
+        await GraphRepository.delete_evidence_subgraph(case_id_str, evidence_id)
+        purge_time = time.perf_counter() - _t_purge
+        if deleted_count > 0:
+            logger.info(
+                f"[PROFILE] Purge old data               {purge_time:.3f}s  "
+                f"({deleted_count} old events deleted for {filename})"
+            )
+
         # ── 5b. MongoDB bulk insert ───────────────────────────────────────────
-        _t2 = loop.time()
+        _t_mongo = time.perf_counter()
         if events:
             count = await EventRepository.bulk_create(events)
-            logger.info(f"[PIPELINE] ⏱ MongoDB:  {loop.time()-_t2:.1f}s  {count} inserted")
+            mongo_time = time.perf_counter() - _t_mongo
+            logger.info(f"[PROFILE] MongoDB bulk write           {mongo_time:.3f}s  ({count} inserted)")
 
-        # ── 6. Mark PARSED — UI timer stops here ─────────────────────────────
-        await EvidenceRepository.update_status(evidence_id, org_id, EvidenceStatus.PARSED.value)
-        logger.info(f"[PIPELINE] ✅ PARSED in {loop.time()-_t0:.1f}s total — {filename}")
-
-        # ── 7-10. Post-parse enrichment runs fully in background ──────────────
+        # ── 6. Post-parse enrichment (Neo4j, Anomaly, FAISS, Correlations) ──
         case_id_str = str(evidence["case_id"])
-        asyncio.create_task(_run_post_pipeline(
-            events, case_id_str, org_id, loop
-        ))
+        await EvidenceRepository.update_status(evidence_id, org_id, "analyzing")
+        post_time, stage_times = await _run_post_pipeline(events, case_id_str, org_id, loop, parse_seconds)
+
+        # ── 7. Mark PARSED — Complete pipeline finished ─────────────────────
+        total_seconds = round(time.perf_counter() - _t0, 3)
+        scan_duration_ms = int(total_seconds * 1000)
+        await EvidenceRepository.update_status(
+            evidence_id, org_id, EvidenceStatus.PARSED.value, scan_duration_ms=scan_duration_ms
+        )
+        # Mark all events for this evidence as processed (set processed_at timestamp)
+        await db_client.db["events"].update_many(
+            {"case_id": case_id_str, "$or": [{"evidence_id": ev_oid}, {"evidence_id": str(ev_oid)}]},
+            {"$set": {"processed_at": datetime.utcnow()}}
+        )
+
+        # Compute "other" time = total − sum of all measured stages
+        measured_sum = (
+            parse_seconds
+            + enrich_time
+            + mongo_time
+            + stage_times.get("neo4j", 0.0)
+            + stage_times.get("ml", 0.0)
+            + stage_times.get("faiss", 0.0)
+            + stage_times.get("correlations", 0.0)
+        )
+        other_time = max(0.0, total_seconds - measured_sum)
+
+        logger.info(f"[PIPELINE] 🏁 COMPLETE & PARSED in {total_seconds}s ({scan_duration_ms}ms) — {filename}")
+        logger.info(
+            f"\n{'='*55}\n"
+            f"FORENSIGHT PERFORMANCE REPORT\n"
+            f"{'='*55}\n"
+            f"Evidence:              {filename}\n"
+            f"Events:                {num_events}\n"
+            f"{'─'*55}\n"
+            f"File preparation:      {file_prep_time:.3f}s\n"
+            f"Parse:                 {parse_seconds:.3f}s\n"
+            f"Enrich:                {enrich_time:.3f}s\n"
+            f"MongoDB insert:        {mongo_time:.3f}s\n"
+            f"Neo4j graph sync:      {stage_times.get('neo4j', 0.0):.3f}s\n"
+            f"ML anomaly detection:  {stage_times.get('ml', 0.0):.3f}s\n"
+            f"FAISS embeddings:      {stage_times.get('faiss', 0.0):.3f}s\n"
+            f"Graph correlations:    {stage_times.get('correlations', 0.0):.3f}s\n"
+            f"Other (overhead):      {other_time:.3f}s\n"
+            f"{'─'*55}\n"
+            f"TOTAL:                 {total_seconds:.3f}s\n"
+            f"{'='*55}"
+        )
 
     except Exception as e:
         logger.error(f"[PIPELINE] ❌ Failed for {filename}: {e}", exc_info=True)
+        total_seconds = round(time.perf_counter() - _t0, 3) if '_t0' in locals() else 0
+        scan_duration_ms = int(total_seconds * 1000)
         await EvidenceRepository.update_status(
             evidence_id, org_id,
             status=EvidenceStatus.FAILED.value,
             error_message=str(e)[:500],
+            scan_duration_ms=scan_duration_ms,
         )
 
 
-async def _run_post_pipeline(events, case_id_str: str, org_id: str, loop) -> None:
+async def _run_post_pipeline(events, case_id_str: str, org_id: str, loop, parse_seconds: float = 0.0) -> float:
     """
     Post-parse enrichment: Neo4j, anomaly detection, embeddings, correlations.
-    Runs after PARSED is set — never blocks the main pipeline timer.
     All four run concurrently via asyncio.gather.
+    Each stage has granular [PROFILE] timing output.
+    Returns total post-pipeline wall-clock time in seconds.
     """
     from backend.app.repositories.graph_repository import GraphRepository
     from backend.app.repositories.event_repository import EventRepository
 
-    _tp = loop.time()
+    _tp = time.perf_counter()
+    # Stage timers captured via mutable containers so nested async funcs can write to them
+    _stage_times: dict = {
+        "neo4j": 0.0,
+        "ml": 0.0,
+        "faiss": 0.0,
+        "correlations": 0.0,
+    }
 
     async def _neo4j():
         try:
-            _t = loop.time()
+            _t = time.perf_counter()
+            # Log the case_id being written to Neo4j for traceability
+            sample_cid = str(events[0].get("case_id", "")) if events else "N/A"
+            logger.info(f"[POST] Neo4j sync starting: case_id={sample_cid!r} events={len(events)}")
             synced = await GraphRepository.bulk_import_events(events)
-            logger.info(f"[POST] ⏱ Neo4j:    {loop.time()-_t:.1f}s  {synced} synced")
+            neo4j_total = time.perf_counter() - _t
+            _stage_times["neo4j"] = neo4j_total
+            logger.info(
+                f"[PROFILE] Neo4j TOTAL                  {neo4j_total:.3f}s  "
+                f"({synced} synced, case_id={sample_cid!r})"
+            )
         except Exception as e:
             logger.warning(f"[POST] Neo4j error (non-fatal): {e}")
 
@@ -197,13 +284,17 @@ async def _run_post_pipeline(events, case_id_str: str, org_id: str, loop) -> Non
             from collections import Counter
 
             # Cap at 2000 — O(n²) LOF gets very slow beyond this
+            _t_fetch = time.perf_counter()
             evs = await EventRepository.list_by_case(case_id_str, org_id, limit=2000)
+            fetch_time = time.perf_counter() - _t_fetch
             n = len(evs)
             if n < 1:
                 return
 
+            logger.info(f"[PROFILE] ML event fetch               {fetch_time:.3f}s  ({n} events)")
+
             if n < 5:
-                # For small sample sizes (n < 5), flag high/critical severity or tagged events as anomalies
+                # For small sample sizes (n < 5), flag high/critical severity or tagged events
                 bulk_ops = [
                     UpdateOne(
                         {"_id": e["_id"]},
@@ -215,9 +306,11 @@ async def _run_post_pipeline(events, case_id_str: str, org_id: str, loop) -> Non
                     for e in evs
                 ]
                 await db_client.db["events"].bulk_write(bulk_ops, ordered=False)
-                logger.info(f"[POST] ⏱ Anomaly (small sample n={n}): tagged events.")
+                logger.info(f"[PROFILE] ML (small sample n={n})       — severity-based tagging.")
                 return
 
+            # ── Feature extraction ────────────────────────────────────────────
+            _t_feat = time.perf_counter()
             SEV = {"info": 0.0, "low": 0.25, "medium": 0.5, "high": 0.75, "critical": 1.0}
             sc = Counter(e.get("subject", "") for e in evs)
             oc = Counter(e.get("object",  "") for e in evs)
@@ -231,11 +324,21 @@ async def _run_post_pipeline(events, case_id_str: str, org_id: str, loop) -> Non
                 SEV.get((e.get("severity") or "info").lower(), 0.0),
             ] for e in evs]
             X = np.array(rows, dtype=float)
+            feat_time = time.perf_counter() - _t_feat
+            logger.info(f"[PROFILE] ML feature extraction        {feat_time:.3f}s  ({n} events, {X.shape[1]} features)")
 
-            _t = loop.time()
+            # ── Ensemble ML ───────────────────────────────────────────────────
+            _t_ml = time.perf_counter()
             res = await loop.run_in_executor(None, lambda: ensemble_predict(X))
             flags, scores = res["flags"], res["scores"]
+            ml_time = time.perf_counter() - _t_ml
+            logger.info(
+                f"[PROFILE] ML ensemble                  {ml_time:.3f}s  "
+                f"({sum(flags)}/{n} anomalies flagged)"
+            )
 
+            # ── MongoDB bulk update ───────────────────────────────────────────
+            _t_mongo_update = time.perf_counter()
             bulk_ops = [
                 UpdateOne(
                     {"_id": evs[i]["_id"]},
@@ -244,30 +347,63 @@ async def _run_post_pipeline(events, case_id_str: str, org_id: str, loop) -> Non
                 for i in range(n)
             ]
             await db_client.db["events"].bulk_write(bulk_ops, ordered=False)
-            logger.info(f"[POST] ⏱ Anomaly:  {loop.time()-_t:.1f}s  {sum(flags)}/{n} flagged")
+            mongo_update_time = time.perf_counter() - _t_mongo_update
+            logger.info(f"[PROFILE] ML MongoDB score update       {mongo_update_time:.3f}s  ({n} events)")
+
+            # ── Neo4j anomaly score sync (batched UNWIND) ─────────────────────
+            _t_neo4j_scores = time.perf_counter()
+            anomaly_updates = [
+                {
+                    "event_id": str(evs[i]["_id"]),
+                    "is_anomaly": bool(flags[i]),
+                    "anomaly_score": float(scores[i]),
+                }
+                for i in range(n)
+            ]
+            await GraphRepository.update_anomaly_scores(anomaly_updates)
+            neo4j_scores_time = time.perf_counter() - _t_neo4j_scores
+            logger.info(f"[PROFILE] ML Neo4j score sync           {neo4j_scores_time:.3f}s  ({n} updates)")
+
+            total_ml_time = feat_time + ml_time + mongo_update_time + neo4j_scores_time
+            _stage_times["ml"] = total_ml_time
+            logger.info(
+                f"[PROFILE] ML TOTAL                     {total_ml_time:.3f}s  "
+                f"({sum(flags)}/{n} flagged)"
+            )
         except Exception as e:
-            logger.warning(f"[POST] Anomaly error (non-fatal): {e}")
+            logger.warning(f"[POST] Anomaly error (non-fatal): {e}", exc_info=True)
 
     async def _embeddings():
         try:
+            _t = time.perf_counter()
             from backend.app.services.ai.vector_store import VectorStore
-            _t = loop.time()
+            # VectorStore.index_case_events has its own [PROFILE] logging
             await VectorStore.index_case_events(case_id_str, org_id)
-            logger.info(f"[POST] ⏱ FAISS:    {loop.time()-_t:.1f}s")
+            _stage_times["faiss"] = time.perf_counter() - _t
         except Exception as e:
             logger.warning(f"[POST] Embedding error (non-fatal): {e}")
 
     async def _correlations():
         try:
             from backend.app.services.graph.graph_queries import GraphCorrelationRules
-            _t = loop.time()
+            _t = time.perf_counter()
             corr = await GraphCorrelationRules.run_all_rules(case_id_str, org_id)
-            logger.info(f"[POST] ⏱ Correlate:{loop.time()-_t:.1f}s  {corr}")
+            corr_time = time.perf_counter() - _t
+            _stage_times["correlations"] = corr_time
+            logger.info(
+                f"[PROFILE] Graph correlations           {corr_time:.3f}s  "
+                f"(total={corr.get('total', 0)}, "
+                f"chains={corr.get('process_chains', 0)}, "
+                f"paths={corr.get('attack_paths', 0)}, "
+                f"cross={corr.get('cross_evidence', 0)})"
+            )
         except Exception as e:
             logger.warning(f"[POST] Correlation error (non-fatal): {e}")
 
     await asyncio.gather(_neo4j(), _anomaly(), _embeddings(), _correlations())
-    logger.info(f"[POST] 🏁 Post-pipeline done in {loop.time()-_tp:.1f}s")
+    post_time = time.perf_counter() - _tp
+    logger.info(f"[PROFILE] Post-pipeline TOTAL          {post_time:.3f}s")
+    return post_time, _stage_times
 
 
 class ProcessingPipeline:

@@ -1,216 +1,218 @@
 """
-Copilot Service — ForenSight AI
-==================================
+Copilot Service — ForenSight AI  (v2 — Groq Primary + Fallback)
+=================================================================
 Orchestrates the full RAG pipeline:
-  1. Build context via ContextBuilder (intent routing + all retrievals)
-  2. Build the prompt string
-  3. Route to the configured LLM provider (Gemini → Ollama → local fallback)
-  4. Return markdown response
+  1. Intent routing (fast-path structured DB queries)
+  2. Build context via ContextBuilder (FAISS + Neo4j + MongoDB)
+  3. Try Groq API (primary) — streaming + non-streaming
+  4. On any Groq failure → fall back to local forensic report engine (same context)
+  5. Return markdown response with citations
 
-Architecture Section 5.6 — AI Copilot Layer.
+Fallback triggers:
+  - API timeout / connection error
+  - Auth failure (401/403)
+  - Rate limit (429)
+  - Server error (5xx)
+  - Empty or insufficient response ("I don't know" etc.)
+  - Any unexpected exception
+
+Internal logging only — never exposed to the frontend.
 """
 
+import asyncio
 import logging
 import os
-from typing import Optional, List, Any
+from typing import Any, AsyncGenerator, List, Optional
 
 from backend.app.config import settings
 from backend.app.services.context.context_builder import build_copilot_context
 from backend.app.services.copilot.query_router import classify_intent, handle_structured_query
 from backend.app.services.copilot.report_generator import build_forensic_report
+from backend.app.services.copilot.prompts import build_fenced_prompt, SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
+from backend.app.services.copilot.groq_provider import _is_insufficient
 
-def _build_prompt(ctx: dict) -> str:
-    """Assemble the LLM prompt from the assembled context dict."""
-    case = ctx["case"]
-    anomalies = ctx["anomalies"]
-    correlations = ctx["correlations"]
-    enriched_techniques = ctx["enriched_techniques"]
-    semantic_context = ctx["semantic_context"]
-    timeline_ctx = ctx.get("timeline_ctx", {})
-    question = ctx.get("question")
-    intent = ctx.get("intent", "summarise")
 
-    lines = [
-        "You are ForenSight, an expert AI digital forensics assistant.",
-        "Your task is to answer the investigator's question using the provided context.",
-        "",
-        "CRITICAL OUTPUT FORMAT RULES:",
-        "1. Output ONLY your final clean, professional Markdown response.",
-        "2. Do NOT repeat, echo, or quote prompt rules, constraints, tasks, roles, or internal reasoning steps.",
-        "3. Keep the answer direct, concise, and focused strictly on what was asked.",
-        "4. Format timestamps in UTC ISO-8601.",
-        "",
-        f"Case Title: {case.get('title')}",
-        f"Case Description: {case.get('description', 'N/A')}",
-        f"Case Status: {case.get('status', 'open')}",
-    ]
+# ── Source citation builder ───────────────────────────────────────────────────
+def _build_sources(ctx: dict) -> list:
+    sources = []
+    for ev in ctx.get("evidence_list", []):
+        fn = ev.get("filename") or ev.get("original_filename") or "evidence"
+        eid = str(ev.get("_id", "") or ev.get("id", ""))
+        sources.append({
+            "type": "evidence_file",
+            "source_file": fn,
+            "evidence_id": eid,
+            "status": ev.get("status", "parsed"),
+        })
+    for sc in ctx.get("semantic_context", [])[:4]:
+        sources.append({
+            "type": "event_log",
+            "source_file": sc.get("evidence_file", "log"),
+            "event_id": str(sc.get("_id", "")),
+            "event_type": sc.get("event_type", ""),
+            "timestamp": str(sc.get("timestamp", "")),
+        })
+    for tech in ctx.get("enriched_techniques", [])[:3]:
+        sources.append({
+            "type": "mitre_technique",
+            "mitre_id": tech.get("id"),
+            "name": tech.get("name"),
+            "tactic": tech.get("tactic", ""),
+        })
+    for corr in ctx.get("correlations", [])[:2]:
+        if corr.get("mitre"):
+            sources.append({
+                "type": "graph_correlation",
+                "source_file": "Neo4j Graph",
+                "mitre_id": corr.get("mitre"),
+                "rule": corr.get("rule", ""),
+            })
+    return sources
 
-    if question:
-        lines.append(f"\nInvestigator question: \"{question}\"")
 
-    # Uploaded evidence list
-    evidence_list = ctx.get("evidence_list", [])
-    if evidence_list:
-        lines.append("\n--- Uploaded Evidence Files (MongoDB) ---")
-        for i, ev in enumerate(evidence_list, 1):
-            filename = ev.get("filename") or ev.get("original_filename") or "Unknown"
-            file_type = ev.get("file_type") or ev.get("parser_type") or "raw"
-            status = ev.get("status", "unknown")
-            raw_b = ev.get("size_bytes") or ev.get("file_size_bytes") or ev.get("file_size") or 0
-            size_kb = raw_b / 1024
-            lines.append(f"{i}. {filename} (Type: {file_type}, Status: {status}, Size: {size_kb:.1f} KB)")
-
-    # Semantic search results (FAISS vector store)
-    if semantic_context:
-        lines.append("\n--- Relevant Evidence Events (FAISS Vector Search Matches) ---")
-        for i, sc in enumerate(semantic_context[:8], 1):
-            lines.append(
-                f"{i}. [{sc.get('severity')}] {sc.get('timestamp')} | "
-                f"{sc.get('subject')} → {sc.get('action')} → {sc.get('object')} "
-                f"(source: {sc.get('evidence_file', 'log')})"
-            )
-
-    # Timeline sessions (timeline intent)
-    if timeline_ctx and timeline_ctx.get("sessions"):
-        lines.append(
-            f"\n--- Timeline: {timeline_ctx['total']} events across "
-            f"{len(timeline_ctx['sessions'])} activity sessions "
-            f"(span: {timeline_ctx['span_hours']}h) ---"
-        )
-        for s in timeline_ctx["sessions"][:5]:
-            lines.append(
-                f"  Session: {s.get('count')} events "
-                f"from {s.get('start')} to {s.get('end')}"
-            )
-
-    # Top anomalies
-    lines.append("\n--- Top ML Anomalies (Isolation Forest Model) ---")
-    if anomalies:
-        for i, a in enumerate(anomalies[:12], 1):
-            mitre = ", ".join(a.get("mitre_techniques", [])) or "none"
-            lines.append(
-                f"{i}. [{a.get('severity').upper()}] {a.get('timestamp')} | "
-                f"{a.get('subject')} → {a.get('action')} → {a.get('object')} | "
-                f"score={a.get('anomaly_score', 0):.4f} | MITRE: {mitre}"
-            )
+# ── Prompt splitter for Groq (system + user) ─────────────────────────────────
+def _split_prompt(ctx: dict) -> tuple[str, str]:
+    """Split build_fenced_prompt output into system + user messages for Groq."""
+    full_prompt = build_fenced_prompt(ctx)
+    # Everything up to INVESTIGATOR QUESTION is the system context
+    marker = "================ INVESTIGATOR QUESTION ================"
+    if marker in full_prompt:
+        parts = full_prompt.split(marker, 1)
+        system_part = parts[0].strip()
+        user_part = (marker + parts[1]).strip()
     else:
-        lines.append("  No anomalies detected yet.")
+        system_part = SYSTEM_PROMPT
+        user_part = full_prompt
+    return system_part, user_part
 
-    # Graph correlations
-    if correlations:
-        lines.append(f"\n--- Neo4j Graph Correlations ({len(correlations)} derived relationships) ---")
-        for c in correlations[:10]:
-            mitre = f" | MITRE {c['mitre']} ({c.get('technique','')})" if c.get("mitre") else ""
-            lines.append(
-                f"  [{c.get('rule')}] {c.get('source')} → {c.get('target')}{mitre}"
-            )
 
-    # MITRE techniques
-    if enriched_techniques:
-        lines.append("\n--- Observed MITRE ATT&CK Techniques ---")
-        for t in enriched_techniques:
-            lines.append(f"  {t['id']} [{t['tactic']}]: {t['name']}")
+# ── Fallback text generation ──────────────────────────────────────────────────
+async def _run_fallback(ctx: dict, prompt: str) -> str:
+    """Groq failed — fall back directly to the local deterministic report engine."""
+    logger.info("[Copilot] Fallback: Using local forensic report engine")
+    return build_forensic_report(
+        case=ctx["case"],
+        anomalies=ctx["anomalies"],
+        correlations=ctx["correlations"],
+        enriched_techniques=ctx["enriched_techniques"],
+        semantic_context=ctx["semantic_context"],
+        evidence_list=ctx.get("evidence_list"),
+        question=ctx.get("question"),
+    )
 
-    q_lower = (question or "").strip().lower()
-    is_greeting = q_lower in ["hi", "hii", "hy", "hye", "hello", "helo", "hey", "yo", "sup", "greetings"]
 
-    if is_greeting:
-        lines.append(
-            f"\nInvestigator Question: \"{question}\"\n"
-            f"SPECIAL GREETING INSTRUCTION: Respond warmly and professionally as follows:\n"
-            f"\"Hello! I am ForenSight, your AI forensic investigator assistant. I have loaded and analyzed the case logs for {case.get('title')}.\"\n"
-            f"Provide a quick 1-2 sentence overview of the loaded dataset ({len(evidence_list)} evidence files, {len(anomalies)} anomalies), "
-            f"and invite the investigator to ask ANY specific questions about evidence files, processes, IPs, or timelines."
-        )
-    elif question:
-        lines.append(
-            f"\nInvestigator Question: \"{question}\"\n"
-            "SYSTEM INSTRUCTION FOR COPILOT:\n"
-            "You are ForenSight AI Copilot, an expert digital forensics assistant. Answer ANY custom question asked by the investigator using the complete project database context provided above (MongoDB evidence files & events, Neo4j graph correlations, Isolation Forest ML anomalies, and FAISS vector matches).\n"
-            "1. Deliver clear, intelligent, natural paragraph-wise explanations (ChatGPT/Gemini style).\n"
-            "2. Cite exact evidence file names, process names, IP addresses, timestamps, or command lines from the database context when relevant.\n"
-            "3. If the user asks about a specific file, IP, process, or event, filter the context to answer that exact question.\n"
-            "4. If the question asks about something not present in the logs, state that clearly and suggest what evidence to inspect next.\n"
-            "Output ONLY your final answer in clean, professional Markdown. Do NOT include system constraints, roles, or prompt text in your output."
-        )
-    else:
-        lines.append(
-            "\nWrite a concise forensic analysis report in Markdown. "
-            "Highlight key attack patterns, suspicious entities, and recommend concrete containment steps."
-        )
+# ── Main CopilotService ───────────────────────────────────────────────────────
+import re as _re
+_FILENAME_RE = _re.compile(r'\b[\w\-. ]+\.(sqlite|pcap|pcapng|csv|json|log|txt|zip)\b', _re.IGNORECASE)
 
-    return "\n".join(lines)
+
+def _extract_mentioned_filenames(text: str) -> set:
+    """Return the set of evidence filenames mentioned in a piece of text."""
+    if not text:
+        return set()
+    return {m.group(0) for m in _FILENAME_RE.finditer(text)}
 
 
 class CopilotService:
 
     @classmethod
     async def analyze_case_timeline(
-        cls, case_id: str, org_id: str, question: Optional[str] = None, history: Optional[List[dict]] = None
+        cls,
+        case_id: str,
+        org_id: str,
+        question: Optional[str] = None,
+        history: Optional[List[dict]] = None,
     ) -> Any:
         """
-        Main entry point — routes queries, builds fenced context, selects LLM provider, and returns structured analysis + sources.
+        Non-streaming entry point (backward compatible).
+        Returns dict with analysis, confidence, sources.
         """
         intent = classify_intent(question or "")
-        logger.info(f"Copilot analysis: case={case_id} intent={intent}")
+        logger.info(f"[Copilot] case={case_id} intent={intent}")
 
-        # 1. Fast Path: Structured DB Queries (Counts, Status, Evidence List, File Security)
-        structured_res = await handle_structured_query(case_id, org_id, question or "", intent, history=history)
+        # Fast-path: structured DB queries (counts, file list, status, etc.)
+        structured_res = await handle_structured_query(
+            case_id, org_id, question or "", intent, history=history
+        )
         if structured_res:
             return structured_res
 
-        # 2. Assemble RAG Context (MongoDB, PyOD, Neo4j, FAISS)
+        # Build full RAG context
         ctx = await build_copilot_context(case_id, org_id, question)
         if not ctx:
             return {"analysis": "Case not found or access denied.", "confidence": "Low", "sources": []}
+
         ctx["history"] = history or []
+        sources = _build_sources(ctx)
 
-        # 3. Build Fenced Prompt (Prompt-Injection Safe)
-        from backend.app.services.copilot.prompts import build_fenced_prompt
-        prompt = build_fenced_prompt(ctx)
+        # Sanitize history to remove assistant turns referencing deleted evidence
+        current_filenames = {ev.get("filename", "") for ev in ctx.get("evidence_list", [])}
+        sanitized_history = []
+        for turn in (history or []):
+            if turn.get("role") == "assistant":
+                content = turn.get("content", "")
+                if any(
+                    fn and fn in content
+                    for fn in (_extract_mentioned_filenames(content) - current_filenames)
+                ):
+                    continue
+            sanitized_history.append(turn)
+        ctx["history"] = sanitized_history
 
-        # Build default source citations from context
-        sources = []
-        for ev in ctx.get("evidence_list", []):
-            sources.append({"type": "evidence_file", "source_file": ev.get("filename", "evidence"), "status": ev.get("status", "parsed")})
-        for sc in ctx.get("semantic_context", [])[:3]:
-            sources.append({"type": "event_log", "source_file": sc.get("evidence_file", "log"), "event_id": str(sc.get("_id", ""))})
-        for tech in ctx.get("enriched_techniques", [])[:3]:
-            sources.append({"type": "mitre_technique", "mitre_id": tech.get("id"), "name": tech.get("name")})
+        # Build prompt
+        full_prompt = build_fenced_prompt(ctx)
+        system_prompt, user_prompt = _split_prompt(ctx)
 
-        # 4. LLM Generation
-        provider_name = os.getenv("LLM_PROVIDER", settings.LLM_PROVIDER).lower()
+        # Try Groq first
+        ai_provider = os.getenv("AI_PROVIDER", getattr(settings, "AI_PROVIDER", "groq")).lower()
+        enable_fallback = os.getenv("ENABLE_FALLBACK", "true").lower() in ("true", "1", "yes")
         analysis_text = ""
 
-        if provider_name == "local":
-            analysis_text = _local_fallback(ctx)
-        elif provider_name == "ollama":
-            try:
-                from backend.app.services.copilot.ollama_provider import OllamaProvider
-                analysis_text = await OllamaProvider().generate(prompt)
-            except Exception as e:
-                logger.warning(f"Ollama failed ({e}), falling back to local.")
-                analysis_text = _local_fallback(ctx)
-        else:
-            api_key = os.getenv("GEMINI_API_KEY", settings.GEMINI_API_KEY)
-            if not api_key:
-                analysis_text = _local_fallback(ctx)
-            else:
+        if ai_provider == "groq":
+            groq_key = os.getenv("GROQ_API_KEY", getattr(settings, "GROQ_API_KEY", ""))
+            if groq_key and groq_key not in ("", "your_groq_api_key_here"):
                 try:
-                    from backend.app.services.copilot.gemini_provider import GeminiProvider
-                    analysis_text = await GeminiProvider(api_key=api_key).generate(prompt)
+                    logger.info("[Copilot] Using Groq provider")
+                    from backend.app.services.copilot.groq_provider import GroqProvider, GroqError
+                    analysis_text = await GroqProvider().generate(
+                        system_prompt=system_prompt,
+                        user_prompt=user_prompt,
+                        history=history or [],
+                    )
+                    logger.info("[Copilot] Groq responded successfully")
                 except Exception as e:
-                    logger.warning(f"Gemini API rate limited ({e}), seamlessly serving from local forensic engine.")
-                    analysis_text = _local_fallback(ctx)
+                    if enable_fallback:
+                        logger.warning(f"[Copilot] Groq failed ({type(e).__name__}: {e}), switching to fallback")
+                        analysis_text = await _run_fallback(ctx, full_prompt)
+                    else:
+                        logger.error(f"[Copilot] Groq failed and fallback disabled: {e}")
+                        return {
+                            "analysis": "Sorry, I couldn't generate a response at this time. Please try again.",
+                            "confidence": "Low",
+                            "sources": [],
+                        }
+            else:
+                logger.warning("[Copilot] Groq API key not set, using fallback directly")
+                analysis_text = await _run_fallback(ctx, full_prompt)
+        else:
+            # Non-Groq provider path (legacy)
+            analysis_text = await _run_fallback(ctx, full_prompt)
 
-        # 5. Parse JSON if LLM returned structured JSON
+        if not analysis_text:
+            logger.error("[Copilot] Both providers failed — returning error message")
+            return {
+                "analysis": "Sorry, I couldn't generate a response at this time. Please try again.",
+                "confidence": "Low",
+                "sources": [],
+            }
+
+        # Parse JSON if LLM returned structured JSON
         import json
-        if analysis_text and "{" in analysis_text and "}" in analysis_text:
+        if analysis_text and "{" in analysis_text and "\"analysis\"" in analysis_text:
             try:
-                # Extract JSON payload if surrounded by markdown code blocks
                 j_str = analysis_text
                 if "```json" in j_str:
                     j_str = j_str.split("```json")[1].split("```")[0].strip()
@@ -221,16 +223,193 @@ class CopilotService:
                     return {
                         "analysis": parsed.get("analysis", analysis_text),
                         "confidence": parsed.get("confidence", "High"),
-                        "sources": parsed.get("sources", sources) or sources
+                        "sources": parsed.get("sources", sources) or sources,
                     }
             except Exception:
                 pass
 
         return {
             "analysis": analysis_text,
-            "confidence": "High" if len(sources) > 0 else "Medium",
-            "sources": sources
+            "confidence": "High" if sources else "Medium",
+            "sources": sources,
         }
+
+    @classmethod
+    async def stream_response(
+        cls,
+        case_id: str,
+        org_id: str,
+        question: str,
+        history: Optional[List[dict]] = None,
+    ) -> AsyncGenerator[dict, None]:
+        """
+        SSE streaming entry point.
+        Yields dicts: {type: "token"|"sources"|"done"|"error", content/sources/confidence}
+
+        Key fix: Groq is instructed to return a JSON envelope
+        {"analysis": "...", "confidence": "...", "sources": [...]}.
+        We collect the full response, parse the JSON, then stream ONLY the
+        'analysis' markdown text word-by-word. Raw JSON is never sent to the
+        frontend.
+        """
+        import json as _json
+
+        intent = classify_intent(question)
+        logger.info(f"[Copilot Stream] case={case_id} intent={intent}")
+
+        # ── Fast-path: structured DB queries ──────────────────────────────────
+        structured_res = await handle_structured_query(
+            case_id, org_id, question, intent, history=history
+        )
+        if structured_res:
+            text = structured_res.get("analysis", "")
+            words = text.split(" ")
+            for i, word in enumerate(words):
+                chunk = word + (" " if i < len(words) - 1 else "")
+                yield {"type": "token", "content": chunk}
+                if i % 10 == 0:
+                    await asyncio.sleep(0)
+            yield {"type": "sources", "sources": structured_res.get("sources", [])}
+            yield {"type": "done", "confidence": structured_res.get("confidence", "High")}
+            return
+
+        # ── Build RAG context ─────────────────────────────────────────────────
+        ctx = await build_copilot_context(case_id, org_id, question)
+        if not ctx:
+            yield {"type": "error", "content": "Case not found or access denied."}
+            return
+
+        ctx["history"] = history or []
+        sources = _build_sources(ctx)
+
+        # Sanitize history: remove assistant turns that reference evidence
+        # filenames no longer in this case. This prevents the LLM from
+        # hallucinating answers based on deleted evidence it saw in prior turns.
+        current_filenames = {
+            ev.get("filename", "") for ev in ctx.get("evidence_list", [])
+        }
+        sanitized_history = []
+        for turn in (history or []):
+            if turn.get("role") == "assistant":
+                content = turn.get("content", "")
+                # Drop this assistant turn if it mentions a filename that no longer
+                # exists in the case — it means it was about deleted evidence.
+                if any(
+                    fn and fn in content
+                    for fn in (
+                        # Extract only names that were deleted (not in current list)
+                        _extract_mentioned_filenames(content) - current_filenames
+                    )
+                ):
+                    continue  # skip stale turn
+            sanitized_history.append(turn)
+        ctx["history"] = sanitized_history
+
+        system_prompt, user_prompt = _split_prompt(ctx)
+        full_prompt = build_fenced_prompt(ctx)
+
+        ai_provider = os.getenv("AI_PROVIDER", getattr(settings, "AI_PROVIDER", "groq")).lower()
+        enable_fallback = os.getenv("ENABLE_FALLBACK", "true").lower() in ("true", "1", "yes")
+        groq_key = os.getenv("GROQ_API_KEY", getattr(settings, "GROQ_API_KEY", ""))
+        groq_available = (
+            ai_provider == "groq"
+            and bool(groq_key)
+            and groq_key not in ("", "your_groq_api_key_here")
+        )
+
+        # ── Groq primary path ─────────────────────────────────────────────────
+        if groq_available:
+            try:
+                logger.info("[Copilot Stream] Using Groq streaming provider")
+                from backend.app.services.copilot.groq_provider import GroqProvider
+
+                provider = GroqProvider()
+
+                # Buffer the full Groq response — we must NOT stream raw JSON tokens.
+                full_text = ""
+                async for chunk in provider.generate_stream(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    history=history or [],
+                ):
+                    full_text += chunk
+
+                logger.info("[Copilot Stream] Groq stream completed successfully")
+
+                # Parse the JSON envelope {"analysis":..., "confidence":..., "sources":[...]}
+                analysis_text = full_text
+                llm_sources: list = []
+                llm_confidence = "High"
+
+                if full_text and "{" in full_text and '"analysis"' in full_text:
+                    try:
+                        j_str = full_text.strip()
+                        # Strip optional markdown code fences
+                        if "```json" in j_str:
+                            j_str = j_str.split("```json")[1].split("```")[0].strip()
+                        elif "```" in j_str:
+                            j_str = j_str.split("```")[1].split("```")[0].strip()
+                        # Isolate the outermost JSON object
+                        brace_start = j_str.find("{")
+                        brace_end = j_str.rfind("}") + 1
+                        if brace_start >= 0 and brace_end > brace_start:
+                            j_str = j_str[brace_start:brace_end]
+                        parsed = _json.loads(j_str)
+                        if isinstance(parsed, dict) and "analysis" in parsed:
+                            analysis_text = parsed.get("analysis", full_text)
+                            llm_confidence = parsed.get("confidence", "High")
+                            raw_srcs = parsed.get("sources") or []
+                            if isinstance(raw_srcs, list):
+                                llm_sources = raw_srcs
+                    except Exception as parse_err:
+                        logger.debug(f"[Copilot Stream] JSON parse skipped: {parse_err}")
+                        analysis_text = full_text
+
+                # Stream the clean markdown analysis word-by-word (typewriter effect)
+                words = analysis_text.split(" ")
+                for i, word in enumerate(words):
+                    chunk = word + (" " if i < len(words) - 1 else "")
+                    yield {"type": "token", "content": chunk}
+                    if i % 12 == 0:
+                        await asyncio.sleep(0)
+
+                # LLM sources take priority; fall back to retrieval-layer sources
+                yield {"type": "sources", "sources": llm_sources if llm_sources else sources}
+                yield {"type": "done", "confidence": llm_confidence}
+                return
+
+            except Exception as e:
+                if enable_fallback:
+                    logger.warning(
+                        f"[Copilot Stream] Groq failed ({type(e).__name__}: {e}), switching to fallback"
+                    )
+                else:
+                    logger.error(f"[Copilot Stream] Groq failed and fallback disabled: {e}")
+                    yield {"type": "error", "content": "Sorry, I couldn't generate a response at this time. Please try again."}
+                    return
+
+        # ── Fallback path (no Groq key, or Groq raised + fallback enabled) ────
+        try:
+            logger.info("[Copilot Stream] Running fallback provider")
+            fallback_text = await _run_fallback(ctx, full_prompt)
+            if fallback_text:
+                words = fallback_text.split(" ")
+                for i, word in enumerate(words):
+                    chunk = word + (" " if i < len(words) - 1 else "")
+                    yield {"type": "token", "content": chunk}
+                    if i % 8 == 0:
+                        await asyncio.sleep(0)
+            else:
+                logger.error("[Copilot Stream] Fallback returned empty response")
+                yield {"type": "error", "content": "Sorry, I couldn't generate a response at this time. Please try again."}
+                return
+        except Exception as e:
+            logger.error(f"[Copilot Stream] Fallback failed: {e}")
+            yield {"type": "error", "content": "Sorry, I couldn't generate a response at this time. Please try again."}
+            return
+
+        yield {"type": "sources", "sources": sources}
+        yield {"type": "done", "confidence": "High" if sources else "Medium"}
 
 
 def _local_fallback(ctx: dict) -> str:

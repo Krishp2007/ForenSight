@@ -63,8 +63,8 @@ export default function EvidenceDrawer({ evidence, caseId, onClose }) {
       ...graphData.nodes.map(n => ({
         data: { id: n.id, label: n.label || n.id, color: NODE_COLORS[n.type] || NODE_COLORS.default }
       })),
-      ...graphData.edges.map(e => ({
-        data: { id: `${e.source}--${e.target}--${Math.random()}`, source: e.source, target: e.target, label: e.action || '' }
+      ...graphData.edges.map((e, idx) => ({
+        data: { id: `${e.source}--${e.target}--${idx}`, source: e.source, target: e.target, label: e.action || '' }
       })),
     ]
     cyRef.current = cytoscape({
@@ -107,18 +107,17 @@ export default function EvidenceDrawer({ evidence, caseId, onClose }) {
       ],
       layout: {
         name: 'cose',
-        animate: true,
-        animationDuration: 700,
-        padding: 60,
-        randomize: true,
+        animate: false,
+        padding: 50,
+        randomize: false,
         fit: true,
-        nodeRepulsion: () => 2500000,
-        idealEdgeLength: () => 180,
+        nodeRepulsion: () => 8000,
+        idealEdgeLength: () => 100,
         edgeElasticity: () => 100,
-        gravity: 0.15,
-        numIter: 2500,
-        componentSpacing: 140,
-        nodeOverlap: 0,
+        gravity: 0.25,
+        numIter: 500,
+        componentSpacing: 100,
+        nodeOverlap: 20,
       },
 
       wheelSensitivity: 0.3,

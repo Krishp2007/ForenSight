@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForenSight AI — Ingestion & Processing Pipeline Flow</title>
+  <style>
+    :root {
+      --bg-dark: #030712;
+      --card-bg: #0f172a;
+      --border-color: rgba(99, 102, 241, 0.25);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-purple: #818cf8;
+      --accent-blue: #60a5fa;
+      --accent-green: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-cyan: #38bdf8;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      background: linear-gradient(135deg, #a78bfa, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0 0 10px 0;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    /* PIPELINE DIAGRAM STYLING */
+    .pipeline-flow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      position: relative;
+    }
+
+    .stage-card {
+      width: 100%;
+      max-width: 750px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 22px 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 20px rgba(99, 102, 241, 0.08);
+      position: relative;
+    }
+
+    .stage-card::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      border-top-left-radius: 16px;
+      border-bottom-left-radius: 16px;
+    }
+
+    .stage-1::after { background: var(--accent-blue); }
+    .stage-2::after { background: var(--accent-purple); }
+    .stage-3::after { background: var(--accent-cyan); }
+    .stage-4::after { background: var(--accent-green); }
+    .stage-5::after { background: var(--accent-amber); }
+
+    .step-number {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .stage-1 .step-number { background: rgba(96, 165, 250, 0.15); color: var(--accent-blue); border: 1px solid rgba(96, 165, 250, 0.3); }
+    .stage-2 .step-number { background: rgba(129, 140, 248, 0.15); color: var(--accent-purple); border: 1px solid rgba(129, 140, 248, 0.3); }
+    .stage-3 .step-number { background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); border: 1px solid rgba(56, 189, 248, 0.3); }
+    .stage-4 .step-number { background: rgba(52, 211, 153, 0.15); color: var(--accent-green); border: 1px solid rgba(52, 211, 153, 0.3); }
+    .stage-5 .step-number { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); border: 1px solid rgba(251, 191, 36, 0.3); }
+
+    .stage-content {
+      flex: 1;
+    }
+
+    .stage-content h3 {
+      margin: 0 0 6px 0;
+      font-size: 1.15rem;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .tech-tag {
+      font-size: 0.78rem;
+      font-family: monospace;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+
+    .stage-content p {
+      margin: 0 0 10px 0;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+    }
+
+    .sub-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .sub-tag {
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+    }
+
+    /* DOWN ARROW CONNECTOR */
+    .arrow-down {
+      width: 2px;
+      height: 24px;
+      background: linear-gradient(180deg, var(--accent-purple), var(--accent-blue));
+      position: relative;
+    }
+
+    .arrow-down::after {
+      content: '▼';
+      font-size: 10px;
+      color: var(--accent-blue);
+      position: absolute;
+      bottom: -6px;
+      left: -4px;
+    }
+
+    .ppt-tip {
+      margin-top: 50px;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px dashed rgba(99, 102, 241, 0.4);
+      border-radius: 12px;
+      padding: 16px 20px;
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>ForenSight AI — Processing Pipeline Diagram</h1>
+      <p class="subtitle">End-to-End Forensic Evidence Ingestion, Graph Lineage Sync & AI Vector Indexing Flow</p>
+    </header>
+
+    <div class="pipeline-flow">
+      <!-- STEP 1 -->
+      <div class="stage-card stage-1">
+        <div class="step-number">01</div>
+        <div class="stage-content">
+          <h3>Evidence Upload & SHA-256 Hashing <span class="tech-tag">FastAPI · MinIO S3</span></h3>
+          <p>Investigator uploads single forensic file. Backend computes SHA-256 hash for deduplication and streams binary object directly into MinIO S3 storage bucket.</p>
+          <div class="sub-steps">
+            <span class="sub-tag">🔒 SHA-256 Hashing</span>
+            <span class="sub-tag">📦 MinIO Object Storage</span>
+            <span class="sub-tag">📄 Evidence Document in MongoDB</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down"></div>
+
+      <!-- STEP 2 -->
+      <div class="stage-card stage-2">
+        <div class="step-number">02</div>
+        <div class="stage-content">
+          <h3>Format Detection & Parser Execution <span class="tech-tag">Thread Executor · Scapy · DictReader</span></h3>
+          <p>File type is inferred (Magic Bytes). Parser extracts structured Subject-Action-Object event records in parallel thread workers without blocking main loop.</p>
+          <div class="sub-steps">
+            <span class="sub-tag">🔍 Type Auto-Inference</span>
+            <span class="sub-tag">🌐 Scapy (.pcap/.pcapng)</span>
+            <span class="sub-tag">🗄️ SQLite (.sqlite)</span>
+            <span class="sub-tag">📊 CSV / JSON / TXT</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down"></div>
+
+      <!-- STEP 3 -->
+      <div class="stage-card stage-3">
+        <div class="step-number">03</div>
+        <div class="stage-content">
+          <h3>MongoDB Bulk Database Insert <span class="tech-tag">MongoDB Async Driver</span></h3>
+          <p>Events are enriched with org_id, case_id, evidence_id, and written in chunked bulk operations (500 records/batch). Status set to PARSED.</p>
+          <div class="sub-steps">
+            <span class="sub-tag">⚡ Chunked Bulk Creation</span>
+            <span class="sub-tag">⏱️ Timer Stops (PARSED)</span>
+            <span class="sub-tag">🛡️ SAO Normalization</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down"></div>
+
+      <!-- STEP 4 -->
+      <div class="stage-card stage-4">
+        <div class="step-number">04</div>
+        <div class="stage-content">
+          <h3>Neo4j Graph Synchronization & Cypher Analytics <span class="tech-tag">Neo4j Async Driver</span></h3>
+          <p>EntityRelationshipExtractor maps entities into graph nodes (Process, Domain, IP, File) and edges (SPAWNED, CONNECTED_TO, MODIFIED). Cypher correlation rules execute.</p>
+          <div class="sub-steps">
+            <span class="sub-tag">🌳 Process Lineage Trees</span>
+            <span class="sub-tag">🕸️ LOLBin Detection</span>
+            <span class="sub-tag">🔑 Registry Persistence</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down"></div>
+
+      <!-- STEP 5 -->
+      <div class="stage-card stage-5">
+        <div class="step-number">05</div>
+        <div class="stage-content">
+          <h3>ML Anomaly Scoring & FAISS Vector Indexing <span class="tech-tag">Isolation Forest · MiniLM · FAISS</span></h3>
+          <p>Isolation Forest calculates anomaly scores for events. Unique event sentences are embedded using MiniLM transformer model and stored in local FAISS vector search index.</p>
+          <div class="sub-steps">
+            <span class="sub-tag">🤖 ML Anomaly Scores</span>
+            <span class="sub-tag">🧠 SentenceTransformer</span>
+            <span class="sub-tag">🔍 FAISS Cosine Index</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ppt-tip">
+      💡 <strong>PPT Presentation Tip:</strong> You can copy this 5-stage vertical flow directly into PowerPoint as a block diagram: 
+      <strong>Upload → Parse → Mongo Write → Neo4j Graph Sync → ML & FAISS Indexing</strong>.
+    </div>
+  </div>
+</body>
+</html>

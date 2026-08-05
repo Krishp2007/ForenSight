@@ -35,7 +35,7 @@ You MUST respond with a clean, valid JSON object containing exactly three keys:
 
 def build_fenced_prompt(ctx: Dict[str, Any]) -> str:
     """
-    Constructs a fenced, prompt-injection-safe prompt string for Gemini.
+    Constructs a fenced, prompt-injection-safe prompt string for Groq.
     Encloses forensic evidence in XML tags and injects former conversation context.
     """
     case = ctx.get("case", {})
@@ -44,7 +44,6 @@ def build_fenced_prompt(ctx: Dict[str, Any]) -> str:
     enriched_techniques = ctx.get("enriched_techniques", [])
     semantic_context = ctx.get("semantic_context", [])
     evidence_list = ctx.get("evidence_list", [])
-    timeline_ctx = ctx.get("timeline_ctx", {})
     history = ctx.get("history", [])
     question = ctx.get("question", "")
 
