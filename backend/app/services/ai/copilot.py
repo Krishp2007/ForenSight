@@ -32,6 +32,14 @@ from backend.app.services.copilot.prompts import build_fenced_prompt, SYSTEM_PRO
 
 logger = logging.getLogger(__name__)
 
+# Configuration defaults (can be overridden via env vars)
+MAX_HISTORY_TURNS = int(os.getenv("COPILOT_MAX_HISTORY_TURNS", "5"))  # keep last N user‑assistant pairs
+GROQ_TOKENS_PER_MIN = int(os.getenv("GROQ_TOKENS_PER_MIN", "20000"))  # default token budget per minute
+
+# Token‑bucket limiter for Groq usage
+from .token_limiter import TokenBucket
+groq_token_bucket = TokenBucket(max_tokens_per_minute=GROQ_TOKENS_PER_MIN)
+
 from backend.app.services.copilot.groq_provider import _is_insufficient
 
 
@@ -160,6 +168,9 @@ class CopilotService:
                 ):
                     continue
             sanitized_history.append(turn)
+        # Trim history to the most recent N turns (user + assistant = 2 * N entries)
+        if len(sanitized_history) > MAX_HISTORY_TURNS * 2:
+            sanitized_history = sanitized_history[-MAX_HISTORY_TURNS * 2:]
         ctx["history"] = sanitized_history
 
         # Build prompt
@@ -209,25 +220,6 @@ class CopilotService:
                 "sources": [],
             }
 
-        # Parse JSON if LLM returned structured JSON
-        import json
-        if analysis_text and "{" in analysis_text and "\"analysis\"" in analysis_text:
-            try:
-                j_str = analysis_text
-                if "```json" in j_str:
-                    j_str = j_str.split("```json")[1].split("```")[0].strip()
-                elif "```" in j_str:
-                    j_str = j_str.split("```")[1].split("```")[0].strip()
-                parsed = json.loads(j_str.strip())
-                if isinstance(parsed, dict) and "analysis" in parsed:
-                    return {
-                        "analysis": parsed.get("analysis", analysis_text),
-                        "confidence": parsed.get("confidence", "High"),
-                        "sources": parsed.get("sources", sources) or sources,
-                    }
-            except Exception:
-                pass
-
         return {
             "analysis": analysis_text,
             "confidence": "High" if sources else "Medium",
@@ -246,13 +238,9 @@ class CopilotService:
         SSE streaming entry point.
         Yields dicts: {type: "token"|"sources"|"done"|"error", content/sources/confidence}
 
-        Key fix: Groq is instructed to return a JSON envelope
-        {"analysis": "...", "confidence": "...", "sources": [...]}.
-        We collect the full response, parse the JSON, then stream ONLY the
-        'analysis' markdown text word-by-word. Raw JSON is never sent to the
-        frontend.
+        Groq is instructed to return plain Markdown analysis only (no JSON).
+        We buffer the full response then stream it word-by-word for the typewriter effect.
         """
-        import json as _json
 
         intent = classify_intent(question)
         logger.info(f"[Copilot Stream] case={case_id} intent={intent}")
@@ -303,6 +291,9 @@ class CopilotService:
                 ):
                     continue  # skip stale turn
             sanitized_history.append(turn)
+        # Apply the same history‑length limit as the non‑streaming path
+        if len(sanitized_history) > MAX_HISTORY_TURNS * 2:
+            sanitized_history = sanitized_history[-MAX_HISTORY_TURNS * 2:]
         ctx["history"] = sanitized_history
 
         system_prompt, user_prompt = _split_prompt(ctx)
@@ -316,6 +307,11 @@ class CopilotService:
             and bool(groq_key)
             and groq_key not in ("", "your_groq_api_key_here")
         )
+        # Estimate token usage for this request and enforce the bucket limit
+        estimated_tokens = len((system_prompt + " " + user_prompt).split())
+        if not groq_token_bucket.consume(estimated_tokens):
+            logger.warning("[Copilot Stream] Token bucket exhausted – falling back to local engine")
+            groq_available = False
 
         # ── Groq primary path ─────────────────────────────────────────────────
         if groq_available:
@@ -336,46 +332,16 @@ class CopilotService:
 
                 logger.info("[Copilot Stream] Groq stream completed successfully")
 
-                # Parse the JSON envelope {"analysis":..., "confidence":..., "sources":[...]}
-                analysis_text = full_text
-                llm_sources: list = []
-                llm_confidence = "High"
-
-                if full_text and "{" in full_text and '"analysis"' in full_text:
-                    try:
-                        j_str = full_text.strip()
-                        # Strip optional markdown code fences
-                        if "```json" in j_str:
-                            j_str = j_str.split("```json")[1].split("```")[0].strip()
-                        elif "```" in j_str:
-                            j_str = j_str.split("```")[1].split("```")[0].strip()
-                        # Isolate the outermost JSON object
-                        brace_start = j_str.find("{")
-                        brace_end = j_str.rfind("}") + 1
-                        if brace_start >= 0 and brace_end > brace_start:
-                            j_str = j_str[brace_start:brace_end]
-                        parsed = _json.loads(j_str)
-                        if isinstance(parsed, dict) and "analysis" in parsed:
-                            analysis_text = parsed.get("analysis", full_text)
-                            llm_confidence = parsed.get("confidence", "High")
-                            raw_srcs = parsed.get("sources") or []
-                            if isinstance(raw_srcs, list):
-                                llm_sources = raw_srcs
-                    except Exception as parse_err:
-                        logger.debug(f"[Copilot Stream] JSON parse skipped: {parse_err}")
-                        analysis_text = full_text
-
-                # Stream the clean markdown analysis word-by-word (typewriter effect)
-                words = analysis_text.split(" ")
+                # Stream the plain Markdown response word-by-word (typewriter effect)
+                words = full_text.split(" ")
                 for i, word in enumerate(words):
                     chunk = word + (" " if i < len(words) - 1 else "")
                     yield {"type": "token", "content": chunk}
                     if i % 12 == 0:
                         await asyncio.sleep(0)
 
-                # LLM sources take priority; fall back to retrieval-layer sources
-                yield {"type": "sources", "sources": llm_sources if llm_sources else sources}
-                yield {"type": "done", "confidence": llm_confidence}
+                yield {"type": "sources", "sources": sources}
+                yield {"type": "done", "confidence": "High" if sources else "Medium"}
                 return
 
             except Exception as e:

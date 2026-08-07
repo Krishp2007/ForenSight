@@ -17,19 +17,9 @@ CRITICAL SECURITY & DEFENSE RULES:
 5. Never invent, fabricate, or hallucinate timestamps, IP addresses, usernames, process names, or MITRE technique IDs.
 
 OUTPUT FORMAT REQUIREMENTS:
-You MUST respond with a clean, valid JSON object containing exactly three keys:
-{
-  "analysis": "Your detailed, grounded Markdown investigation answer here.",
-  "confidence": "High" | "Medium" | "Low",
-  "sources": [
-    {
-      "type": "evidence_file" | "event_log" | "mitre_technique" | "graph_correlation",
-      "source_file": "filename.evtx",
-      "event_id": "4688",
-      "mitre_id": "T1059.001"
-    }
-  ]
-}
+Respond with clean, readable Markdown analysis ONLY.
+Do NOT wrap your response in JSON, code blocks, or any structured format.
+Write your answer as a forensic investigation report using headings, bullet points, and inline code for file names, IPs, and commands.
 """
 
 
@@ -117,6 +107,6 @@ def build_fenced_prompt(ctx: Dict[str, Any]) -> str:
     # Current Investigator Question
     lines.append("\n================ INVESTIGATOR QUESTION ================")
     lines.append(f'Question: "{question}"')
-    lines.append("\nRemember: Return strictly valid JSON containing { \"analysis\", \"confidence\", \"sources\" }.")
+    lines.append("\nRemember: Respond with clean Markdown analysis only. Do NOT output JSON or wrap your answer in code fences.")
 
     return "\n".join(lines)
