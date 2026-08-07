@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { getEvidence, reprocessEvidence, deleteEvidence } from '../../services/evidenceService'
 import { formatBytes, formatDateTime, humanize, parseUtcMs, formatDuration } from '../../utils/formatters'
-import { FileText, RefreshCw, RotateCcw, Trash2, Eye } from 'lucide-react'
+import { FileText, RefreshCw, RotateCcw, Trash2 } from 'lucide-react'
 import { EmptyState, ConfirmModal } from '../ui'
-import EvidenceDrawer from './EvidenceDrawer'
 import useRole from '../../hooks/useRole'
 
 const POLLING_INTERVAL = 2000
@@ -42,8 +41,6 @@ const EvidenceList = ({ items, caseId, isDashboard = false, onItemUpdated, onIte
   const [reprocessing, setReprocessing] = useState({})
   const [deleting, setDeleting]         = useState({})
   const [confirmDelete, setConfirmDelete] = useState(null)
-  const [drawerEvidence, setDrawerEvidence] = useState(null)
-
   const { canReprocess, canDelete } = useRole()
 
   // Stable ref for onItemUpdated so the polling interval doesn't restart on every render
@@ -327,15 +324,6 @@ const EvidenceList = ({ items, caseId, isDashboard = false, onItemUpdated, onIte
                 <td style={{ padding: '12px 16px' }}>
                   {!isDashboard ? (
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      <ActionBtn
-                        onClick={() => setDrawerEvidence(e)}
-                        disabled={e.status !== 'parsed'}
-                        title="View evidence graph and report"
-                        color="var(--forensic-primary, #2563eb)"
-                      >
-                        <Eye size={12} /> View
-                      </ActionBtn>
-
                       {canReprocess && (
                         <ActionBtn
                           onClick={() => handleReprocess(e)}
@@ -396,13 +384,6 @@ const EvidenceList = ({ items, caseId, isDashboard = false, onItemUpdated, onIte
         />
       )}
 
-      {drawerEvidence && (
-        <EvidenceDrawer
-          evidence={drawerEvidence}
-          caseId={caseId}
-          onClose={() => setDrawerEvidence(null)}
-        />
-      )}
     </>
   )
 }
