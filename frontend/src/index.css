@@ -18,7 +18,11 @@
   --forensic-border: #334155;
   --forensic-text-main: #f8fafc;
   --forensic-text-muted: #94a3b8;
-  --logo-fore-color: #ffffff;
+  --forensic-strong-color: #f1f5f9; /* strong text */
+  --forensic-italic-color: #94a3b8; /* italic text */
+  --forensic-code-bg: rgba(99,102,241,0.15); /* code background */
+  --forensic-code-text: #a5b4fc; /* code text */
+  --forensic-strike-color: #64748b; /* strikethrough */
 
   /* 30% Secondary Tones */
   --forensic-primary: #6366f1;
@@ -30,6 +34,7 @@
   --forensic-alert-critical: #dc2626;
   --forensic-alert-high: #ea580c;
   --forensic-alert-medium: #eab308;
+  --forensic-chat-bg: #070c1a; /* dark chat background */
 }
 
 [data-theme="light"] {
@@ -39,8 +44,14 @@
   --forensic-card-bg: #ffffff;
   --forensic-border: #e2e8f0;
   --forensic-text-main: #0f172a;
+  --forensic-chat-bg: #ffffff; /* light chat background */
   --forensic-text-muted: #64748b;
   --logo-fore-color: #0f172a;
+  --forensic-strong-color: #0f172a; /* strong text - dark */
+  --forensic-italic-color: #64748b; /* italic text - muted */
+  --forensic-code-bg: rgba(99,102,241,0.08); /* code background - subtle */
+  --forensic-code-text: #1e293b; /* code text - dark */
+  --forensic-strike-color: #64748b; /* strikethrough */
 
   /* 30% Secondary Tones */
   --forensic-primary: #2563eb;

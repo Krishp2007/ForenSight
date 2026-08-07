@@ -42,7 +42,7 @@ function renderMarkdown(text) {
     const h2m = line.match(/^##\s+(.+)/)
     const h1m = line.match(/^#\s+(.+)/)
     if (h1m) { elements.push(<h3 key={key++} style={{ color: 'var(--forensic-text-main)', fontSize: '15px', fontWeight: 700, margin: '14px 0 6px' }}>{inlineRender(h1m[1])}</h3>); i++; continue }
-    if (h2m) { elements.push(<h4 key={key++} style={{ color: 'var(--forensic-text-muted)', fontSize: '13.5px', fontWeight: 700, margin: '12px 0 5px' }}>{inlineRender(h2m[1])}</h4>); i++; continue }
+    if (h2m) { elements.push(<h4 key={key++} style={{ color: 'var(--forensic-text-main)', fontSize: '13.5px', fontWeight: 700, margin: '12px 0 5px' }}>{inlineRender(h2m[1])}</h4>); i++; continue }
     if (h3m) { elements.push(<h5 key={key++} style={{ color: 'var(--forensic-primary)', fontSize: '12.5px', fontWeight: 700, margin: '10px 0 4px' }}>{inlineRender(h3m[1])}</h5>); i++; continue }
 
     // Bullet list item
@@ -57,7 +57,7 @@ function renderMarkdown(text) {
       elements.push(
         <ul key={key++} style={{ margin: '6px 0', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           {items.map((item, idx) => (
-            <li key={idx} style={{ color: 'var(--forensic-text-muted)', fontSize: '13px', lineHeight: '1.55' }}>{inlineRender(item)}</li>
+            <li key={idx} style={{ color: 'var(--forensic-text-main)', fontSize: '13px', lineHeight: '1.55' }}>{inlineRender(item)}</li>
           ))}
         </ul>
       )
@@ -76,7 +76,7 @@ function renderMarkdown(text) {
       elements.push(
         <ol key={key++} style={{ margin: '6px 0', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           {items.map((item, idx) => (
-            <li key={idx} style={{ color: 'var(--forensic-text-muted)', fontSize: '13px', lineHeight: '1.55' }}>{inlineRender(item)}</li>
+            <li key={idx} style={{ color: 'var(--forensic-text-main)', fontSize: '13px', lineHeight: '1.55' }}>{inlineRender(item)}</li>
           ))}
         </ol>
       )
@@ -98,7 +98,7 @@ function renderMarkdown(text) {
     const bqm = line.match(/^>\s+(.+)/)
     if (bqm) {
       elements.push(
-        <blockquote key={key++} style={{ margin: '6px 0', paddingLeft: '12px', borderLeft: `3px solid var(--forensic-primary)`, color: 'var(--forensic-text-muted)', fontSize: '12.5px', fontStyle: 'italic' }}>
+        <blockquote key={key++} style={{ margin: '6px 0', paddingLeft: '12px', borderLeft: `3px solid var(--forensic-primary)`, color: 'var(--forensic-text-main)', fontSize: '12.5px', fontStyle: 'italic', opacity: 0.85 }}>
           {inlineRender(bqm[1])}
         </blockquote>
       )
@@ -115,7 +115,7 @@ function renderMarkdown(text) {
 
     // Regular paragraph
     elements.push(
-      <p key={key++} style={{ margin: '4px 0', color: 'var(--forensic-text-muted)', fontSize: '13px', lineHeight: '1.65' }}>{inlineRender(line)}</p>
+      <p key={key++} style={{ margin: '4px 0', color: 'var(--forensic-text-main)', fontSize: '13px', lineHeight: '1.65' }}>{inlineRender(line)}</p>
     )
     i++
   }
@@ -133,10 +133,10 @@ function inlineRender(text) {
   let k = 0
   while ((match = regex.exec(text)) !== null) {
     if (match.index > last) parts.push(<span key={k++}>{text.slice(last, match.index)}</span>)
-    if (match[2]) parts.push(<strong key={k++} style={{ color: '#f1f5f9', fontWeight: 700 }}>{match[2]}</strong>)
-    else if (match[3]) parts.push(<em key={k++} style={{ color: '#94a3b8' }}>{match[3]}</em>)
-    else if (match[4]) parts.push(<code key={k++} style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '1px 5px', borderRadius: '4px', fontSize: '11.5px', fontFamily: 'monospace' }}>{match[4]}</code>)
-    else if (match[5]) parts.push(<s key={k++} style={{ color: '#64748b' }}>{match[5]}</s>)
+    if (match[2]) parts.push(<strong key={k++} style={{ color: 'var(--forensic-text-main)', fontWeight: 700 }}>{match[2]}</strong>)
+    else if (match[3]) parts.push(<em key={k++} style={{ color: 'var(--forensic-italic-color, #94a3b8)' }}>{match[3]}</em>)
+    else if (match[4]) parts.push(<code key={k++} style={{ background: 'var(--forensic-code-bg, rgba(99,102,241,0.15))', color: 'var(--forensic-code-text, #a5b4fc)', padding: '1px 5px', borderRadius: '4px', fontSize: '11.5px', fontFamily: 'monospace' }}>{match[4]}</code>)
+    else if (match[5]) parts.push(<s key={k++} style={{ color: 'var(--forensic-strike-color, #64748b)' }}>{match[5]}</s>)
     last = match.index + match[0].length
   }
   if (last < text.length) parts.push(<span key={k++}>{text.slice(last)}</span>)

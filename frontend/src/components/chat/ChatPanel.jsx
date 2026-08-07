@@ -228,7 +228,7 @@ const ChatPanel = ({ caseId }) => {
     <div style={{
       display: 'flex', flexDirection: 'column',
       height: '680px', maxHeight: 'calc(100vh - 120px)',
-      background: 'var(--forensic-chat-bg, #070c1a)',
+      background: 'var(--forensic-panel-bg, #070c1a)',
       borderRadius: '16px',
       border: '1px solid var(--forensic-border, rgba(255,255,255,0.08))',
       overflow: 'hidden',
