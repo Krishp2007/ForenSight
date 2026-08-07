@@ -660,12 +660,12 @@ class GraphRepository:
 
         if evidence_id:
             extra_clauses.append(
-                "(r.evidence_id = $evidence_id OR s.evidence_id = $evidence_id OR t.evidence_id = $evidence_id OR EXISTS { MATCH (ev_scope:Evidence {evidence_id: $evidence_id, case_id: $case_id})-[*1..3]-(s) } OR EXISTS { MATCH (ev_scope:Evidence {evidence_id: $evidence_id, case_id: $case_id})-[*1..3]-(t) })"
+                "(r.evidence_id = $evidence_id OR s.evidence_id = $evidence_id OR t.evidence_id = $evidence_id)"
             )
             params["evidence_id"] = evidence_id
         if anomaly_only:
             extra_clauses.append(
-                "(r.is_anomaly = true OR r.anomaly_score > 0.5 OR s.is_anomaly = true OR s.anomaly_score > 0.5 OR t.is_anomaly = true OR t.anomaly_score > 0.5 OR EXISTS { MATCH (s)-(ev_anom) WHERE (ev_anom.is_anomaly = true OR ev_anom.anomaly_score > 0.5) } OR EXISTS { MATCH (t)-(ev_anom) WHERE (ev_anom.is_anomaly = true OR ev_anom.anomaly_score > 0.5) })"
+                "(r.is_anomaly = true OR r.anomaly_score > 0.5 OR s.is_anomaly = true OR s.anomaly_score > 0.5 OR t.is_anomaly = true OR t.anomaly_score > 0.5)"
             )
 
         where_parts = [case_filter] + extra_clauses

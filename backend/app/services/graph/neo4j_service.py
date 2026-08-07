@@ -113,6 +113,14 @@ class Neo4jService:
             # Process indexes
             "CREATE INDEX process_name_idx IF NOT EXISTS FOR (p:Process) ON (p.process_name)",
             "CREATE INDEX process_case_idx IF NOT EXISTS FOR (p:Process) ON (p.case_id)",
+            # IPAddress, User, Host, File, Port, RegistryKey, Service indexes
+            "CREATE INDEX ip_case_idx IF NOT EXISTS FOR (ip:IPAddress) ON (ip.case_id)",
+            "CREATE INDEX user_case_idx IF NOT EXISTS FOR (u:User) ON (u.case_id)",
+            "CREATE INDEX host_case_idx IF NOT EXISTS FOR (h:Host) ON (h.case_id)",
+            "CREATE INDEX file_case_idx IF NOT EXISTS FOR (f:File) ON (f.case_id)",
+            "CREATE INDEX port_case_idx IF NOT EXISTS FOR (pt:Port) ON (pt.case_id)",
+            "CREATE INDEX registry_case_idx IF NOT EXISTS FOR (r:RegistryKey) ON (r.case_id)",
+            "CREATE INDEX service_case_idx IF NOT EXISTS FOR (s:Service) ON (s.case_id)",
         ]
 
         try:

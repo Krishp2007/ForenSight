@@ -4,6 +4,9 @@ import { LogOut, LayoutDashboard, Users, Menu, X, User } from 'lucide-react'
 import useAuth from '../../hooks/useAuth'
 import { useRole } from '../../store/authStore'
 
+import ThemeToggle from '../ui/ThemeToggle'
+import BrandLogo from './BrandLogo'
+
 const Topbar = () => {
   const { user, logout } = useAuth()
   const { canManageUsers } = useRole()
@@ -42,11 +45,7 @@ const Topbar = () => {
         {/* Left: Brand Logo & Desktop Navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <img
-              src="/logo.svg?v=7"
-              alt="ForenSight"
-              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
-            />
+            <BrandLogo height={32} />
           </Link>
 
           {/* Desktop Navigation Links */}
@@ -57,12 +56,12 @@ const Topbar = () => {
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '8px 16px', borderRadius: '12px',
                 fontSize: '13px', fontWeight: '700', textDecoration: 'none',
-                background: isDashboardActive ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(99, 102, 241, 0.16)',
-                border: isDashboardActive ? '1px solid #6366f1' : '1px solid rgba(99, 102, 241, 0.4)',
+                background: isDashboardActive ? 'var(--forensic-primary, #2563eb)' : 'rgba(99, 102, 241, 0.12)',
+                border: isDashboardActive ? '1px solid var(--forensic-primary, #2563eb)' : '1px solid var(--forensic-border, rgba(99, 102, 241, 0.3))',
                 color: isDashboardActive ? '#ffffff' : 'var(--forensic-text-main, #e2e8f0)',
               }}
             >
-              <LayoutDashboard size={16} style={{ color: isDashboardActive ? '#ffffff' : '#818cf8' }} />
+              <LayoutDashboard size={16} style={{ color: isDashboardActive ? '#ffffff' : 'var(--forensic-primary, #818cf8)' }} />
               <span>All Cases</span>
             </Link>
 
@@ -74,7 +73,7 @@ const Topbar = () => {
                   padding: '8px 16px', borderRadius: '12px',
                   fontSize: '13px', fontWeight: isActive ? '600' : '500',
                   textDecoration: 'none',
-                  background: isActive ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'transparent',
+                  background: isActive ? 'var(--forensic-primary, #2563eb)' : 'transparent',
                   color: isActive ? '#ffffff' : 'var(--forensic-text-muted, #94a3b8)',
                 })}
               >
@@ -85,8 +84,12 @@ const Topbar = () => {
           </nav>
         </div>
 
-        {/* Right Corner: Desktop User Actions */}
-        <div className="desktop-only" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Right Corner: Desktop User Actions & Theme Toggle */}
+        <div className="desktop-only" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          
+          <ThemeToggle />
+
+          <div style={{ width: '1px', height: '24px', background: 'var(--forensic-border, rgba(255, 255, 255, 0.1))' }} />
 
           {user && (
             <Link
@@ -95,8 +98,8 @@ const Topbar = () => {
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 textDecoration: 'none', padding: '6px 14px', borderRadius: '12px',
-                background: isProfileActive ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(255, 255, 255, 0.05)',
-                border: isProfileActive ? '1px solid #6366f1' : '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
+                background: isProfileActive ? 'var(--forensic-primary, #2563eb)' : 'rgba(255, 255, 255, 0.05)',
+                border: isProfileActive ? '1px solid var(--forensic-primary, #2563eb)' : '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
                 color: isProfileActive ? '#ffffff' : 'var(--forensic-text-main, #f8fafc)',
               }}
             >
@@ -122,11 +125,10 @@ const Topbar = () => {
 
           <button
             onClick={handleLogout}
+            className="logout-btn-theme"
             style={{
               display: 'flex', alignItems: 'center', gap: '6px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              color: '#fca5a5', fontSize: '12.5px', fontWeight: '600',
+              fontSize: '12.5px', fontWeight: '600',
               cursor: 'pointer', padding: '7.5px 14px', borderRadius: '10px',
               fontFamily: 'inherit',
             }}
@@ -179,6 +181,11 @@ const Topbar = () => {
         >
 
 
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--forensic-text-muted, #94a3b8)' }}>Theme Mode</span>
+            <ThemeToggle />
+          </div>
+
           <Link
             to="/dashboard"
             onClick={() => setMobileMenuOpen(false)}
@@ -225,13 +232,12 @@ const Topbar = () => {
 
           <button
             onClick={() => { setMobileMenuOpen(false); handleLogout() }}
+            className="logout-btn-theme"
             style={{
               marginTop: 'auto',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               padding: '14px', borderRadius: '12px',
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#fca5a5', fontWeight: '600', fontSize: '14px',
+              fontWeight: '600', fontSize: '14px',
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >

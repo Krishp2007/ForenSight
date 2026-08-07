@@ -631,12 +631,7 @@ async def get_case_graph_summary(
         if evidence_id and ObjectId.is_valid(evidence_id):
             params["evidence_id"] = evidence_id
             ev_id_filter_rel = "AND (r.evidence_id = $evidence_id OR n.evidence_id = $evidence_id OR m.evidence_id = $evidence_id)"
-            ev_id_filter_node = """
-            AND (
-                EXISTS { MATCH (ev_scope:Evidence {evidence_id: $evidence_id, case_id: $case_id})-[*1..3]-(n) } OR
-                EXISTS { MATCH (ev_scope:Evidence {evidence_id: $evidence_id, case_id: $case_id})-[*1..3]-(m) }
-            )
-            """
+            ev_id_filter_node = "AND (r.evidence_id = $evidence_id OR n.evidence_id = $evidence_id OR m.evidence_id = $evidence_id)"
             ev_filter = ev_id_filter_rel
 
         anomaly_filter = ""
@@ -645,9 +640,7 @@ async def get_case_graph_summary(
             AND (
                 n.is_anomaly = true OR n.anomaly_score > 0.5 OR
                 m.is_anomaly = true OR m.anomaly_score > 0.5 OR
-                r.is_anomaly = true OR r.anomaly_score > 0.5 OR
-                EXISTS { MATCH (n)-(ev_anom) WHERE (ev_anom.is_anomaly = true OR ev_anom.anomaly_score > 0.5) } OR
-                EXISTS { MATCH (m)-(ev_anom) WHERE (ev_anom.is_anomaly = true OR ev_anom.anomaly_score > 0.5) }
+                r.is_anomaly = true OR r.anomaly_score > 0.5
             )
             """
 
@@ -832,9 +825,7 @@ async def get_case_graph_summary(
               AND (
                   n.is_anomaly = true OR n.anomaly_score > 0.5 OR
                   m.is_anomaly = true OR m.anomaly_score > 0.5 OR
-                  r.is_anomaly = true OR r.anomaly_score > 0.5 OR
-                  EXISTS {{ MATCH (n)-[:INVOLVES_PROCESS|OCCURRED_ON|INVOLVES_USER|CONTAINS_EVENT|CONTAINS_VISIT|CONNECTED_TO|RESOLVED|MODIFIED_REGISTRY|CREATED|SPAWNED|EXECUTED]-(ev_anom) WHERE (ev_anom.is_anomaly = true OR ev_anom.anomaly_score > 0.5) }} OR
-                  EXISTS {{ MATCH (m)-[:INVOLVES_PROCESS|OCCURRED_ON|INVOLVES_USER|CONTAINS_EVENT|CONTAINS_VISIT|CONNECTED_TO|RESOLVED|MODIFIED_REGISTRY|CREATED|SPAWNED|EXECUTED]-(ev_anom) WHERE (ev_anom.is_anomaly = true OR ev_anom.anomaly_score > 0.5) }}
+                  r.is_anomaly = true OR r.anomaly_score > 0.5
               )
               {ev_id_filter_rel} {benign_filter} {sev_filter} {search_clause}
             WITH n, m, type(r) AS rel_type,
@@ -901,7 +892,7 @@ async def get_case_graph_summary(
             return {}
 
         nodes_dict: Dict[str, Any] = {}
-        edges: List[Any] = []
+        edges_dict: Dict[str, Any] = {}
 
         for row in records:
             s_id = str(row.get("source_id") or "")
@@ -949,20 +940,30 @@ async def get_case_graph_summary(
                     "risk_level": t_meta["risk_level"],
                 }
 
-            edges.append({
-                "id": f"edge-{len(edges)+1}",
-                "source": s_node_id, "target": t_node_id,
-                "type": str(row.get("rel_type") or "RELATES_TO"),
-                "count": edge_count,
-                "is_anomaly": bool(
-                    r_props.get("is_anomaly", False) or
-                    nodes_dict[s_node_id]["is_anomaly"] or
-                    nodes_dict[t_node_id]["is_anomaly"]
-                ),
-                "properties": r_props,
-            })
+            rel_type = str(row.get("rel_type") or "RELATES_TO")
+            edge_key = f"{s_node_id}->{t_node_id}:{rel_type}"
 
-        logger.info(f"[GRAPH SUMMARY] Built {len(nodes_dict)} nodes, {len(edges)} edges for view={view}")
+            if edge_key not in edges_dict:
+                edges_dict[edge_key] = {
+                    "id": f"edge-{len(edges_dict)+1}",
+                    "source": s_node_id,
+                    "target": t_node_id,
+                    "type": rel_type,
+                    "count": edge_count,
+                    "is_anomaly": bool(
+                        r_props.get("is_anomaly", False) or
+                        nodes_dict[s_node_id]["is_anomaly"] or
+                        nodes_dict[t_node_id]["is_anomaly"]
+                    ),
+                    "properties": r_props,
+                }
+            else:
+                edges_dict[edge_key]["count"] += edge_count
+                if r_props.get("is_anomaly", False):
+                    edges_dict[edge_key]["is_anomaly"] = True
+
+        edges = list(edges_dict.values())
+        logger.info(f"[GRAPH SUMMARY] Built {len(nodes_dict)} nodes, {len(edges)} aggregated edges for view={view}")
         return {
             "nodes": list(nodes_dict.values()),
             "edges": edges,

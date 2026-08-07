@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 155" width="100%" height="100%">
   <defs>
+    <style>
+      .logo-fore { fill: var(--logo-fore-color, currentColor); }
+      @media (prefers-color-scheme: dark) {
+        .logo-fore { fill: var(--logo-fore-color, #FFFFFF); }
+      }
+    </style>
     <!-- Neon Violet to Electric Indigo Gradient for NSIGHT -->
     <linearGradient id="violetIndigoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#A855F7" />
@@ -17,19 +23,19 @@
   <g transform="translate(15, 12)">
     <!-- Wordmark Group -->
     <g transform="translate(0, 0)">
-      <!-- F (White) -->
-      <path d="M 10 10 H 42 V 22 H 24 V 38 H 38 V 50 H 24 V 80 H 10 V 10 Z" fill="#FFFFFF" />
+      <!-- F -->
+      <path d="M 10 10 H 42 V 22 H 24 V 38 H 38 V 50 H 24 V 80 H 10 V 10 Z" class="logo-fore" fill="var(--logo-fore-color, currentColor)" />
 
-      <!-- O (White) -->
-      <path d="M 48 10 H 84 V 80 H 48 V 10 Z M 62 22 V 68 H 70 V 22 H 62 Z" fill="#FFFFFF" />
+      <!-- O -->
+      <path d="M 48 10 H 84 V 80 H 48 V 10 Z M 62 22 V 68 H 70 V 22 H 62 Z" class="logo-fore" fill="var(--logo-fore-color, currentColor)" />
 
-      <!-- R (White) -->
-      <path d="M 90 10 H 126 V 46 H 114 L 128 80 H 112 L 100 48 H 104 V 80 H 90 V 10 Z M 104 22 V 36 H 112 V 22 H 104 Z" fill="#FFFFFF" />
+      <!-- R -->
+      <path d="M 90 10 H 126 V 46 H 114 L 128 80 H 112 L 100 48 H 104 V 80 H 90 V 10 Z M 104 22 V 36 H 112 V 22 H 104 Z" class="logo-fore" fill="var(--logo-fore-color, currentColor)" />
 
-      <!-- E (Stylized Triple Horizontal Bars in White) -->
-      <rect x="132" y="10" width="30" height="11" fill="#FFFFFF" rx="2" />
-      <rect x="132" y="34.5" width="25" height="11" fill="#FFFFFF" rx="2" />
-      <rect x="132" y="59" width="30" height="11" fill="#FFFFFF" rx="2" />
+      <!-- E (Stylized Triple Horizontal Bars) -->
+      <rect x="132" y="10" width="30" height="11" class="logo-fore" fill="var(--logo-fore-color, currentColor)" rx="2" />
+      <rect x="132" y="34.5" width="25" height="11" class="logo-fore" fill="var(--logo-fore-color, currentColor)" rx="2" />
+      <rect x="132" y="59" width="30" height="11" class="logo-fore" fill="var(--logo-fore-color, currentColor)" rx="2" />
 
       <!-- N (Violet to Indigo) -->
       <path d="M 172 10 H 184 L 206 55 V 10 H 218 V 80 H 206 L 184 35 V 80 H 172 V 10 Z" fill="url(#violetIndigoGrad)" />
@@ -52,27 +58,18 @@
 
     <!-- Underline Trace with Node Terminal -->
     <g transform="translate(10, 94)">
-      <!-- Gradient Line -->
       <line x1="0" y1="0" x2="390" y2="0" stroke="url(#violetLineGrad)" stroke-width="3" stroke-linecap="round" />
-
-      <!-- Connecting segment -->
       <line x1="390" y1="0" x2="402" y2="0" stroke="#6366F1" stroke-width="2.5" />
-
-      <!-- Solid Node Circle -->
       <circle cx="402" cy="0" r="4.5" fill="#6366F1" />
-
-      <!-- Interconnecting Segment -->
       <line x1="402" y1="0" x2="415" y2="0" stroke="#6366F1" stroke-width="2.5" />
-
-      <!-- Terminal Ring Node -->
-      <circle cx="419" cy="0" r="6" fill="#0F172A" stroke="#6366F1" stroke-width="3" />
+      <circle cx="419" cy="0" r="6" fill="var(--forensic-bg-dark, #0F172A)" stroke="#6366F1" stroke-width="3" />
     </g>
 
     <!-- Tagline -->
     <text
       x="220"
       y="126"
-      fill="#C084FC"
+      fill="#A855F7"
       font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
       font-size="12"
       font-weight="700"

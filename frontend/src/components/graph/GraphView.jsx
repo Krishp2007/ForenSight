@@ -105,10 +105,10 @@ const GraphView = ({ caseId, evidence = [] }) => {
           id:            n.id,
           label:         truncateLabel(n.label, n.type),
           type:          n.type,
-          color:         suspicious ? '#f97316' : style.color,
+          color:         style.color,
           shape:         style.shape,
           size:          style.size,
-          riskBorder,
+          riskBorder:    suspicious ? '#f97316' : riskBorder,
           is_anomaly:    n.is_anomaly || false,
           anomaly_score: n.anomaly_score || 0,
           suspicious,
@@ -768,18 +768,17 @@ function getCyStyle() {
     {
       selector: 'node.anomaly',
       style: {
-        'border-width':  4,
-        'border-color':  '#ef4444',
+        'border-width':   4.5,
+        'border-color':   '#ef4444',
         'border-opacity': 1,
-        'background-color': '#7f1d1d',
       },
     },
     {
       selector: 'node.suspicious',
       style: {
-        'border-width':  3.5,
-        'border-color':  '#f97316',
-        'background-color': '#7c2d12',
+        'border-width':   4,
+        'border-color':   '#f97316',
+        'border-opacity': 1,
       },
     },
     {

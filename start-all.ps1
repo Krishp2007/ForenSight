@@ -19,7 +19,7 @@ Start-Sleep -Seconds 1
 
 # 1. Docker (MongoDB, Neo4j, Redis, MinIO)
 Write-Host "[1/3] Starting Docker services..." -ForegroundColor Yellow
-docker compose -f "$root\docker-compose.yml" up -d
+docker compose -f "$root\docker-compose.yml" up -d mongodb neo4j redis minio qdrant
 Write-Host "      Done." -ForegroundColor Green
 
 # 2. Backend API

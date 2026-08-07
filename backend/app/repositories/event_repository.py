@@ -5,10 +5,10 @@ from backend.app.db.mongodb import db_client
 class EventRepository:
     @staticmethod
     async def bulk_create(events: List[Dict[str, Any]]) -> int:
-        """Insert events in chunks of 500 to avoid MongoDB write timeout on large files."""
+        """Insert events in chunks of 2500 for high-performance bulk ingestion."""
         if not events:
             return 0
-        CHUNK = 500
+        CHUNK = 2500
         total = 0
         try:
             for i in range(0, len(events), CHUNK):

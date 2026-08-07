@@ -1,99 +1,48 @@
-# ForenSight - Correlations, Focus Neighborhood Toggle, Timelines, & Single File Upload UI Plan
+# Implementation Plan - Redesign Dashboard Page (Professional & Non-Blackish Enterprise Design)
 
-## Overview
-This implementation plan addresses four core user requests:
-1. **Why Correlations Are Not Showing / Capped at 3**: Root cause analysis and expansion of graph correlation engine rules.
-2. **Focus Neighborhood Button Toggle**: Implementation of 2-state toggle ("Focus Neighborhood" / "Cancel Focus Neighborhood") in `NodeDetailsPanel` & `GraphView`.
-3. **Why Timelines Are Not Showing**: Restoring top-level navigation tab for Timeline in `CaseDetailPage` and hardening backend event response mapping.
-4. **Remove Multi-File Support from UI**: Enforcing single-file uploads in `EvidenceUpload.jsx` UI and file handler.
-
----
+Transform the ForenSight Dashboard into a modern, professional, enterprise-grade workspace with vibrant aesthetics, crisp typography, micro-animations, and a clean slate/indigo color palette that avoids pitch-black/darkish tones.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Correlation Engine Rules**: New correlation rules will be added (e.g. suspicious LOLBin process execution, registry run key persistence, C2 domain resolutions, external IP connections, and anomalous event clusters) so that evidence files generate rich, multi-category correlations rather than returning 0 or being capped at 3.
-> - **UI Navigation**: The top tab bar in `CaseDetailPage.jsx` will now display all feature tabs (Dashboard, Evidence Scope, Timeline, Knowledge Graph, Correlations, AI Assistant, Report, Audit Log) so users can directly view and switch to the Timeline tab from the main navigation bar.
+> - **Visual Theme Overhaul**: Replace pitch-black backgrounds and dark overlays with a modern, high-end enterprise slate theme featuring soft mesh gradients, crisp white/glass surfaces, vibrant indigo (`#6366f1`) and emerald (`#10b981`) accents, and high-contrast typography (`#0f172a` / `#1e293b`).
+> - **Rich Telemetry Bar & Animated Metrics**: Add a top summary telemetry bar (System Status, AI Engine Health, Active Evidence Count, Quick Action Filters).
 
 ---
 
 ## Proposed Changes
 
-### 1. Backend Correlation Engine & API
-Expand Cypher queries and correlation rules in `GraphCorrelationEngine` to support diverse forensic evidence and generate unlimited granular findings.
+### Frontend Dashboard & UI Components
 
-#### [MODIFY] [graph_correlation.py](file:///d:/ForenSight%20-%20Copy/ForenSight/backend/app/services/graph/graph_correlation.py)
-- Add new correlation rules:
-  - `detect_suspicious_lolbin_execution`: Detect execution of suspicious tools (PowerShell, Cmd, WScript, CScript, Mshta, Certutil, Rundll32, Regsvr32).
-  - `detect_registry_persistence`: Detect registry run key modifications (`MODIFIED_REGISTRY`).
-  - `detect_domain_c2_resolutions`: Detect domain resolutions to external IP addresses.
-  - `detect_anomalous_event_clusters`: Detect clusters of high-severity ML-anomalous events.
-- Update `get_all_case_correlations` to aggregate and return all findings across all active rules without artificial limits.
+#### [MODIFY] [DashboardPage.jsx](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/pages/DashboardPage.jsx)
+- **Background & Theme**: Replace dark unsplash image overlay and pitch-black gradients with a sleek background grid featuring soft blue/violet radial glows and bright enterprise slate surfaces.
+- **Top Summary Telemetry Strip**: Add quick status chips (e.g., `AI Engine: Active`, `Total Evidence Files`, `Court Chain: Verified`).
+- **Interactive Metric Filter Cards**:
+  - Redesign filter cards with soft glowing icons, clear metric counters, hover scale effects, and distinct active border states.
+- **Enhanced Search Bar**:
+  - Add search input focus glow, clear action button, and shortcut pill indicator (`/`).
+- **Smooth Modal & Staggered Animations**:
+  - Update `CaseForm` modal with animated pop-in, clean headers, and shadow effects.
 
-#### [MODIFY] [events.py](file:///d:/ForenSight%20-%20Copy/ForenSight/backend/app/api/events.py)
-- Safely populate missing standard fields (subject, action, object, evidence_id, organization_id) when returning event responses so Pydantic serialization never throws 500 errors.
+#### [MODIFY] [CaseCard.jsx](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/components/cases/CaseCard.jsx)
+- **Modern Enterprise Card Design**:
+  - Soft light-slate glass background (`rgba(255, 255, 255, 0.9)` / bright slate card) with crisp borders and subtle drop shadows (`box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05)`).
+  - Status badges with distinct color pills (Open, In Progress, Suspended, Resolved).
+  - Hover micro-animations: Lift on hover (`translateY(-4px)`), shimmering top accent bar, animated arrow icon slide, and smooth icon scaling.
 
----
-
-### 2. Frontend Graph View & Focus Neighborhood Toggle
-
-#### [MODIFY] [NodeDetailsPanel.jsx](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/components/graph/NodeDetailsPanel.jsx)
-- Introduce `isFocused` state to manage the button toggle state.
-- 1st click on "Focus Neighborhood":
-  - Triggers neighborhood highlighting via `onExpandNeighbors(node)`.
-  - Updates button label to **"Cancel Focus Neighborhood"** with active styling.
-- 2nd click:
-  - Calls `onCancelFocus` handler to clear `.faded` class from all graph elements.
-  - Reverts button label back to **"Focus Neighborhood"**.
-- Reset `isFocused` state whenever `node.id` changes.
-
-#### [MODIFY] [GraphView.jsx](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/components/graph/GraphView.jsx)
-- Pass `onCancelFocus` prop to `NodeDetailsPanel` which executes `cyRef.current.elements().removeClass('faded')`.
-
----
-
-### 3. Frontend Timeline & Case Detail Navigation
-
-#### [MODIFY] [CaseDetailPage.jsx](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/pages/CaseDetailPage.jsx)
-- Update `TAB_CONFIG` to include all tabs: `dashboard`, `evidence`, `timeline`, `graph`, `correlations`, `chat`, `report`, `audit`.
-- Fix tab navigation bar so clicking "Timeline" properly highlights and displays the `EventTimeline` component.
-
-#### [MODIFY] [EventTimeline.jsx](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/components/timeline/EventTimeline.jsx)
-- Handle API error boundaries gracefully and show informative empty states when no events exist for a filter.
-
----
-
-### 4. File Upload UI (Single File Support)
-
-#### [MODIFY] [EvidenceUpload.jsx](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/components/evidence/EvidenceUpload.jsx)
-- Remove `multiple` attribute from the `<input type="file" />` element.
-- Update `handleFiles` logic to accept and upload only a single file (`fileList[0]`).
-- Update UI copy:
-  - Header: `"Drop an evidence file or click to browse"` (removing `(Multiple Files Supported)`).
-  - Subtitle: `"Select a PCAP, SQLite, CSV, JSON, LOG, or TXT file"`.
-  - Progress label: `"Uploading <filename> (<progress>%)"`.
+#### [MODIFY] [index.css](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/index.css)
+- Add keyframe animations (`@keyframes dashboardCardPop`, `@keyframes ambientPulse`, `@keyframes shimmerLine`) and CSS class utilities for smooth hover and entrance transitions.
 
 ---
 
 ## Verification Plan
 
-### Automated Tests
-- Run backend verification scripts / test suite if available:
-  `python -m pytest backend/tests` (or verify via FastAPI endpoints).
+### Automated / Syntax Check
+- Verify React build / JSX syntax by checking Vite dev output or running build.
 
 ### Manual Verification
-1. **Correlations Verification**:
-   - Open case details -> Correlations tab.
-   - Click "Re-run Rules". Verify multiple derived relationships are listed across different rule categories (not capped at 3).
-2. **Focus Neighborhood Toggle**:
-   - Click a graph node in Knowledge Graph view.
-   - Click "Focus Neighborhood": verify target node & neighbors remain clear while other nodes fade, and button text changes to "Cancel Focus Neighborhood".
-   - Click "Cancel Focus Neighborhood": verify all nodes return to normal opacity and button text changes back to "Focus Neighborhood".
-3. **Timeline Display**:
-   - Verify "Timeline" tab is present in the top navigation bar of the Case Detail page.
-   - Click "Timeline" tab: verify forensic timeline events load and render chronologically with severity tags.
-4. **Single File Upload UI**:
-   - Navigate to Evidence Scope tab.
-   - Verify file upload box displays single-file text.
-   - Test selecting/dropping a single file and verify upload completes cleanly.
-
+1. **Aesthetics & Colors**: Verify the dashboard is clean, crisp, professional, and no longer blackish/darkish.
+2. **Interactive Metric Cards**: Click each status filter card (`All Cases`, `Open`, `In Progress`, `Suspended`, `Resolved`) and verify filtering works smoothly.
+3. **Search Bar**: Test typing in the search bar and press `/` keyboard shortcut.
+4. **Card Hover & Animations**: Hover over case cards to verify lift effect, arrow animation, and badge highlights.
+5. **Modal**: Click "New Case" to open the creation modal and verify smooth pop-in transition.

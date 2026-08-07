@@ -20,7 +20,6 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
 
   const handleFiles = async (fileList) => {
     if (!fileList || fileList.length === 0) return
-    // Only process the first file — multi-file is not supported
     const file = fileList[0]
     setUploading(true)
     setError(null)
@@ -54,23 +53,21 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
       onMouseLeave={() => setHovered(false)}
       style={{
         cursor: uploading ? 'default' : 'pointer',
-        border: `2px dashed ${dragging || hovered ? '#6366f1' : 'rgba(255, 255, 255, 0.12)'}`,
-        borderRadius: '16px',
-        padding: '36px 24px',
+        border: `2px dashed ${dragging || hovered ? 'var(--forensic-primary, #2563eb)' : 'var(--forensic-border, #cbd5e1)'}`,
+        borderRadius: '20px',
+        padding: '38px 24px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: '14px',
         background: dragging || hovered
-          ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(15, 23, 42, 0.6))'
-          : 'rgba(30, 41, 59, 0.55)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+          ? 'rgba(99, 102, 241, 0.08)'
+          : 'var(--forensic-card-bg, #ffffff)',
         boxShadow: hovered
-          ? '0 12px 28px -6px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.15)'
-          : '0 4px 14px rgba(0, 0, 0, 0.25)',
+          ? '0 12px 28px -6px rgba(37, 99, 235, 0.2), 0 2px 8px rgba(0, 0, 0, 0.04)'
+          : '0 2px 8px rgba(0, 0, 0, 0.04)',
         transform: hovered && !uploading ? 'translateY(-2px)' : 'translateY(0)',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
       <input
@@ -83,37 +80,37 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
       {uploading ? (
         <>
           <Spinner size="lg" />
-          <p style={{ color: '#ffffff', fontSize: '13.5px', margin: 0, fontWeight: '600' }}>
-            Uploading <span style={{ color: '#60a5fa' }}>{currentFileName}</span> ({progress}%)
+          <p style={{ color: 'var(--forensic-text-main, #0f172a)', fontSize: '13.5px', margin: 0, fontWeight: '700' }}>
+            Uploading <span style={{ color: 'var(--forensic-primary, #2563eb)' }}>{currentFileName}</span> ({progress}%)
           </p>
-          <div style={{ width: '260px', height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '99px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #6366f1, #06b6d4)', borderRadius: '99px', transition: 'width 0.3s' }} />
+          <div style={{ width: '260px', height: '6px', background: 'var(--forensic-panel-bg, #e2e8f0)', borderRadius: '99px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #2563eb, #06b6d4)', borderRadius: '99px', transition: 'width 0.3s' }} />
           </div>
         </>
       ) : (
         <>
           <div style={{
             width: '56px', height: '56px',
-            background: hovered ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.15)',
-            border: `1px solid ${hovered ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.3)'}`,
+            background: 'rgba(99, 102, 241, 0.14)',
+            border: `1px solid ${hovered ? 'var(--forensic-primary, #2563eb)' : 'rgba(99, 102, 241, 0.3)'}`,
             borderRadius: '16px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: hovered ? '#ffffff' : '#818cf8',
+            color: 'var(--forensic-primary, #2563eb)',
             transform: hovered ? 'scale(1.08)' : 'scale(1)',
-            boxShadow: hovered ? '0 0 16px rgba(99, 102, 241, 0.35)' : 'none',
-            transition: 'all 0.3s ease',
+            boxShadow: hovered ? '0 0 16px rgba(37, 99, 235, 0.3)' : 'none',
+            transition: 'all 0.25s ease',
           }}>
             <FileUp size={24} />
           </div>
-          <p style={{ color: '#ffffff', fontSize: '14px', fontWeight: '600', margin: 0 }}>
+          <p style={{ color: 'var(--forensic-text-main, #0f172a)', fontSize: '14.5px', fontWeight: '700', margin: 0, letterSpacing: '-0.3px' }}>
             Drop a file or click to browse
           </p>
-          <p style={{ color: '#94a3b8', fontSize: '11.5px', margin: 0 }}>
+          <p style={{ color: 'var(--forensic-text-muted, #64748b)', fontSize: '12px', fontWeight: '600', margin: 0 }}>
             PCAP · SQLite · CSV · JSON · MD5 · TXT · LOG
           </p>
         </>
       )}
-      {error && <p style={{ color: '#fca5a5', fontSize: '12px', margin: '4px 0 0 0' }}>{error}</p>}
+      {error && <p style={{ color: '#dc2626', fontSize: '12px', margin: '4px 0 0 0', fontWeight: '600' }}>{error}</p>}
     </div>
   )
 }

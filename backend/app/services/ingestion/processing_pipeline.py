@@ -39,8 +39,8 @@ _scapy_cache = os.path.join(tempfile.gettempdir(), "scapy_cache_forensight")
 os.makedirs(_scapy_cache, exist_ok=True)
 os.environ.setdefault("SCAPY_CACHE_DIR", _scapy_cache)
 
-# Shared thread pool executor capped at 2 workers for low-memory 512MB RAM instances
-_parse_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+# Shared thread pool executor for high-performance parallel file parsing
+_parse_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 from backend.app.utils.memory_profiler import log_memory
 
 
@@ -177,14 +177,9 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
             mongo_time = time.perf_counter() - _t_mongo
             logger.info(f"[PROFILE] MongoDB bulk write           {mongo_time:.3f}s  ({count} inserted)")
 
-        # ── 6. Post-parse enrichment (Neo4j, Anomaly, FAISS, Correlations) ──
-        case_id_str = str(evidence["case_id"])
-        await EvidenceRepository.update_status(evidence_id, org_id, "analyzing")
-        post_time, stage_times = await _run_post_pipeline(events, case_id_str, org_id, loop, parse_seconds)
-
-        # ── 7. Mark PARSED — Complete pipeline finished ─────────────────────
-        total_seconds = round(time.perf_counter() - _t0, 3)
-        scan_duration_ms = int(total_seconds * 1000)
+        # ── 6. Mark PARSED — File parsing & event ingestion complete! ────────
+        parse_wall_time = round(time.perf_counter() - _t0, 3)
+        scan_duration_ms = int(parse_wall_time * 1000)
         await EvidenceRepository.update_status(
             evidence_id, org_id, EvidenceStatus.PARSED.value, scan_duration_ms=scan_duration_ms
         )
@@ -194,19 +189,10 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
             {"$set": {"processed_at": datetime.utcnow()}}
         )
 
-        # Compute "other" time = total − sum of all measured stages
-        measured_sum = (
-            parse_seconds
-            + enrich_time
-            + mongo_time
-            + stage_times.get("neo4j", 0.0)
-            + stage_times.get("ml", 0.0)
-            + stage_times.get("faiss", 0.0)
-            + stage_times.get("correlations", 0.0)
-        )
-        other_time = max(0.0, total_seconds - measured_sum)
+        logger.info(f"[PIPELINE] 🏁 PARSED in {parse_wall_time}s ({scan_duration_ms}ms) — {filename}. Spawning background graph/ML enrichment...")
 
-        logger.info(f"[PIPELINE] 🏁 COMPLETE & PARSED in {total_seconds}s ({scan_duration_ms}ms) — {filename}")
+        # ── 7. Run background post-enrichment (Neo4j, Anomaly, FAISS, Correlations) ──
+        asyncio.create_task(_run_post_pipeline(events, case_id_str, org_id, loop, parse_seconds))
         logger.info(
             f"\n{'='*55}\n"
             f"FORENSIGHT PERFORMANCE REPORT\n"
