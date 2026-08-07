@@ -16,9 +16,19 @@ import UsersPage from './pages/UsersPage'
 
 // Inlined AppShell without Sidebar
 const AppShell = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--forensic-bg-dark, #0b0f19)', color: 'var(--forensic-text-main, #ffffff)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', transition: 'background 0.25s ease, color 0.25s ease' }}>
+  <div style={{
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100dvh',          /* dynamic viewport — correct in F11 fullscreen */
+    minHeight: '100vh',        /* fallback for browsers without dvh support */
+    background: 'var(--forensic-bg-dark, #0b0f19)',
+    color: 'var(--forensic-text-main, #ffffff)',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    transition: 'background 0.25s ease, color 0.25s ease',
+    overflow: 'hidden',        /* prevent double scrollbars */
+  }}>
     <Topbar />
-    <main className="app-main-padding" style={{ flex: 1, overflowY: 'auto' }}>
+    <main className="app-main-padding" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
       <Outlet />
     </main>
   </div>
