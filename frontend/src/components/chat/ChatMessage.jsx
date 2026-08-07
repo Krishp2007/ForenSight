@@ -41,9 +41,9 @@ function renderMarkdown(text) {
     const h3m = line.match(/^###\s+(.+)/)
     const h2m = line.match(/^##\s+(.+)/)
     const h1m = line.match(/^#\s+(.+)/)
-    if (h1m) { elements.push(<h3 key={key++} style={{ color: '#f1f5f9', fontSize: '15px', fontWeight: 700, margin: '14px 0 6px' }}>{inlineRender(h1m[1])}</h3>); i++; continue }
-    if (h2m) { elements.push(<h4 key={key++} style={{ color: '#e2e8f0', fontSize: '13.5px', fontWeight: 700, margin: '12px 0 5px' }}>{inlineRender(h2m[1])}</h4>); i++; continue }
-    if (h3m) { elements.push(<h5 key={key++} style={{ color: '#cbd5e1', fontSize: '12.5px', fontWeight: 700, margin: '10px 0 4px', color: '#818cf8' }}>{inlineRender(h3m[1])}</h5>); i++; continue }
+    if (h1m) { elements.push(<h3 key={key++} style={{ color: 'var(--forensic-text-main)', fontSize: '15px', fontWeight: 700, margin: '14px 0 6px' }}>{inlineRender(h1m[1])}</h3>); i++; continue }
+    if (h2m) { elements.push(<h4 key={key++} style={{ color: 'var(--forensic-text-muted)', fontSize: '13.5px', fontWeight: 700, margin: '12px 0 5px' }}>{inlineRender(h2m[1])}</h4>); i++; continue }
+    if (h3m) { elements.push(<h5 key={key++} style={{ color: 'var(--forensic-primary)', fontSize: '12.5px', fontWeight: 700, margin: '10px 0 4px' }}>{inlineRender(h3m[1])}</h5>); i++; continue }
 
     // Bullet list item
     const bulletMatch = line.match(/^[\-\*]\s+(.+)/)
@@ -57,7 +57,7 @@ function renderMarkdown(text) {
       elements.push(
         <ul key={key++} style={{ margin: '6px 0', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           {items.map((item, idx) => (
-            <li key={idx} style={{ color: '#cbd5e1', fontSize: '13px', lineHeight: '1.55' }}>{inlineRender(item)}</li>
+            <li key={idx} style={{ color: 'var(--forensic-text-muted)', fontSize: '13px', lineHeight: '1.55' }}>{inlineRender(item)}</li>
           ))}
         </ul>
       )
@@ -76,7 +76,7 @@ function renderMarkdown(text) {
       elements.push(
         <ol key={key++} style={{ margin: '6px 0', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           {items.map((item, idx) => (
-            <li key={idx} style={{ color: '#cbd5e1', fontSize: '13px', lineHeight: '1.55' }}>{inlineRender(item)}</li>
+            <li key={idx} style={{ color: 'var(--forensic-text-muted)', fontSize: '13px', lineHeight: '1.55' }}>{inlineRender(item)}</li>
           ))}
         </ol>
       )
@@ -98,7 +98,7 @@ function renderMarkdown(text) {
     const bqm = line.match(/^>\s+(.+)/)
     if (bqm) {
       elements.push(
-        <blockquote key={key++} style={{ margin: '6px 0', paddingLeft: '12px', borderLeft: '3px solid #6366f1', color: '#94a3b8', fontSize: '12.5px', fontStyle: 'italic' }}>
+        <blockquote key={key++} style={{ margin: '6px 0', paddingLeft: '12px', borderLeft: `3px solid var(--forensic-primary)`, color: 'var(--forensic-text-muted)', fontSize: '12.5px', fontStyle: 'italic' }}>
           {inlineRender(bqm[1])}
         </blockquote>
       )
@@ -115,9 +115,7 @@ function renderMarkdown(text) {
 
     // Regular paragraph
     elements.push(
-      <p key={key++} style={{ margin: '4px 0', color: '#cbd5e1', fontSize: '13px', lineHeight: '1.65' }}>
-        {inlineRender(line)}
-      </p>
+      <p key={key++} style={{ margin: '4px 0', color: 'var(--forensic-text-muted)', fontSize: '13px', lineHeight: '1.65' }}>{inlineRender(line)}</p>
     )
     i++
   }
@@ -363,8 +361,7 @@ const ChatMessage = ({
               onClick={handleCopy}
               style={{
                 background: 'none', border: '1px solid rgba(255,255,255,0.07)',
-                color: copied ? '#22c55e' : '#64748b', cursor: 'pointer',
-                fontSize: '10.5px', padding: '3px 9px', borderRadius: '6px',
+                color: copied ? '#22c55e' : 'var(--forensic-text-muted)', cursor: 'pointer', fontSize: '10.5px', padding: '3px 9px', borderRadius: '6px',
                 display: 'flex', alignItems: 'center', gap: '4px',
                 transition: 'all 0.15s', fontFamily: 'inherit',
               }}
@@ -380,8 +377,7 @@ const ChatMessage = ({
                 onClick={onRegenerate}
                 style={{
                   background: 'none', border: '1px solid rgba(255,255,255,0.07)',
-                  color: '#64748b', cursor: 'pointer',
-                  fontSize: '10.5px', padding: '3px 9px', borderRadius: '6px',
+                  color: 'var(--forensic-text-muted)', cursor: 'pointer', fontSize: '10.5px', padding: '3px 9px', borderRadius: '6px',
                   display: 'flex', alignItems: 'center', gap: '4px',
                   transition: 'all 0.15s', fontFamily: 'inherit',
                 }}
@@ -394,7 +390,7 @@ const ChatMessage = ({
 
             {/* Timestamp */}
             {timestamp && (
-              <span style={{ fontSize: '10px', color: '#334155', marginLeft: 'auto' }}>
+              <span style={{ fontSize: '10px', color: 'var(--forensic-text-muted)', marginLeft: 'auto' }}>
                 {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}

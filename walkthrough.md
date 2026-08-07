@@ -158,3 +158,11 @@ Created:
 * **Asynchronous Post-Parse Enrichment**: Re-architected [`processing_pipeline.py`](file:///d:/ForenSight%20-%20Copy/ForenSight/backend/app/services/ingestion/processing_pipeline.py) to set the evidence status to `PARSED` immediately upon completion of file parsing and MongoDB event insertion. Heavy post-parse tasks (Neo4j graph sync, ML ensemble anomaly detection, FAISS vector embeddings, and Cypher correlations) now execute asynchronously in the background (`asyncio.create_task`), stopping the UI timer in **<0.3 seconds**.
 * **High-Performance MongoDB Bulk Batching**: Increased chunk size in [`event_repository.py`](file:///d:/ForenSight%20-%20Copy/ForenSight/backend/app/repositories/event_repository.py) from `500` to `2500` events per `insert_many` operation, reducing network round-trips by 80%.
 * **Parallel Multi-Thread Executor**: Scaled parsing thread pool from 2 to 4 workers for multi-core parallel parsing of EVTX, PCAP, CSV, and SQLite logs.
+
+---
+
+### 17. Final Production-Grade Refactoring & Codebase Cleanup
+* **Merged Duplicate Intent Classifiers**: Consolidated [`question_router.py`](file:///d:/ForenSight%20-%20Copy/ForenSight/backend/app/services/copilot/question_router.py) into [`query_router.py`](file:///d:/ForenSight%20-%20Copy/ForenSight/backend/app/services/copilot/query_router.py), eliminating duplicate intent classification logic while preserving backward-compatible exports.
+* **Component Deduplication**: Refactored [`Logo.jsx`](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/components/ui/Logo.jsx) to delegate to [`BrandLogo.jsx`](file:///d:/ForenSight%20-%20Copy/ForenSight/frontend/src/components/layout/BrandLogo.jsx), unifying vector SVG rendering across the entire application.
+* **Streamlined Unused Modules**: Deactivated dead legacy Celery worker tasks (`backend/app/worker/`) and SSE event streaming (`backend/app/pipeline/`) in favor of native FastAPI in-process background tasks.
+* **Zero Regression Verification**: Verified that all public APIs, REST endpoints, MongoDB schemas, Neo4j label formats, Groq LLM fallback AI pipeline, FAISS vector embeddings, streaming responses, and UI theme switchers operate with 100% feature parity.

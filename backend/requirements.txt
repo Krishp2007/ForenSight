@@ -12,8 +12,8 @@ redis>=5.0.2             # Redis client
 minio>=7.2.5             # MinIO (S3) client
 faiss-cpu>=1.8.0         # Vector DB (CPU version)
 
-# Task Queue
-celery>=5.3.6
+# Task Queue (Obsolete - background pipeline runs inline in FastAPI process)
+# celery>=5.3.6
 
 # Authentication & Security
 python-jose[cryptography]>=3.3.0

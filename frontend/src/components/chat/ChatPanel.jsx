@@ -228,12 +228,12 @@ const ChatPanel = ({ caseId }) => {
     <div style={{
       display: 'flex', flexDirection: 'column',
       height: '680px', maxHeight: 'calc(100vh - 120px)',
-      background: 'linear-gradient(180deg, #070c1a 0%, #0c1221 100%)',
+      background: 'var(--forensic-chat-bg, #070c1a)',
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.08)',
+      border: '1px solid var(--forensic-border, rgba(255,255,255,0.08))',
       overflow: 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)',
+      boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
     }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -241,8 +241,8 @@ const ChatPanel = ({ caseId }) => {
         flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '13px 18px',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-        background: 'rgba(9,13,26,0.9)',
+        borderBottom: '1px solid var(--forensic-border, rgba(255,255,255,0.07))',
+        background: 'var(--forensic-card-bg, #ffffff)',
         backdropFilter: 'blur(12px)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -255,7 +255,7 @@ const ChatPanel = ({ caseId }) => {
             <Bot size={18} color="#818cf8" />
           </div>
           <div>
-            <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#f1f5f9' }}>ForenSight Copilot</div>
+            <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--forensic-text-main, #0f172a)' }}>ForenSight Copilot</div>
             {isStreaming && (
               <div style={{ fontSize: '10.5px', color: '#22c55e', marginTop: '1px' }}>
                 ● Generating response…
@@ -301,7 +301,7 @@ const ChatPanel = ({ caseId }) => {
       </div>
 
       {/* ── Messages area ──────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', display: 'flex', flexDirection: 'column', gap: '16px', background: 'var(--forensic-bg-dark, #050a14)' }}>
 
         {/* Empty state */}
         {messages.length === 0 && (

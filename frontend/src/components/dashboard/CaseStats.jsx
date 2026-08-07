@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../services/api'
 import { listEvidence } from '../../services/evidenceService'
-import { AlertTriangle, Activity, FileText, Layers, GitBranch } from 'lucide-react'
+import { Activity, AlertTriangle, FileText, Layers, GitBranch } from 'lucide-react'
 
 const Stat = ({ icon: Icon, label, value, iconBg, loading }) => (
   <div style={{
@@ -51,8 +51,8 @@ const CaseStats = ({ caseId, evidenceList, initialEvidenceCount }) => {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  const effectiveCount = Array.isArray(evidenceList) 
-    ? evidenceList.length 
+  const effectiveCount = Array.isArray(evidenceList)
+    ? evidenceList.length
     : (initialEvidenceCount !== undefined ? initialEvidenceCount : null)
 
   const parsedCount = Array.isArray(evidenceList)
@@ -71,20 +71,28 @@ const CaseStats = ({ caseId, evidenceList, initialEvidenceCount }) => {
         }
 
         if (fileCount === 0) {
-          if (isMounted) {
-            setStats({ total: 0, anomalies: 0, critical: 0, correlations: 0, files: 0 })
-          }
+          if (isMounted) setStats({ total: 0, anomalies: 0, critical: 0, correlations: 0, files: 0 })
           return
         }
 
-        const resStats = await api.get(`/cases/${caseId}/stats`).then(r => r.data)
+        // Fetch event stats and graph correlations in parallel.
+        // The /stats endpoint always returns graph_correlations=0 (by design — too expensive
+        // to run Neo4j on every stats poll). We call /correlations separately for the real count.
+        const [resStats, resCorr] = await Promise.allSettled([
+          api.get(`/cases/${caseId}/stats`).then(r => r.data),
+          api.get(`/cases/${caseId}/correlations`).then(r => r.data),
+        ])
+
         if (isMounted) {
+          const s = resStats.status === 'fulfilled' ? resStats.value : {}
+          const c = resCorr.status === 'fulfilled' ? resCorr.value : {}
           setStats({
-            total: resStats.total,
-            anomalies: resStats.anomalies,
-            critical: resStats.critical,
-            correlations: resStats.graph_correlations || 0,
-            files: fileCount
+            total:        s.total        ?? 0,
+            anomalies:    s.anomalies    ?? 0,
+            critical:     s.critical     ?? 0,
+            // Use total_correlations from the Neo4j correlations endpoint — authoritative count
+            correlations: c.total_correlations ?? c.total ?? 0,
+            files:        fileCount,
           })
         }
       } catch (e) {
@@ -103,11 +111,11 @@ const CaseStats = ({ caseId, evidenceList, initialEvidenceCount }) => {
       gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
       gap: '14px',
     }}>
-      <Stat icon={Activity}      label="Total Events"       value={stats?.total}        iconBg="#2563eb" loading={loading} />
-      <Stat icon={AlertTriangle} label="ML Anomalies"      value={stats?.anomalies}    iconBg="#d97706" loading={loading} />
-      <Stat icon={Layers}        label="Critical Events"    value={stats?.critical}     iconBg="#dc2626" loading={loading} />
-      <Stat icon={GitBranch}     label="Graph Correlations" value={stats?.correlations}  iconBg="#7c3aed" loading={loading} />
-      <Stat icon={FileText}      label="Evidence Files"     value={stats?.files ?? initialEvidenceCount} iconBg="#059669" loading={loading && initialEvidenceCount === undefined} />
+      <Stat icon={Activity}      label="Total Events"        value={stats?.total}        iconBg="#2563eb" loading={loading} />
+      <Stat icon={AlertTriangle} label="ML Anomalies"        value={stats?.anomalies}    iconBg="#d97706" loading={loading} />
+      <Stat icon={Layers}        label="Critical Events"     value={stats?.critical}     iconBg="#dc2626" loading={loading} />
+      <Stat icon={GitBranch}     label="Graph Correlations"  value={stats?.correlations} iconBg="#7c3aed" loading={loading} />
+      <Stat icon={FileText}      label="Evidence Files"      value={stats?.files ?? initialEvidenceCount} iconBg="#059669" loading={loading && initialEvidenceCount === undefined} />
     </div>
   )
 }
