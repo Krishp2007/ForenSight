@@ -312,11 +312,11 @@ const ChatMessage = ({
         borderRadius: isUser ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
         background: isUser
           ? 'linear-gradient(135deg, #3b82f6, #2563eb)'
-          : 'rgba(15, 23, 42, 0.85)',
-        border: isUser ? 'none' : '1px solid rgba(255,255,255,0.07)',
+          : 'var(--forensic-panel-bg, #f8fafc)',
+        border: isUser ? 'none' : '1px solid var(--forensic-border, #e2e8f0)',
         boxShadow: isUser
           ? '0 2px 12px rgba(59,130,246,0.3)'
-          : '0 2px 8px rgba(0,0,0,0.3)',
+          : '0 1px 4px rgba(0,0,0,0.06)',
         position: 'relative',
       }}>
         {isUser ? (
@@ -329,7 +329,7 @@ const ChatMessage = ({
             {isStreaming && (
               <span style={{
                 display: 'inline-block', width: '2px', height: '16px',
-                background: '#60a5fa', marginLeft: '2px', verticalAlign: 'text-bottom',
+                background: '#3b82f6', marginLeft: '2px', verticalAlign: 'text-bottom',
                 animation: 'blink 0.8s infinite',
               }} />
             )}
@@ -345,7 +345,7 @@ const ChatMessage = ({
           {/* Source citations */}
           {sources && sources.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <span style={{ fontSize: '10px', color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <span style={{ fontSize: '10px', color: 'var(--forensic-text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Evidence Used
               </span>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>

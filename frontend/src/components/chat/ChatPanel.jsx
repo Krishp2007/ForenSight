@@ -266,7 +266,7 @@ const ChatPanel = ({ caseId }) => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Mode toggle */}
-          <div style={{ display: 'flex', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', border: '1px solid var(--forensic-border, #e2e8f0)', borderRadius: '8px', overflow: 'hidden' }}>
             {[
               { id: 'copilot', label: 'AI Copilot' },
               { id: 'search',  label: '🔍 Search'  },
@@ -274,7 +274,7 @@ const ChatPanel = ({ caseId }) => {
               <button key={m.id} onClick={() => setMode(m.id)} style={{
                 padding: '5px 12px', fontSize: '11px', fontWeight: 600, border: 'none',
                 background: mode === m.id ? '#3b82f6' : 'transparent',
-                color: mode === m.id ? '#fff' : '#64748b',
+                color: mode === m.id ? '#fff' : 'var(--forensic-text-muted, #64748b)',
                 cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
               }}>
                 {m.label}
@@ -285,14 +285,14 @@ const ChatPanel = ({ caseId }) => {
           {/* Clear */}
           {messages.length > 0 && !isStreaming && (
             <button onClick={clearChat} title="Clear Chat" style={{
-              background: 'none', border: '1px solid rgba(255,255,255,0.07)',
-              color: '#475569', cursor: 'pointer',
+              background: 'none', border: '1px solid var(--forensic-border, #e2e8f0)',
+              color: 'var(--forensic-text-muted, #64748b)', cursor: 'pointer',
               padding: '5px 8px', borderRadius: '7px',
               display: 'flex', alignItems: 'center', gap: '4px',
               fontSize: '11px', transition: 'all 0.15s', fontFamily: 'inherit',
             }}
               onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#475569'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--forensic-text-muted, #64748b)'; e.currentTarget.style.borderColor = 'var(--forensic-border, #e2e8f0)' }}
             >
               <Trash2 size={12} />
             </button>
@@ -315,8 +315,8 @@ const ChatPanel = ({ caseId }) => {
               <Bot size={26} color="#818cf8" />
             </div>
             <div style={{ textAlign: 'center' }}>
-              <h4 style={{ color: '#f1f5f9', fontSize: '15px', fontWeight: 700, margin: '0 0 6px' }}>ForenSight AI Investigation Assistant</h4>
-              <p style={{ color: '#475569', fontSize: '12.5px', margin: 0, maxWidth: '380px', lineHeight: '1.55' }}>
+              <h4 style={{ color: 'var(--forensic-text-main, #0f172a)', fontSize: '15px', fontWeight: 700, margin: '0 0 6px' }}>ForenSight AI Investigation Assistant</h4>
+              <p style={{ color: 'var(--forensic-text-muted, #64748b)', fontSize: '12.5px', margin: 0, maxWidth: '380px', lineHeight: '1.55' }}>
                 Ask any question about the current case — evidence files, suspicious processes, network activity, anomalies, or attack timelines.
               </p>
             </div>
@@ -329,18 +329,18 @@ const ChatPanel = ({ caseId }) => {
                   onClick={() => send(s.q)}
                   style={{
                     padding: '9px 12px', textAlign: 'left',
-                    background: 'rgba(15,23,42,0.8)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    borderRadius: '10px', color: '#94a3b8',
+                    background: 'var(--forensic-panel-bg, #f8fafc)',
+                    border: '1px solid var(--forensic-border, #e2e8f0)',
+                    borderRadius: '10px', color: 'var(--forensic-text-muted, #64748b)',
                     fontSize: '11.5px', fontWeight: 500,
                     cursor: 'pointer', fontFamily: 'inherit',
                     transition: 'all 0.15s', lineHeight: '1.4',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(30,41,59,0.9)'; e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(15,23,42,0.8)'; e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)'; e.currentTarget.style.color = 'var(--forensic-text-main, #0f172a)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--forensic-border, #e2e8f0)'; e.currentTarget.style.color = 'var(--forensic-text-muted, #64748b)' }}
                 >
                   {s.label}
-                  <div style={{ fontSize: '10px', color: '#334155', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--forensic-text-muted, #64748b)', opacity: 0.7, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {s.q.slice(0, 42)}…
                   </div>
                 </button>
@@ -385,14 +385,14 @@ const ChatPanel = ({ caseId }) => {
                 flexShrink: 0,
                 fontSize: '11px', fontWeight: 600,
                 padding: '5px 11px',
-                background: 'rgba(15,23,42,0.9)',
-                border: '1px solid rgba(255,255,255,0.09)',
-                borderRadius: '20px', color: '#64748b',
+                background: 'var(--forensic-panel-bg, #f8fafc)',
+                border: '1px solid var(--forensic-border, #e2e8f0)',
+                borderRadius: '20px', color: 'var(--forensic-text-muted, #64748b)',
                 cursor: 'pointer', fontFamily: 'inherit',
                 transition: 'all 0.15s', whiteSpace: 'nowrap',
               }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#c7d2fe'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.35)'; e.currentTarget.style.background = 'rgba(99,102,241,0.1)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'; e.currentTarget.style.background = 'rgba(15,23,42,0.9)' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)'; e.currentTarget.style.background = 'rgba(99,102,241,0.08)'; e.currentTarget.style.color = '#6366f1' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--forensic-border, #e2e8f0)'; e.currentTarget.style.background = 'var(--forensic-panel-bg, #f8fafc)'; e.currentTarget.style.color = 'var(--forensic-text-muted, #64748b)' }}
             >
               {s.label}
             </button>
@@ -403,19 +403,18 @@ const ChatPanel = ({ caseId }) => {
       {/* ── Input row ──────────────────────────────────────────────────────── */}
       <div style={{
         flexShrink: 0,
-        borderTop: '1px solid rgba(255,255,255,0.07)',
+        borderTop: '1px solid var(--forensic-border, #e2e8f0)',
         padding: '10px 14px 12px',
-        background: 'rgba(9,13,26,0.9)',
+        background: 'var(--forensic-card-bg, #ffffff)',
         display: 'flex', alignItems: 'flex-end', gap: '8px',
       }}>
-        {mode === 'search' && <Search size={14} color="#475569" style={{ flexShrink: 0, marginBottom: '11px' }} />}
+        {mode === 'search' && <Search size={14} color="var(--forensic-text-muted, #64748b)" style={{ flexShrink: 0, marginBottom: '11px' }} />}
 
         <textarea
           ref={inputRef}
           value={input}
           onChange={e => {
             setInput(e.target.value)
-            // Auto-resize
             e.target.style.height = 'auto'
             e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
           }}
@@ -437,10 +436,10 @@ const ChatPanel = ({ caseId }) => {
           style={{
             flex: 1,
             resize: 'none',
-            background: 'rgba(15,23,42,0.7)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--forensic-panel-bg, #f8fafc)',
+            border: '1px solid var(--forensic-border, #e2e8f0)',
             borderRadius: '12px',
-            color: isStreaming ? '#475569' : '#f1f5f9',
+            color: isStreaming ? 'var(--forensic-text-muted, #94a3b8)' : 'var(--forensic-text-main, #0f172a)',
             fontSize: '13px',
             padding: '10px 14px',
             outline: 'none',
@@ -451,8 +450,8 @@ const ChatPanel = ({ caseId }) => {
             transition: 'border-color 0.15s',
             scrollbarWidth: 'thin',
           }}
-          onFocus={e => { e.target.style.borderColor = 'rgba(99,102,241,0.4)' }}
-          onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)' }}
+          onFocus={e => { e.target.style.borderColor = 'rgba(99,102,241,0.5)' }}
+          onBlur={e => { e.target.style.borderColor = 'var(--forensic-border, #e2e8f0)' }}
         />
 
         {/* Stop / Send button */}
@@ -484,9 +483,9 @@ const ChatPanel = ({ caseId }) => {
               width: 40, height: 40, borderRadius: '10px',
               background: canSend
                 ? 'linear-gradient(135deg, #3b82f6, #2563eb)'
-                : 'rgba(30,41,59,0.7)',
+                : 'var(--forensic-border, #e2e8f0)',
               border: 'none',
-              color: canSend ? '#fff' : '#334155',
+              color: canSend ? '#fff' : 'var(--forensic-text-muted, #94a3b8)',
               cursor: canSend ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',

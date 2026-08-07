@@ -193,9 +193,12 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
 
         # ── 7. Run background post-enrichment (Neo4j, Anomaly, FAISS, Correlations) ──
         asyncio.create_task(_run_post_pipeline(events, case_id_str, org_id, loop, parse_seconds))
+
+        # Performance report for the parsing phase only — post-pipeline runs in background
+        # and will emit its own [PROFILE] log lines when complete.
         logger.info(
             f"\n{'='*55}\n"
-            f"FORENSIGHT PERFORMANCE REPORT\n"
+            f"FORENSIGHT PERFORMANCE REPORT (parse phase)\n"
             f"{'='*55}\n"
             f"Evidence:              {filename}\n"
             f"Events:                {num_events}\n"
@@ -204,13 +207,8 @@ async def _run_full_pipeline(evidence_id: str, org_id: str, file_bytes: Optional
             f"Parse:                 {parse_seconds:.3f}s\n"
             f"Enrich:                {enrich_time:.3f}s\n"
             f"MongoDB insert:        {mongo_time:.3f}s\n"
-            f"Neo4j graph sync:      {stage_times.get('neo4j', 0.0):.3f}s\n"
-            f"ML anomaly detection:  {stage_times.get('ml', 0.0):.3f}s\n"
-            f"FAISS embeddings:      {stage_times.get('faiss', 0.0):.3f}s\n"
-            f"Graph correlations:    {stage_times.get('correlations', 0.0):.3f}s\n"
-            f"Other (overhead):      {other_time:.3f}s\n"
-            f"{'─'*55}\n"
-            f"TOTAL:                 {total_seconds:.3f}s\n"
+            f"Parse phase TOTAL:     {parse_wall_time:.3f}s\n"
+            f"(Post-pipeline: Neo4j / ML / FAISS / Correlations run in background)\n"
             f"{'='*55}"
         )
 
