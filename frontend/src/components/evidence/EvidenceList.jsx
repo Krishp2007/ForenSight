@@ -260,7 +260,7 @@ const EvidenceList = ({ items, caseId, isDashboard = false, onItemUpdated, onIte
               <th style={thStyle}>Scan Time</th>
               <th style={thStyle}>Uploaded</th>
               <th style={thStyle}>SHA-256</th>
-              <th style={thStyle}>Actions</th>
+              {!isDashboard && <th style={thStyle}>Actions</th>}
             </tr>
           </thead>
 
@@ -321,8 +321,8 @@ const EvidenceList = ({ items, caseId, isDashboard = false, onItemUpdated, onIte
                   {e.sha256?.slice(0, 12)}…
                 </td>
 
-                <td style={{ padding: '12px 16px' }}>
-                  {!isDashboard ? (
+                {!isDashboard && (
+                  <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {canReprocess && (
                         <ActionBtn
@@ -354,10 +354,8 @@ const EvidenceList = ({ items, caseId, isDashboard = false, onItemUpdated, onIte
                         </ActionBtn>
                       )}
                     </div>
-                  ) : (
-                    <span style={{ color: 'var(--forensic-text-muted, #94a3b8)', fontSize: '12px' }}>—</span>
-                  )}
-                </td>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

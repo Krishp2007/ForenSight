@@ -203,23 +203,26 @@ async def update_me(
     payload: UserUpdate,
     current_user: UserResponse = Depends(get_current_user),
 ):
-    """Update the logged-in user's profile (username, email, password)."""
+    """Update the logged-in user's profile (display name, password with current password verification)."""
     update_fields: dict = {"updated_at": datetime.utcnow()}
 
     if payload.username is not None:
         update_fields["username"] = payload.username
 
-    if payload.email is not None:
-        # Ensure new email is not taken by another account
-        existing = await UserRepository.get_by_email(payload.email)
-        if existing and str(existing["_id"]) != current_user.id:
+    if payload.password is not None:
+        if not payload.current_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email address is already in use by another account.",
+                detail="Current password is required to change password.",
             )
-        update_fields["email"] = payload.email
 
-    if payload.password is not None:
+        db_user = await UserRepository.get_by_id(current_user.id)
+        if not db_user or not verify_password(payload.current_password, db_user["hashed_password"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Incorrect current password.",
+            )
+
         update_fields["hashed_password"] = hash_password(payload.password)
 
     if len(update_fields) == 1:  # only updated_at — nothing to do

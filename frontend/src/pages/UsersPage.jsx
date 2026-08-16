@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Users, ShieldCheck, ShieldOff, UserPlus, Copy, Check, Trash2, Link as LinkIcon, X } from 'lucide-react'
+import { Users, ShieldCheck, ShieldOff, UserPlus, Copy, Check, Trash2, Link as LinkIcon, X, Key } from 'lucide-react'
 import api from '../services/api'
 import useRole from '../hooks/useRole'
 import { Spinner } from '../components/ui'
@@ -211,50 +211,65 @@ const UsersPage = () => {
       {/* Active Invites Section */}
       <div style={{ marginTop: '12px' }}>
         <h3 style={{ color: '#f8fafc', fontSize: '15px', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <LinkIcon size={16} color="#60a5fa" />
-          Active Invite Links ({activeInvites.length})
+          <Key size={16} color="#60a5fa" />
+          Active Invite Tokens ({activeInvites.length})
         </h3>
 
         {activeInvites.length === 0 ? (
-          <div style={{ background: '#0f172a', border: '1px border #334155', borderRadius: '10px', padding: '16px', color: '#64748b', fontSize: '13px', textAlign: 'center' }}>
-            No active invite links. Click <strong>"Invite Team Member"</strong> above to generate a join link.
+          <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '16px', color: '#64748b', fontSize: '13px', textAlign: 'center' }}>
+            No active invite tokens. Click <strong>"Invite Team Member"</strong> above to generate a join code.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {activeInvites.map(inv => (
               <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <RoleBadge role={inv.role} />
                     {inv.target_email && (
-                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>Restricted to: {inv.target_email}</span>
+                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>Restricted: {inv.target_email}</span>
                     )}
                     <span style={{ color: '#64748b', fontSize: '11px' }}>
                       Expires: {new Date(inv.expires_at).toLocaleDateString()}
                     </span>
                   </div>
-                  <div style={{ color: '#38bdf8', fontSize: '12px', fontFamily: 'monospace', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {inv.invite_url}
+                  <div style={{ color: '#38bdf8', fontSize: '13px', fontFamily: 'monospace', fontWeight: '600', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    Code: {inv.token}
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                   <button
-                    onClick={() => copyToClipboard(inv.invite_url, inv.id)}
+                    onClick={() => copyToClipboard(inv.token, `code-${inv.id}`)}
+                    title="Copy Invite Code"
                     style={{
                       display: 'flex', alignItems: 'center', gap: '6px',
                       padding: '6px 12px', background: '#1e293b', border: '1px solid #334155',
-                      borderRadius: '6px', color: copiedToken === inv.id ? '#22c55e' : '#f8fafc',
+                      borderRadius: '6px', color: copiedToken === `code-${inv.id}` ? '#22c55e' : '#f8fafc',
                       fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit'
                     }}
                   >
-                    {copiedToken === inv.id ? <Check size={14} /> : <Copy size={14} />}
-                    {copiedToken === inv.id ? 'Copied' : 'Copy'}
+                    {copiedToken === `code-${inv.id}` ? <Check size={14} /> : <Copy size={14} />}
+                    {copiedToken === `code-${inv.id}` ? 'Code Copied' : 'Copy Code'}
+                  </button>
+
+                  <button
+                    onClick={() => copyToClipboard(inv.invite_url, `url-${inv.id}`)}
+                    title="Copy Full URL"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '6px 10px', background: '#0f172a', border: '1px solid #334155',
+                      borderRadius: '6px', color: copiedToken === `url-${inv.id}` ? '#22c55e' : '#94a3b8',
+                      fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit'
+                    }}
+                  >
+                    {copiedToken === `url-${inv.id}` ? <Check size={14} /> : <LinkIcon size={14} />}
+                    {copiedToken === `url-${inv.id}` ? 'URL Copied' : 'Copy URL'}
                   </button>
 
                   <button
                     onClick={() => handleRevokeInvite(inv.id)}
-                    title="Revoke Link"
+                    title="Revoke Token"
                     style={{
                       padding: '6px', background: 'rgba(239, 68, 68, 0.1)',
                       border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px',
@@ -291,10 +306,10 @@ const UsersPage = () => {
             </button>
 
             <h3 style={{ color: '#f8fafc', fontSize: '18px', fontWeight: '700', margin: '0 0 4px 0' }}>
-              Create Organization Invite Link
+              Generate Team Invite Code
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 20px 0' }}>
-              Generate a secure link for new members to register under your organization.
+              Generate a secure invite code for new team members to enter during registration.
             </p>
 
             <form onSubmit={handleCreateInvite} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -331,19 +346,47 @@ const UsersPage = () => {
               )}
 
               {createdInvite && (
-                <div style={{ padding: '12px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ color: '#4ade80', fontSize: '12px', fontWeight: '600' }}>Invite Link Created!</div>
-                  <div style={{ color: '#38bdf8', fontSize: '12px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                    {createdInvite.invite_url}
+                <div style={{ padding: '14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ color: '#4ade80', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Invite Code Generated!
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(createdInvite.invite_url, 'modal')}
-                    style={{ padding: '8px', background: '#22c55e', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                  >
-                    {copiedToken === 'modal' ? <Check size={14} /> : <Copy size={14} />}
-                    {copiedToken === 'modal' ? 'Link Copied!' : 'Copy Invite Link'}
-                  </button>
+                  
+                  {/* Token Box */}
+                  <div style={{
+                    padding: '10px 12px', background: '#0f172a', border: '1px solid rgba(56, 189, 248, 0.4)',
+                    borderRadius: '8px', color: '#38bdf8', fontSize: '13px', fontFamily: 'monospace',
+                    fontWeight: '600', wordBreak: 'break-all', textAlign: 'center'
+                  }}>
+                    {createdInvite.token}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(createdInvite.token, 'modal-code')}
+                      style={{
+                        flex: 1, padding: '9px', background: '#22c55e', border: 'none',
+                        borderRadius: '8px', color: '#fff', fontSize: '12px', fontWeight: '600',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                      }}
+                    >
+                      {copiedToken === 'modal-code' ? <Check size={14} /> : <Copy size={14} />}
+                      {copiedToken === 'modal-code' ? 'Code Copied!' : 'Copy Invite Code'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(createdInvite.invite_url, 'modal-url')}
+                      style={{
+                        padding: '9px 12px', background: '#1e293b', border: '1px solid #334155',
+                        borderRadius: '8px', color: copiedToken === 'modal-url' ? '#22c55e' : '#cbd5e1', fontSize: '12px', fontWeight: '600',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                      }}
+                    >
+                      {copiedToken === 'modal-url' ? <Check size={14} /> : <LinkIcon size={14} />}
+                      {copiedToken === 'modal-url' ? 'URL Copied' : 'Copy URL'}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -356,8 +399,8 @@ const UsersPage = () => {
                   cursor: inviteLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                 }}
               >
-                {inviteLoading ? <Spinner size="sm" /> : <LinkIcon size={16} />}
-                Generate Invite Link
+                {inviteLoading ? <Spinner size="sm" /> : <Key size={16} />}
+                Generate Invite Code
               </button>
             </form>
           </div>

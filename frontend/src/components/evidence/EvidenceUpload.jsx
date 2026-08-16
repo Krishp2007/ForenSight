@@ -20,22 +20,37 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
 
   const handleFiles = async (fileList) => {
     if (!fileList || fileList.length === 0) return
-    const file = fileList[0]
+    const files = Array.from(fileList)
     setUploading(true)
     setError(null)
-    setCurrentFileName(file.name)
-    setProgress(0)
-    try {
-      const evidence = await uploadEvidence(caseId, file, (e) => {
-        if (e.total) setProgress(Math.round((e.loaded / e.total) * 100))
-      })
-      if (onUploaded) onUploaded(evidence)
-    } catch (e) {
-      setError(`Failed uploading "${file.name}": ${e.response?.data?.detail || 'Upload failed'}`)
-    } finally {
-      setUploading(false)
+
+    let successCount = 0
+    const errors = []
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const label = files.length > 1 ? `${file.name} (${i + 1}/${files.length})` : file.name
+      setCurrentFileName(label)
       setProgress(0)
-      if (inputRef.current) inputRef.current.value = ''
+      try {
+        const evidence = await uploadEvidence(caseId, file, (e) => {
+          if (e.total) setProgress(Math.round((e.loaded / e.total) * 100))
+        })
+        if (onUploaded) onUploaded(evidence)
+        successCount++
+      } catch (e) {
+        console.error(`Upload error for ${file.name}:`, e)
+        errors.push(`"${file.name}": ${e.response?.data?.detail || 'Upload failed'}`)
+      }
+    }
+
+    setUploading(false)
+    setProgress(0)
+    setCurrentFileName('')
+    if (inputRef.current) inputRef.current.value = ''
+
+    if (errors.length > 0) {
+      setError(`Uploaded ${successCount}/${files.length} file(s). ${errors.join('; ')}`)
     }
   }
 
@@ -73,6 +88,7 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
       <input
         ref={inputRef}
         type="file"
+        multiple
         accept={ACCEPTED}
         style={{ display: 'none' }}
         onChange={(e) => handleFiles(e.target.files)}
@@ -103,10 +119,10 @@ const EvidenceUpload = ({ caseId, onUploaded }) => {
             <FileUp size={24} />
           </div>
           <p style={{ color: 'var(--forensic-text-main, #0f172a)', fontSize: '14.5px', fontWeight: '700', margin: 0, letterSpacing: '-0.3px' }}>
-            Drop a file or click to browse
+            Drop files or click to browse multiple evidence files
           </p>
           <p style={{ color: 'var(--forensic-text-muted, #64748b)', fontSize: '12px', fontWeight: '600', margin: 0 }}>
-            PCAP · SQLite · CSV · JSON · MD5 · TXT · LOG
+            EVTX · PCAP · SQLite · CSV · JSON · MD5 · TXT · LOG
           </p>
         </>
       )}

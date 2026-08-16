@@ -26,11 +26,9 @@ class UserCreate(BaseModel):
     is_active: bool = Field(default=True, description="Whether this account is active")
 
 class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
     username: Optional[str] = Field(None, min_length=3, max_length=50)
-    role: Optional[UserRole] = None
-    is_active: Optional[bool] = None
-    password: Optional[str] = Field(None, min_length=8)
+    current_password: Optional[str] = Field(None, description="Current password required for verification when changing password")
+    password: Optional[str] = Field(None, min_length=8, description="New account password")
 
 class UserResponse(UserBase):
     id: str = Field(..., description="The user's MongoDB ObjectId representation")

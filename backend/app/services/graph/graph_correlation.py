@@ -69,10 +69,14 @@ class GraphCorrelationEngine:
             corr_id = f"proc_chain_{hashlib.md5((case_id + chain_str).encode()).hexdigest()[:10]}"
             findings.append({
                 "correlation_id": corr_id,
-                "type": "process_chain",
+                "type": "PROCESS_CHAIN",
+                "rule": "PROCESS_CHAIN",
                 "score": score,
                 "severity": "critical" if score >= 80 else "high" if score >= 60 else "medium",
                 "chain": chain,
+                "source": chain[0] if chain else "Parent Process",
+                "target": chain[-1] if chain else "Child Process",
+                "explanation": f"Process lineage chain detected (depth {depth}): {' -> '.join(chain)}",
                 "reasons": reasons,
                 "involved_ids": r.get("process_ids", []),
             })
@@ -114,32 +118,39 @@ class GraphCorrelationEngine:
 
         paths = []
         for r in rows:
-            if not r.get("username") or not r.get("process_name") or not r.get("ip_address"):
+            user_name = r.get("username") or "System User"
+            proc_name = r.get("process_name") or "Process"
+            ip_addr = r.get("ip_address")
+            if not ip_addr or ip_addr.lower() == "none":
                 continue
+
             score = 75
             port_str = str(r.get("port_number", "?"))
             reasons = [
-                f"User '{r['username']}' executed process '{r['process_name']}'",
-                f"Process established outbound network connection to external IP {r['ip_address']}:{port_str}",
+                f"User '{user_name}' executed process '{proc_name}'",
+                f"Process established outbound network connection to external IP {ip_addr}:{port_str}",
             ]
-            if "powershell" in r["process_name"].lower() or "-enc" in (r.get("command_line") or "").lower():
+            if "powershell" in proc_name.lower() or "-enc" in (r.get("command_line") or "").lower():
                 score = min(100, score + 20)
                 reasons.append("Encoded or suspicious command-line parameters detected")
 
             explanation = (
-                f"{r['username']} executed {r['process_name']}, which subsequently connected "
-                f"to external IP {r['ip_address']} on port {port_str}."
+                f"{user_name} executed {proc_name}, which subsequently connected "
+                f"to external IP {ip_addr} on port {port_str}."
             )
-            corr_id = f"attack_path_{hashlib.md5((case_id + (r.get('process_id') or '') + r['ip_address']).encode()).hexdigest()[:10]}"
+            corr_id = f"attack_path_{hashlib.md5((case_id + (r.get('process_id') or '') + ip_addr).encode()).hexdigest()[:10]}"
 
             paths.append({
                 "correlation_id": corr_id,
-                "type": "attack_path",
+                "type": "ATTACK_PATH",
+                "rule": "ATTACK_PATH",
                 "score": score,
                 "severity": "critical" if score >= 80 else "high",
+                "source": f"{user_name} ({proc_name})",
+                "target": f"{ip_addr}:{port_str}",
                 "explanation": explanation,
                 "reasons": reasons,
-                "involved_nodes": [r.get("user_id", ""), r.get("process_id", ""), r["ip_address"]],
+                "involved_nodes": [r.get("user_id", ""), r.get("process_id", ""), ip_addr],
             })
         return paths
 
@@ -179,17 +190,20 @@ class GraphCorrelationEngine:
 
         correlations = []
         for r in rows:
-            if not r.get("shared_ip") or not r.get("process_name"):
+            shared_ip = r.get("shared_ip")
+            proc_name = r.get("process_name") or "System Process"
+            if not shared_ip or shared_ip.lower() == "none":
                 continue
-            shared_ip = r["shared_ip"]
-            proc_name = r["process_name"]
             ev_id = r.get("evtx_evidence_id", "unknown")
             corr_id = f"cross_ev_{hashlib.md5((case_id + ev_id + shared_ip).encode()).hexdigest()[:10]}"
             correlations.append({
                 "correlation_id": corr_id,
-                "type": "cross_evidence",
+                "type": "CROSS_EVIDENCE_CORRELATION",
+                "rule": "CROSS_EVIDENCE_CORRELATION",
                 "score": 85,
                 "severity": "high",
+                "source": proc_name,
+                "target": shared_ip,
                 "explanation": (
                     f"Activity on IP {shared_ip} confirmed across multiple evidence sources. "
                     f"Process '{proc_name}' recorded in event log with matching PCAP capture."
@@ -234,7 +248,7 @@ class GraphCorrelationEngine:
         findings = []
         for r in rows:
             proc_name = r.get("process_name")
-            if not proc_name:
+            if not proc_name or proc_name.lower() == "none":
                 continue
             cmd = r.get("command_line") or proc_name
             score = 70
@@ -243,8 +257,8 @@ class GraphCorrelationEngine:
             corr_id = f"lolbin_{hashlib.md5((case_id + proc_name + (r.get('process_id') or '')).encode()).hexdigest()[:10]}"
             findings.append({
                 "correlation_id": corr_id,
-                "type": "PROCESS_INITIATED_CONNECTION",
-                "rule": "PROCESS_INITIATED_CONNECTION",
+                "type": "SUSPICIOUS_LOLBIN_EXECUTION",
+                "rule": "SUSPICIOUS_LOLBIN_EXECUTION",
                 "score": score,
                 "severity": "critical" if score >= 80 else "high",
                 "source": proc_name,
@@ -278,8 +292,10 @@ class GraphCorrelationEngine:
         for r in rows:
             reg_path = r.get("reg_path")
             proc_name = r.get("process_name") or "Process"
-            if not reg_path:
+            if not reg_path or reg_path.lower() == "none":
                 continue
+            if proc_name.lower() == "none":
+                proc_name = "System Process"
             score = 85 if "run" in reg_path.lower() or "services" in reg_path.lower() else 65
             corr_id = f"reg_persist_{hashlib.md5((case_id + reg_path).encode()).hexdigest()[:10]}"
             findings.append({
@@ -319,20 +335,23 @@ class GraphCorrelationEngine:
         findings = []
         for r in rows:
             dom = r.get("domain_name")
-            if not dom:
+            if not dom or dom.lower() == "none":
                 continue
-            proc_name = r.get("process_name") or "System/Network"
+            proc_name = r.get("process_name")
+            if not proc_name or proc_name.lower() == "none":
+                proc_name = "Network Service"
+
             score = 60
             corr_id = f"dom_c2_{hashlib.md5((case_id + dom + proc_name).encode()).hexdigest()[:10]}"
             findings.append({
                 "correlation_id": corr_id,
-                "type": "PARENT_OF",
-                "rule": "PARENT_OF",
+                "type": "DOMAIN_RESOLUTION",
+                "rule": "DOMAIN_RESOLUTION",
                 "score": score,
                 "severity": "medium",
                 "source": proc_name,
                 "target": dom,
-                "explanation": f"Domain resolution query recorded: {proc_name} → {dom}",
+                "explanation": f"Domain resolution query recorded: {proc_name} -> {dom}",
                 "reasons": [
                     f"Domain network activity observed for '{dom}'",
                     f"Initiated by process '{proc_name}'"

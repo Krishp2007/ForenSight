@@ -47,6 +47,7 @@ class EventBase(BaseModel):
     details: Dict[str, Any] = Field(default_factory=dict, description="Raw key-value details from parser (e.g. PID, CommandLine, SourcePort)")
     
     # Threat Intelligence & Analytics metadata
+    description: Optional[str] = Field(default=None, description="Plain English sentence explaining the event for investigators")
     mitre_techniques: List[str] = Field(default_factory=list, description="Mapped MITRE ATT&CK technique IDs (e.g. ['T1059.001'])")
     is_anomaly: bool = Field(default=False, description="Flagged as outlier by local ML engines")
     anomaly_score: float = Field(default=0.0, description="Outlying probability score between 0.0 and 1.0")
@@ -67,7 +68,7 @@ class EventResponse(EventBase):
     case_id: str = Field(..., description="Parent case ID")
     evidence_id: str = Field(..., description="Originating evidence ID")
     organization_id: str = Field(..., description="Owner organization ID")
-    
+
     # Optional semantic search rank properties
     distance: Optional[float] = Field(default=None, description="FAISS L2 search match distance")
     search_sentence: Optional[str] = Field(default=None, description="Formatted sentence used for vector embedding matching")
@@ -99,3 +100,11 @@ class EventResponse(EventBase):
                 "anomaly_score": 0.82
             }
         }
+
+class PaginatedEventResponse(BaseModel):
+    events: List[EventResponse] = Field(..., description="List of events on the current page")
+    total: int = Field(..., description="Uncapped total matching events count")
+    page: int = Field(..., description="Current page number (1-indexed)")
+    limit: int = Field(..., description="Number of items per page")
+    total_pages: int = Field(..., description="Total pages available")
+

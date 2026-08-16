@@ -1,3 +1,5 @@
+import math
+import re
 from typing import Optional, Dict, Any, List
 from bson import ObjectId
 from backend.app.db.mongodb import db_client
@@ -120,7 +122,6 @@ class EventRepository:
         """Retrieve events in a case matching criteria, supporting both ObjectId and string IDs."""
         try:
             cid_obj = ObjectId(case_id) if ObjectId.is_valid(case_id) else case_id
-            oid_obj = ObjectId(org_id) if ObjectId.is_valid(org_id) else org_id
 
             query = {
                 "$or": [
@@ -138,6 +139,99 @@ class EventRepository:
             return await cursor.to_list(length=limit)
         except Exception:
             return []
+
+    @staticmethod
+    async def list_paginated_by_case(
+        case_id: str,
+        org_id: str,
+        severity: Optional[str] = None,
+        event_type: Optional[str] = None,
+        search: Optional[str] = None,
+        is_anomaly: Optional[bool] = None,
+        sort_order: str = "desc",
+        page: int = 1,
+        limit: int = 50
+    ) -> Dict[str, Any]:
+        """Retrieve paginated events in a case with search, filter, and total count metadata."""
+        try:
+            cid_obj = ObjectId(case_id) if ObjectId.is_valid(case_id) else case_id
+
+            conds = [
+                {"$or": [{"case_id": cid_obj}, {"case_id": str(case_id)}]}
+            ]
+
+            if severity and severity.strip():
+                s_clean = severity.strip().lower()
+                conds.append({
+                    "severity": {
+                        "$in": [s_clean, s_clean.capitalize(), s_clean.upper()]
+                    }
+                })
+
+            if event_type and event_type.strip():
+                et_clean = event_type.strip()
+                conds.append({
+                    "event_type": {"$regex": f"^{re.escape(et_clean)}$", "$options": "i"}
+                })
+
+            if is_anomaly is not None:
+                if is_anomaly:
+                    conds.append({
+                        "$or": [{"is_anomaly": True}, {"anomaly_score": {"$gt": 0.5}}]
+                    })
+                else:
+                    conds.append({"is_anomaly": {"$ne": True}})
+
+            if search and search.strip():
+                st = search.strip()
+                esc_s = re.escape(st)
+                reg_pat = {"$regex": esc_s, "$options": "i"}
+                conds.append({
+                    "$or": [
+                        {"subject": reg_pat},
+                        {"action": reg_pat},
+                        {"object": reg_pat},
+                        {"source": reg_pat},
+                        {"event_type": reg_pat},
+                        {"mitre_techniques": reg_pat},
+                        {"details.filename": reg_pat},
+                        {"details.process_name": reg_pat},
+                        {"details.command_line": reg_pat},
+                        {"details.user": reg_pat},
+                    ]
+                })
+
+            query = {"$and": conds} if len(conds) > 1 else conds[0]
+
+            total = await db_client.db["events"].count_documents(query)
+
+            safe_limit = max(10, min(limit, 500))
+            safe_page = max(1, page)
+            skip = (safe_page - 1) * safe_limit
+            sort_dir = -1 if sort_order == "desc" else 1
+
+            cursor = db_client.db["events"].find(query).sort("timestamp", sort_dir).skip(skip).limit(safe_limit)
+            items = await cursor.to_list(length=safe_limit)
+
+            total_pages = max(1, math.ceil(total / safe_limit)) if total > 0 else 1
+
+            return {
+                "events": items,
+                "total": total,
+                "page": safe_page,
+                "limit": safe_limit,
+                "total_pages": total_pages
+            }
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"EventRepository.list_paginated_by_case error: {e}")
+            return {
+                "events": [],
+                "total": 0,
+                "page": 1,
+                "limit": limit,
+                "total_pages": 1
+            }
 
     @staticmethod
     async def get_by_id(event_id: str, org_id: str) -> Optional[Dict[str, Any]]:
