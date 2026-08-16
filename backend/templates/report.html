@@ -7,29 +7,31 @@
         /* ── Page Setup ──────────────────────────────────────────────────── */
         @page {
             size: A4;
-            margin: 18mm 18mm 22mm 18mm;
+            margin: 10mm 10mm 12mm 10mm;
             @bottom-left {
                 content: "CONFIDENTIAL — ForenSight AI  |  " string(case-title);
                 font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-                font-size: 7pt;
+                font-size: 7.5pt;
                 color: #94a3b8;
             }
             @bottom-right {
                 content: "Page " counter(page) " / " counter(pages);
                 font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-                font-size: 7pt;
+                font-size: 7.5pt;
                 color: #94a3b8;
             }
         }
         /* ── Reset & Base ────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; }
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            color: #1e293b;
-            line-height: 1.55;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            line-height: 1.5;
             font-size: 9.5pt;
-            margin: 0; padding: 0;
-            background: #fff;
+            margin: 0 auto;
+            padding: 16px 20px;
+            max-width: 1000px;
+            background: #ffffff;
         }
         h1, h2, h3, h4 { margin: 0; padding: 0; line-height: 1.25; }
         p { margin: 0 0 9px 0; text-align: justify; }
@@ -273,6 +275,39 @@
 </div>
 
 
+<!-- ── Evidence Inventory Section ─────────────────────────────────────────── -->
+{% if evidence_list %}
+<div class="section-hdr no-break" style="margin-top: 18px;">
+    <div class="num">📁</div>
+    <h2>Ingested Forensic Evidence Files</h2>
+</div>
+<table class="dt">
+    <thead>
+        <tr>
+            <th>File Name</th>
+            <th style="width:100px;">Evidence Type</th>
+            <th style="width:90px; text-align:center;">Events Parsed</th>
+            <th style="width:75px; text-align:center;">Status</th>
+            <th>SHA-256 Hash</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for ev in evidence_list %}
+        <tr>
+            <td style="font-weight:700; color:#1e3a8a;">📄 {{ ev.filename }}</td>
+            <td style="font-size:7.5pt; text-transform:uppercase;"><code>{{ ev.file_type | default('log') }}</code></td>
+            <td style="text-align:center; font-weight:700; color:#0f172a;">{{ ev.parsed_events_count | default(0) }}</td>
+            <td style="text-align:center;">
+                <span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #6ee7b7;">{{ ev.status | default('parsed') }}</span>
+            </td>
+            <td style="font-size:7pt; font-family:monospace; color:#64748b;">{{ ev.sha256[:24] }}…</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 1 — AI COPILOT ANALYSIS                                          -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -306,10 +341,6 @@
         <strong>{{ enriched_techniques | map(attribute='tactic') | unique | join(', ') }}</strong>.
     </p>
     {% endif %}
-    <p style="color:#475569; font-size:8pt; margin-top:10px;">
-        ℹ️ <em>Configure a Gemini API key or start an Ollama instance to enable
-        AI-narrative summaries and deeper investigation guidance.</em>
-    </p>
 {% endif %}
 </div>
 
@@ -323,18 +354,15 @@
     <h2>Machine Learning Anomaly Detections</h2>
 </div>
 <p style="color:#475569; font-size:8.5pt; margin-bottom:12px;">
-    Events flagged by the <strong>Isolation Forest</strong> model (contamination 5%).
-    Scores closer to <code>1.0</code> indicate stronger outliers.
+    Events flagged by the <strong>Isolation Forest</strong> model. Every anomaly is translated into plain English for rapid incident triage.
 </p>
 
 {% if anomalies %}
 <table class="dt">
     <thead>
         <tr>
-            <th style="width:110px;">Timestamp</th>
-            <th>Subject (Actor)</th>
-            <th>Action</th>
-            <th>Object (Target)</th>
+            <th style="width:115px;">Timestamp</th>
+            <th>Plain-English Finding & Details</th>
             <th style="width:65px; text-align:center;">Score</th>
             <th style="width:75px; text-align:center;">Severity</th>
             <th style="width:90px;">MITRE</th>
@@ -344,9 +372,12 @@
     {% for a in anomalies %}
         <tr>
             <td style="font-size:7.5pt; color:#64748b; white-space:nowrap;">{{ a.timestamp }}</td>
-            <td><code>{{ a.subject }}</code></td>
-            <td style="color:#1e3a8a; font-weight:600;">{{ a.action }}</td>
-            <td><code>{{ a.object }}</code></td>
+            <td>
+                <div style="font-weight:700; color:#0f172a; margin-bottom:2px;">{{ a.description }}</div>
+                <div style="font-size:7.5pt; color:#64748b;">
+                    <code>{{ a.subject }}</code> &nbsp;➔&nbsp; <em>{{ a.action }}</em> &nbsp;➔&nbsp; <code>{{ a.object }}</code>
+                </div>
+            </td>
             <td style="text-align:center; font-weight:700; color:#7e22ce;">{{ "%.4f"|format(a.anomaly_score) }}</td>
             <td style="text-align:center;">
                 <span class="badge sev-{{ a.severity }}">{{ a.severity }}</span>
@@ -384,7 +415,7 @@
 {% if enriched_techniques %}
 <div class="mitre-grid">
 {% for t in enriched_techniques %}
-    {% if loop.index is odd %}<div class="mitre-card" style="{% if loop.last %}width:100%;{% endif %}">
+    {% if loop.index is odd %}<div class="mitre-card">
         <div class="mitre-card-id"><a href="{{ t.url }}" style="color:#1e3a8a; text-decoration:none;">{{ t.id }}</a></div>
         <div class="mitre-card-name">{{ t.name }}</div>
         <div class="mitre-tactic-pill">{{ t.tactic }}</div>
@@ -508,19 +539,22 @@
 
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- SECTION 6 — ACTIVITY TIMELINE                                             -->
+<!-- SECTION 6 — KEY INCIDENT MILESTONES                                      -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page-break"></div>
 <div class="section-hdr no-break">
     <div class="num">6</div>
     <span class="icon">📅</span>
-    <h2>Activity Timeline</h2>
+    <h2>Key Incident Milestones & Activity Summary</h2>
 </div>
+
+<p style="color:#475569; font-size:8.5pt; margin-bottom:10px;">
+    Executive summary of key investigation milestones. <em>(For complete interactive timeline searching, filtering, and deep packet inspection, refer to the live ForenSight Timeline Dashboard.)</em>
+</p>
 
 {% if sessions %}
 <p style="color:#475569; font-size:8.5pt; margin-bottom:10px;">
-    <strong>{{ sessions | length }}</strong> activity session(s) identified
-    (events separated by &gt;15 min gap). Showing up to 50 timeline entries.
+    <strong>{{ sessions | length }}</strong> activity session(s) identified across <strong>{{ span_hours }} hours</strong>.
 </p>
 
 {% for session in sessions[:6] %}
@@ -545,12 +579,13 @@
         <div class="tl-time">{{ ev.timestamp_str if ev.timestamp_str else ev.timestamp }}</div>
         <div class="tl-dot" style="background:{{ dot_color.get(sev, '#94a3b8') }};"></div>
         <div class="tl-content">
-            <span class="subject">{{ ev.subject }}</span>
-            <span class="action">{{ ev.action }}</span>
-            <span class="object">{{ ev.object }}</span>
-            &nbsp;
-            <span class="badge sev-{{ sev }}" style="font-size:6.5pt;">{{ sev }}</span>
-            {% if ev.is_anomaly %}<span class="badge sev-anomaly" style="font-size:6.5pt;">anomaly</span>{% endif %}
+            <div style="font-weight:700; color:#0f172a; margin-bottom:1px;">{{ ev.description }}</div>
+            <div style="font-size:7.5pt; color:#64748b;">
+                <code>{{ ev.subject }}</code> &nbsp;➔&nbsp; <span class="action">{{ ev.action }}</span> &nbsp;➔&nbsp; <code>{{ ev.object }}</code>
+                &nbsp;
+                <span class="badge sev-{{ sev }}" style="font-size:6.5pt;">{{ sev }}</span>
+                {% if ev.is_anomaly %}<span class="badge sev-anomaly" style="font-size:6.5pt;">anomaly</span>{% endif %}
+            </div>
         </div>
     </div>
 {% endfor %}

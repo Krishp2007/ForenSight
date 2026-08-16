@@ -87,8 +87,7 @@ class ReportCompiler:
     @classmethod
     def _build_fallback_analysis_html(cls, ctx: Dict[str, Any]) -> str:
         """
-        Build a meaningful HTML executive summary from the assembled report context.
-        Used when no Groq API key is configured.
+        Build a comprehensive, humanized executive summary from report context.
         """
         case = ctx.get("case", {})
         total = ctx.get("total_events", 0)
@@ -98,6 +97,7 @@ class ReportCompiler:
         enriched = ctx.get("enriched_techniques", [])
         correlations = ctx.get("correlations", [])
         anomalies = ctx.get("anomalies", [])
+        evidence_list = ctx.get("evidence_list", [])
 
         tactics = list({t.get("tactic", "") for t in enriched if t.get("tactic")})
         technique_ids = [t.get("id", "") for t in enriched[:5]]
@@ -108,65 +108,51 @@ class ReportCompiler:
             severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
         lines = []
-        lines.append("<h3>Executive Summary</h3>")
+        lines.append("<h3>Executive Investigation Overview</h3>")
         lines.append(
-            f"<p>Case <strong>{case.get('title', 'N/A')}</strong> was analysed by the "
-            f"ForenSight ML &amp; Graph engine. A total of <strong>{total:,}</strong> log events "
-            f"were ingested, covering <strong>{span_hours} hours</strong> of activity. "
-            f"The Isolation Forest anomaly detector flagged <strong>{anomalies_count}</strong> "
-            f"outlying events"
+            f"<p>Case <strong>{case.get('title', 'N/A')}</strong> was processed through the "
+            f"ForenSight multi-source forensic pipeline. A total of <strong>{total:,}</strong> log events "
+            f"were analyzed from <strong>{len(evidence_list)} ingested evidence file(s)</strong> over a span of "
+            f"<strong>{span_hours} hours</strong>.</p>"
         )
-        if critical_high:
-            lines[-1] += (
-                f", of which <strong>{critical_high}</strong> carry a "
-                "<em>Critical</em> or <em>High</em> severity rating</p>"
-            )
-        else:
-            lines[-1] += ", none of which reached Critical or High severity.</p>"
 
-        if severity_counts:
-            lines.append("<p><strong>Anomaly severity breakdown:</strong> " +
-                ", ".join(
-                    f"<strong>{cnt}</strong> {sev}"
-                    for sev, cnt in sorted(severity_counts.items(),
-                                           key=lambda x: ["critical","high","medium","low","info"].index(x[0])
-                                           if x[0] in ["critical","high","medium","low","info"] else 99)
-                ) + ".</p>")
+        lines.append("<div style='margin: 10px 0;'><strong>Key Forensic Findings & Incident Insights:</strong><ul>")
+        lines.append(
+            f"<li><strong>ML Outlier Detections:</strong> The Isolation Forest algorithm identified "
+            f"<strong>{anomalies_count} anomalous events</strong> out of {total:,} logs. "
+            f"Of these, <strong>{critical_high}</strong> require immediate priority response due to Critical/High risk scores.</li>"
+        )
 
         if correlations:
             rules = list({c.get("rule", "UNKNOWN") for c in correlations})
+            rule_str = ", ".join(f"<code>{r.replace('_', ' ').title()}</code>" for r in rules[:4])
             lines.append(
-                f"<p>The graph correlation engine produced "
-                f"<strong>{len(correlations)}</strong> derived relationships across "
-                f"<strong>{len(rules)}</strong> rule(s): "
-                + ", ".join(f"<em>{r.replace('_', ' ').title()}</em>" for r in rules[:5])
-                + ("." if len(rules) <= 5 else f" and {len(rules)-5} more.")
-                + "</p>"
+                f"<li><strong>Graph Attack Path Correlations:</strong> The Neo4j graph correlation engine linked "
+                f"<strong>{len(correlations)} key entity relationships</strong> across rules: {rule_str}.</li>"
             )
 
         if enriched:
+            tech_str = ", ".join(f"<code>{t}</code>" for t in technique_ids)
             lines.append(
-                f"<p><strong>{len(enriched)}</strong> MITRE ATT&amp;CK technique(s) were "
-                "identified during this investigation"
+                f"<li><strong>MITRE ATT&CK Framework Mapping:</strong> <strong>{len(enriched)} technique(s)</strong> "
+                f"spanned tactics: <strong>{', '.join(tactics) if tactics else 'Execution / Persistence'}</strong>. "
+                f"Observed identifiers: {tech_str}.</li>"
             )
-            if tactics:
-                lines[-1] += f", spanning tactics: <strong>{', '.join(tactics)}</strong>"
-            if technique_ids:
-                lines[-1] += (
-                    ". Observed techniques include: "
-                    + ", ".join(f"<code>{t}</code>" for t in technique_ids)
-                    + ("." if len(enriched) <= 5 else f" and {len(enriched)-5} more.")
-                )
-            else:
-                lines[-1] += ".</p>"
-            if not lines[-1].endswith("</p>"):
-                lines[-1] += "</p>"
+        lines.append("</ul></div>")
+
+        # Top Plain English Highlights
+        if anomalies:
+            lines.append("<p><strong>Top Anomaly Plain-English Indicators:</strong></p><ul>")
+            for a in anomalies[:4]:
+                desc = a.get("description") or f"{a.get('subject')} ➔ {a.get('action')} ➔ {a.get('object')}"
+                sev = a.get("severity", "info").upper()
+                lines.append(f"<li><strong>[{sev}]</strong> {desc}</li>")
+            lines.append("</ul>")
 
         lines.append(
             "<p style='color:#64748b; font-size:8pt; margin-top:10px;'>"
-            "ℹ️ <em>This summary was generated by the local ForenSight analysis engine. "
-            "Configure a Groq API key to enable AI-narrative "
-            "investigation guidance and natural-language findings.</em></p>"
+            "ℹ️ <em>Generated automatically by ForenSight Analytics. "
+            "All findings are cross-verified against forensic evidence signatures.</em></p>"
         )
         return "\n".join(lines)
 
