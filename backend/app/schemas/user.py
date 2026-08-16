@@ -16,8 +16,14 @@ class UserBase(BaseModel):
     role: UserRole = Field(default=UserRole.INVESTIGATOR, description="Access role for RBAC")
     is_active: bool = Field(default=True, description="Whether this account is active")
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    email: EmailStr = Field(..., description="Unique email address of the user")
+    username: str = Field(..., min_length=3, max_length=50, description="Username of the investigator")
     password: str = Field(..., min_length=8, description="Plaintext password (hashed before storing)")
+    organization_id: Optional[str] = Field(None, description="MongoDB Organization ID (if registering directly or setup)")
+    role: Optional[UserRole] = Field(None, description="Access role for RBAC")
+    invite_token: Optional[str] = Field(None, description="Secure Admin invite token for joining an existing organization")
+    is_active: bool = Field(default=True, description="Whether this account is active")
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None

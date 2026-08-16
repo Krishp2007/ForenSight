@@ -25,7 +25,21 @@ async def create_organization(payload: OrganizationCreate):
         }
         
         created_org = await OrganizationRepository.create(org_dict)
-        created_org["id"] = str(created_org["_id"])
+        org_id = str(created_org["_id"])
+        created_org["id"] = org_id
+
+        # Generate initial Admin invite token for agency founder
+        from backend.app.repositories.invite_repository import InviteRepository
+        from backend.app.config import settings
+        invite_record = await InviteRepository.create_invite(
+            organization_id=org_id,
+            role="admin",
+            expires_in_days=3
+        )
+
+        frontend_base = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
+        created_org["admin_invite_token"] = invite_record["token"]
+        created_org["admin_invite_url"] = f"{frontend_base}/register?invite={invite_record['token']}"
         return created_org
     except HTTPException:
         raise

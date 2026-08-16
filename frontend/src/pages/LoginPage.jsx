@@ -63,15 +63,18 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      width: '100vw',
+      width: '100%',
+      backgroundColor: '#030712',
       backgroundImage: `linear-gradient(135deg, rgba(3, 7, 18, 0.88) 0%, rgba(15, 23, 42, 0.92) 100%), url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop')`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      padding: '24px',
+      padding: '24px 16px',
       boxSizing: 'border-box',
     }}>
       <div className="mobile-flex-col"

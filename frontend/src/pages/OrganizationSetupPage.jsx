@@ -18,8 +18,12 @@ const OrganizationSetupPage = () => {
     setError(null)
     setLoading(true)
     try {
-      await createOrganization(name)
-      navigate('/register')
+      const org = await createOrganization(name)
+      if (org?.admin_invite_token) {
+        navigate(`/register?invite=${org.admin_invite_token}`)
+      } else {
+        navigate('/register')
+      }
     } catch (e) {
       setError(e.response?.data?.detail || e.message || 'Failed to create organization. Please ensure the database is running.')
     } finally {
@@ -30,11 +34,18 @@ const OrganizationSetupPage = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#2a3347',
+      width: '100%',
+      backgroundColor: '#030712',
+      backgroundImage: `linear-gradient(135deg, rgba(3, 7, 18, 0.92) 0%, rgba(15, 23, 42, 0.95) 100%), url('https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070&auto=format&fit=crop')`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '24px',
+      padding: '24px 16px',
+      boxSizing: 'border-box',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     }}>
       <div style={{

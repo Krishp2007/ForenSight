@@ -133,6 +133,7 @@ from backend.app.api.reports import router as reports_router
 from backend.app.api.audit import router as audit_router
 from backend.app.api.correlations import router as correlations_router
 from backend.app.api.users import router as users_router
+from backend.app.api.invites import router as invites_router
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(org_router, prefix="/api/v1")
@@ -146,6 +147,7 @@ app.include_router(reports_router, prefix="/api/v1")
 app.include_router(audit_router, prefix="/api/v1")
 app.include_router(correlations_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
+app.include_router(invites_router, prefix="/api/v1")
 
 import os
 from fastapi.staticfiles import StaticFiles

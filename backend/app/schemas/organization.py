@@ -15,6 +15,8 @@ class OrganizationResponse(OrganizationBase):
     id: str = Field(..., description="The hex string representation of MongoDB ObjectId")
     created_at: datetime
     updated_at: datetime
+    admin_invite_token: Optional[str] = Field(None, description="Initial Admin invite token generated for workspace setup")
+    admin_invite_url: Optional[str] = Field(None, description="Direct URL to register as initial Admin")
 
     class Config:
         from_attributes = True

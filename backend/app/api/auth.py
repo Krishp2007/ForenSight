@@ -14,29 +14,59 @@ from bson import ObjectId
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+from backend.app.repositories.invite_repository import InviteRepository
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(payload: UserCreate):
-    """Register a new user. Role defaults to 'investigator'. Admin role requires an existing admin to set it."""
-    if not ObjectId.is_valid(payload.organization_id):
-        raise HTTPException(status_code=400, detail="Invalid organization ID format")
-
-    org = await OrganizationRepository.get_by_id(payload.organization_id)
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found")
-
+    """Register a new user via Admin Invite Token or direct Agency Setup."""
     existing_user = await UserRepository.get_by_email(payload.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email address already registered")
 
-    # Prevent self-assigned admin role on registration — default to investigator
-    safe_role = payload.role if payload.role.value != "admin" else UserRole.INVESTIGATOR
+    validated_invite = None
+    target_org_id = None
+    assigned_role = None
+
+    if payload.invite_token:
+        # Validate invite token
+        validated_invite = await InviteRepository.get_valid_invite(payload.invite_token)
+        if not validated_invite:
+            raise HTTPException(
+                status_code=400,
+                detail="Invite token is invalid, expired, or has already been used. Please request a new invite link from your admin."
+            )
+        
+        # Check target email restriction if present
+        if validated_invite.get("target_email") and validated_invite["target_email"].lower() != payload.email.lower():
+            raise HTTPException(
+                status_code=400,
+                detail=f"This invite link is restricted to {validated_invite['target_email']}."
+            )
+
+        target_org_id = validated_invite["organization_id"]
+        assigned_role = validated_invite["role"]
+    elif payload.organization_id:
+        if not ObjectId.is_valid(payload.organization_id):
+            raise HTTPException(status_code=400, detail="Invalid organization ID format")
+
+        org = await OrganizationRepository.get_by_id(payload.organization_id)
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+
+        target_org_id = ObjectId(payload.organization_id)
+        assigned_role = payload.role.value if payload.role else UserRole.INVESTIGATOR.value
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Registration requires an Admin invite link or an Organization ID."
+        )
 
     now = datetime.utcnow()
     user_dict = {
         "email": payload.email,
         "username": payload.username,
-        "organization_id": ObjectId(payload.organization_id),
-        "role": safe_role.value,
+        "organization_id": target_org_id,
+        "role": assigned_role,
         "hashed_password": hash_password(payload.password),
         "is_active": payload.is_active,
         "created_at": now,
@@ -44,7 +74,13 @@ async def register_user(payload: UserCreate):
     }
 
     created_user = await UserRepository.create(user_dict)
-    created_user["id"] = str(created_user["_id"])
+    user_id_str = str(created_user["_id"])
+    
+    # Mark invite token as consumed if used
+    if payload.invite_token:
+        await InviteRepository.mark_used(payload.invite_token, user_id_str)
+
+    created_user["id"] = user_id_str
     created_user["organization_id"] = str(created_user["organization_id"])
     return created_user
 

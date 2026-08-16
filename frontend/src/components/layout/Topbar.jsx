@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link, NavLink, useLocation } from 'react-router-dom'
-import { LogOut, LayoutDashboard, Users, Menu, X, User } from 'lucide-react'
+import { LogOut, LayoutDashboard, Users, Menu, X, User, AlertTriangle } from 'lucide-react'
 import useAuth from '../../hooks/useAuth'
 import { useRole } from '../../store/authStore'
 
@@ -13,8 +13,10 @@ const Topbar = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
-  const handleLogout = () => {
+  const confirmAndLogout = () => {
+    setShowLogoutConfirm(false)
     logout()
     navigate('/login')
   }
@@ -124,7 +126,7 @@ const Topbar = () => {
           <div style={{ width: '1px', height: '24px', background: 'var(--forensic-border, rgba(255, 255, 255, 0.1))' }} />
 
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="logout-btn-theme"
             style={{
               display: 'flex', alignItems: 'center', gap: '6px',
@@ -179,8 +181,6 @@ const Topbar = () => {
             borderBottom: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.1))',
           }}
         >
-
-
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px' }}>
             <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--forensic-text-muted, #94a3b8)' }}>Theme Mode</span>
             <ThemeToggle />
@@ -231,7 +231,7 @@ const Topbar = () => {
           </Link>
 
           <button
-            onClick={() => { setMobileMenuOpen(false); handleLogout() }}
+            onClick={() => { setMobileMenuOpen(false); setShowLogoutConfirm(true) }}
             className="logout-btn-theme"
             style={{
               marginTop: 'auto',
@@ -243,6 +243,106 @@ const Topbar = () => {
           >
             <LogOut size={16} /> Log Out
           </button>
+        </div>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(3, 7, 18, 0.8)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '16px',
+        }}>
+          <div style={{
+            width: '100%',
+            maxWidth: '420px',
+            background: 'var(--forensic-panel-bg, #0f172a)',
+            border: '1px solid var(--forensic-border, rgba(239, 68, 68, 0.3))',
+            borderRadius: '16px',
+            padding: '28px 24px',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 30px rgba(239, 68, 68, 0.15)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: '16px',
+            animation: 'dashboardModalPop 0.25s ease-out',
+          }}>
+            <div style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ef4444',
+            }}>
+              <LogOut size={24} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <h3 style={{ color: 'var(--forensic-text-main, #f8fafc)', fontSize: '18px', fontWeight: '700', margin: 0 }}>
+                Confirm Sign Out
+              </h3>
+              <p style={{ color: 'var(--forensic-text-muted, #94a3b8)', fontSize: '13px', margin: 0, lineHeight: '1.5' }}>
+                Are you sure you want to end your session, <strong style={{ color: 'var(--forensic-text-main, #f8fafc)' }}>{user?.username || 'Investigator'}</strong>? Unsaved investigation queries will be cleared.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '8px' }}>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{
+                  flex: 1,
+                  padding: '11px',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid var(--forensic-border, rgba(255, 255, 255, 0.15))',
+                  color: 'var(--forensic-text-main, #f8fafc)',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'background 0.2s',
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={confirmAndLogout}
+                style={{
+                  flex: 1,
+                  padding: '11px',
+                  borderRadius: '10px',
+                  background: '#ef4444',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                <LogOut size={15} />
+                Sign Out
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>
