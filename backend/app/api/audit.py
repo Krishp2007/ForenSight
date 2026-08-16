@@ -14,6 +14,42 @@ from backend.app.schemas.user import UserResponse
 router = APIRouter(tags=["audit"])
 
 
+async def _enrich_actor_details(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if not rows:
+        return rows
+    actor_ids = set()
+    for r in rows:
+        aid = r.get("actor_id")
+        if aid and ObjectId.is_valid(aid):
+            actor_ids.add(ObjectId(aid))
+    if not actor_ids:
+        return rows
+
+    from backend.app.db.mongodb import db_client
+    users = await db_client.db["users"].find(
+        {"_id": {"$in": list(actor_ids)}},
+        {"name": 1, "email": 1}
+    ).to_list(length=len(actor_ids))
+
+    user_map = {}
+    for u in users:
+        uid = str(u["_id"])
+        user_map[uid] = {
+            "name": u.get("name") or u.get("email", "Investigator"),
+            "email": u.get("email", "")
+        }
+
+    for r in rows:
+        aid = str(r.get("actor_id", ""))
+        if aid in user_map:
+            r["actor_name"] = user_map[aid]["name"]
+            r["actor_email"] = user_map[aid]["email"]
+        else:
+            r["actor_name"] = "Investigator" if aid else "System"
+            r["actor_email"] = ""
+    return rows
+
+
 @router.get("/cases/{case_id}/audit", response_model=List[Dict[str, Any]])
 async def get_case_audit_log(
     case_id: str,
@@ -27,7 +63,8 @@ async def get_case_audit_log(
     case = await CaseRepository.get_by_id(case_id, current_user.organization_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found or access denied")
-    return await AuditRepository.list_for_case(case_id, current_user.organization_id, limit=limit)
+    rows = await AuditRepository.list_for_case(case_id, current_user.organization_id, limit=limit)
+    return await _enrich_actor_details(rows)
 
 
 @router.get("/audit", response_model=List[Dict[str, Any]])
@@ -37,7 +74,8 @@ async def get_org_audit_log(
 ):
     """Admin only — full org-wide audit log."""
     require_admin(current_user.role)
-    return await AuditRepository.list_for_org(current_user.organization_id, limit=limit)
+    rows = await AuditRepository.list_for_org(current_user.organization_id, limit=limit)
+    return await _enrich_actor_details(rows)
 
 
 @router.get("/audit/verify", response_model=Dict[str, Any])
