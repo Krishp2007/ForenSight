@@ -1,4 +1,4 @@
-# 🕵️‍♂️ ForenSight AI — Event-Driven Digital Forensics & AI Copilot Platform
+# 🕵️‍♂️ ForenSight — Event-Driven Digital Forensics & AI Copilot Platform
 
 [![Python Version](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688.svg)](https://fastapi.tiangolo.com/)
