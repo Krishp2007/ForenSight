@@ -1,1 +1,0 @@
-# ForenSight AI Notes
