@@ -38,7 +38,7 @@ class Settings:
     # LLM — Groq only
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "groq")
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
     ENABLE_FALLBACK: bool = os.getenv("ENABLE_FALLBACK", "true").lower() in ("true", "1", "yes")
 
     # Email & SMTP / Brevo Settings

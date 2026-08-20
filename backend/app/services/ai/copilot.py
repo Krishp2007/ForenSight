@@ -124,6 +124,13 @@ def _extract_mentioned_filenames(text: str) -> set:
     return {m.group(0) for m in _FILENAME_RE.finditer(text)}
 
 
+def _strip_think_tags(text: str) -> str:
+    """Strip internal model <think>...</think> reasoning blocks if present."""
+    if not text:
+        return ""
+    return _re.sub(r'<think>.*?</think>', '', text, flags=_re.DOTALL).strip()
+
+
 class CopilotService:
 
     @classmethod
@@ -221,7 +228,7 @@ class CopilotService:
             }
 
         return {
-            "analysis": analysis_text,
+            "analysis": _strip_think_tags(analysis_text),
             "confidence": "High" if sources else "Medium",
             "sources": sources,
         }
@@ -331,6 +338,9 @@ class CopilotService:
                     full_text += chunk
 
                 logger.info("[Copilot Stream] Groq stream completed successfully")
+
+                # Strip any internal model <think>...</think> reasoning blocks
+                full_text = _strip_think_tags(full_text)
 
                 # Stream the plain Markdown response word-by-word (typewriter effect)
                 words = full_text.split(" ")

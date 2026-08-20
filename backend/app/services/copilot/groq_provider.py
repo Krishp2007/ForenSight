@@ -80,7 +80,7 @@ class GroqProvider:
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self._api_key = api_key or os.getenv("GROQ_API_KEY", getattr(settings, "GROQ_API_KEY", ""))
-        self._model = model or os.getenv("GROQ_MODEL", getattr(settings, "GROQ_MODEL", "llama-3.3-70b-versatile"))
+        self._model = model or os.getenv("GROQ_MODEL", getattr(settings, "GROQ_MODEL", "qwen/qwen3.6-27b"))
         self._max_retries = 3
         self._timeout = httpx.Timeout(connect=25.0, read=90.0, write=15.0, pool=10.0)
 
@@ -118,63 +118,74 @@ class GroqProvider:
             raise GroqAuthError("GROQ_API_KEY not configured")
 
         messages = self._build_messages(system_prompt, user_prompt, history or [])
-        payload = {
-            "model": self._model,
-            "messages": messages,
-            "temperature": 0.15,
-            "max_tokens": 2048,
-            "stream": False,
-        }
+        candidate_models = [self._model, "qwen/qwen3.6-27b", "openai/gpt-oss-120b"]
+        seen_models = set()
 
-        last_err = None
-        for attempt in range(1, self._max_retries + 1):
-            try:
-                async with httpx.AsyncClient(timeout=self._timeout) as client:
-                    resp = await client.post(
-                        f"{GROQ_API_BASE}/chat/completions",
-                        headers=self._headers(),
-                        json=payload,
-                    )
+        for cur_model in candidate_models:
+            if cur_model in seen_models:
+                continue
+            seen_models.add(cur_model)
+            payload = {
+                "model": cur_model,
+                "messages": messages,
+                "temperature": 0.15,
+                "max_tokens": 2048,
+                "stream": False,
+            }
 
-                if resp.status_code == 200:
-                    data = resp.json()
-                    text = data["choices"][0]["message"]["content"]
-                    if _is_insufficient(text):
-                        raise GroqInsufficientResponseError(
-                            f"Groq response insufficient: {text[:100]}"
+            last_err = None
+            for attempt in range(1, self._max_retries + 1):
+                try:
+                    async with httpx.AsyncClient(timeout=self._timeout) as client:
+                        resp = await client.post(
+                            f"{GROQ_API_BASE}/chat/completions",
+                            headers=self._headers(),
+                            json=payload,
                         )
-                    logger.info(f"[Groq] Generated successfully on attempt {attempt}")
-                    return text
 
-                elif resp.status_code == 429:
-                    raise GroqRateLimitError(f"Groq rate limit (429) on attempt {attempt}")
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        text = data["choices"][0]["message"]["content"]
+                        if _is_insufficient(text):
+                            raise GroqInsufficientResponseError(
+                                f"Groq response insufficient: {text[:100]}"
+                            )
+                        logger.info(f"[Groq] Generated successfully using {cur_model} on attempt {attempt}")
+                        return text
 
-                elif resp.status_code in (401, 403):
-                    raise GroqAuthError(f"Groq auth failure ({resp.status_code})")
+                    elif resp.status_code == 429:
+                        raise GroqRateLimitError(f"Groq rate limit (429) on attempt {attempt}")
 
-                elif resp.status_code >= 500:
-                    err_msg = resp.json().get("error", {}).get("message", resp.text[:100])
-                    last_err = GroqError(f"Groq server error {resp.status_code}: {err_msg}")
-                    wait = 2 ** attempt
-                    logger.warning(f"[Groq] Server error on attempt {attempt}, retrying in {wait}s...")
-                    await asyncio.sleep(wait)
+                    elif resp.status_code in (401, 403):
+                        raise GroqAuthError(f"Groq auth failure ({resp.status_code})")
 
-                else:
-                    err_msg = resp.text[:200]
-                    raise GroqError(f"Groq unexpected status {resp.status_code}: {err_msg}")
+                    elif resp.status_code == 404:
+                        logger.warning(f"[Groq] Model {cur_model} returned 404, trying next available model...")
+                        break
 
-            except (GroqRateLimitError, GroqAuthError, GroqInsufficientResponseError):
-                raise  # Don't retry auth/rate-limit errors
-            except httpx.TimeoutException as e:
-                last_err = GroqTimeoutError(f"Groq timeout on attempt {attempt}: {e}")
-                logger.warning(f"[Groq] Timeout on attempt {attempt}")
-                await asyncio.sleep(2 ** attempt)
-            except httpx.ConnectError as e:
-                last_err = GroqError(f"Groq connection error on attempt {attempt}: {e}")
-                logger.warning(f"[Groq] Connection error on attempt {attempt}")
-                await asyncio.sleep(2 ** attempt)
+                    elif resp.status_code >= 500:
+                        err_msg = resp.json().get("error", {}).get("message", resp.text[:100])
+                        last_err = GroqError(f"Groq server error {resp.status_code}: {err_msg}")
+                        wait = 2 ** attempt
+                        logger.warning(f"[Groq] Server error on attempt {attempt}, retrying in {wait}s...")
+                        await asyncio.sleep(wait)
 
-        raise last_err or GroqError("Groq failed after all retries")
+                    else:
+                        err_msg = resp.text[:200]
+                        raise GroqError(f"Groq unexpected status {resp.status_code}: {err_msg}")
+
+                except (GroqRateLimitError, GroqAuthError, GroqInsufficientResponseError):
+                    raise  # Don't retry auth/rate-limit errors
+                except httpx.TimeoutException as e:
+                    last_err = GroqTimeoutError(f"Groq timeout on attempt {attempt}: {e}")
+                    logger.warning(f"[Groq] Timeout on attempt {attempt}")
+                    await asyncio.sleep(2 ** attempt)
+                except httpx.ConnectError as e:
+                    last_err = GroqError(f"Groq connection error on attempt {attempt}: {e}")
+                    logger.warning(f"[Groq] Connection error on attempt {attempt}")
+                    await asyncio.sleep(2 ** attempt)
+
+        raise last_err or GroqError("Groq failed after trying all candidate models")
 
     async def generate_stream(
         self,
@@ -190,60 +201,69 @@ class GroqProvider:
             raise GroqAuthError("GROQ_API_KEY not configured")
 
         messages = self._build_messages(system_prompt, user_prompt, history or [])
-        payload = {
-            "model": self._model,
-            "messages": messages,
-            "temperature": 0.15,
-            "max_tokens": 2048,
-            "stream": True,
-        }
+        candidate_models = [self._model, "qwen/qwen3.6-27b", "openai/gpt-oss-120b"]
+        
+        for cur_model in candidate_models:
+            payload = {
+                "model": cur_model,
+                "messages": messages,
+                "temperature": 0.15,
+                "max_tokens": 2048,
+                "stream": True,
+            }
 
-        try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                async with client.stream(
-                    "POST",
-                    f"{GROQ_API_BASE}/chat/completions",
-                    headers=self._headers(),
-                    json=payload,
-                ) as resp:
+            try:
+                async with httpx.AsyncClient(timeout=self._timeout) as client:
+                    async with client.stream(
+                        "POST",
+                        f"{GROQ_API_BASE}/chat/completions",
+                        headers=self._headers(),
+                        json=payload,
+                    ) as resp:
 
-                    if resp.status_code == 429:
-                        raise GroqRateLimitError("Groq rate limit (429)")
-                    if resp.status_code in (401, 403):
-                        raise GroqAuthError(f"Groq auth failure ({resp.status_code})")
-                    if resp.status_code >= 500:
-                        raise GroqError(f"Groq server error {resp.status_code}")
-                    if resp.status_code != 200:
-                        raise GroqError(f"Groq unexpected status {resp.status_code}")
-
-                    full_text = ""
-                    async for line in resp.aiter_lines():
-                        line = line.strip()
-                        if not line or not line.startswith("data:"):
-                            continue
-                        data_str = line[5:].strip()
-                        if data_str == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            delta = data["choices"][0]["delta"]
-                            chunk = delta.get("content", "")
-                            if chunk:
-                                full_text += chunk
-                                yield chunk
-                        except (json.JSONDecodeError, KeyError, IndexError):
+                        if resp.status_code == 404:
+                            logger.warning(f"[Groq Stream] Model {cur_model} returned 404, trying next model...")
                             continue
 
-                    if _is_insufficient(full_text):
-                        raise GroqInsufficientResponseError(
-                            f"Groq streaming response insufficient"
-                        )
+                        if resp.status_code == 429:
+                            raise GroqRateLimitError("Groq rate limit (429)")
+                        if resp.status_code in (401, 403):
+                            raise GroqAuthError(f"Groq auth failure ({resp.status_code})")
+                        if resp.status_code >= 500:
+                            raise GroqError(f"Groq server error {resp.status_code}")
+                        if resp.status_code != 200:
+                            raise GroqError(f"Groq unexpected status {resp.status_code}")
 
-        except (GroqRateLimitError, GroqAuthError, GroqInsufficientResponseError, GroqError):
-            raise
-        except httpx.TimeoutException as e:
-            raise GroqTimeoutError(f"Groq stream timeout: {e}")
-        except httpx.ConnectError as e:
-            raise GroqError(f"Groq stream connection error: {e}")
-        except Exception as e:
-            raise GroqError(f"Groq stream unexpected error: {e}")
+                        full_text = ""
+                        async for line in resp.aiter_lines():
+                            line = line.strip()
+                            if not line or not line.startswith("data:"):
+                                continue
+                            data_str = line[5:].strip()
+                            if data_str == "[DONE]":
+                                break
+                            try:
+                                data = json.loads(data_str)
+                                delta = data["choices"][0]["delta"]
+                                chunk = delta.get("content", "")
+                                if chunk:
+                                    full_text += chunk
+                                    yield chunk
+                            except (json.JSONDecodeError, KeyError, IndexError):
+                                continue
+
+                        if _is_insufficient(full_text):
+                            raise GroqInsufficientResponseError(
+                                f"Groq streaming response insufficient"
+                            )
+                        # Successfully completed stream
+                        return
+
+            except (GroqRateLimitError, GroqAuthError, GroqInsufficientResponseError, GroqError):
+                raise
+            except httpx.TimeoutException as e:
+                raise GroqTimeoutError(f"Groq stream timeout: {e}")
+            except httpx.ConnectError as e:
+                raise GroqError(f"Groq stream connection error: {e}")
+            except Exception as e:
+                raise GroqError(f"Groq stream unexpected error: {e}")

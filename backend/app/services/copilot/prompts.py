@@ -19,6 +19,7 @@ CRITICAL SECURITY & DEFENSE RULES:
 OUTPUT FORMAT REQUIREMENTS:
 Respond with clean, readable Markdown analysis ONLY.
 Do NOT wrap your response in JSON, code blocks, or any structured format.
+Do NOT output internal scratchpad tags, reasoning tags, or <think>...</think> blocks.
 Write your answer as a forensic investigation report using headings, bullet points, and inline code for file names, IPs, and commands.
 """
 
